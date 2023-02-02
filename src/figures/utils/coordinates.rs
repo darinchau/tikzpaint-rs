@@ -46,11 +46,9 @@ impl<const DIMS: usize> Coordinates<DIMS> {
     ///
     /// ```
     /// use tikzpaint_rs::Coordinates;
-    /// let coord = Coordinates::new(&[1, 2, -3]);
-    /// let coord2 = coord.scale(6);
-    /// assert_eq!(6., coord2[0]);
-    /// assert_eq!(12., coord2[1]);
-    /// assert_eq!(-18., coord2[2]);
+    /// let coord = Coordinates::new(&[1, 2, -3]).scale(6);
+    /// let coord2 = Coordinates::new(&[6, 12, -18]);
+    /// assert!(coord == coord2);
     /// ```
     pub fn scale<T>(&self, other: T) -> Self where
         T: Into<f64> + Copy  
@@ -91,8 +89,8 @@ impl<const DIMS: usize> Coordinates<DIMS> {
     /// ```
     /// use tikzpaint_rs::Coordinates;
     /// let coord = Coordinates::new(&[3, 4]).normalize();
-    /// assert!(coord[0] - 0.6 <= 1e-8);
-    /// assert!(coord[1] - 0.8 <= 1e-8);
+    /// let coord2 = Coordinates::new(&[0.6, 0.8]);
+    /// assert!(coord == coord2);
     /// ```
     pub fn normalize(self) -> Self {
         let mag = self.magnitude();
@@ -100,6 +98,18 @@ impl<const DIMS: usize> Coordinates<DIMS> {
             return self;
         }
         self * (1./mag)
+    }
+}
+
+impl<const DIMS: usize> PartialEq for Coordinates<DIMS> {
+    fn eq(&self, other: &Self) -> bool {
+        for i in 0..DIMS {
+            if (self.values[i] - other.values[i]).abs() >= 1e-8 {
+                return false;
+            }
+        }
+
+        true
     }
 }
 
@@ -156,5 +166,32 @@ impl<const DIMS: usize> Index<usize> for Coordinates<DIMS> {
         }
 
         &self.values[other]
+    }
+}
+
+impl Coordinates<3> {
+    /// The cross product. "a.cross(b)" indicates a x b
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use tikzpaint_rs::Coordinates;
+    /// let a = Coordinates::new(&[3, 2, -4]);
+    /// let b = Coordinates::new(&[1, 2, 0]);
+    /// let ab = a.cross(&b);
+    /// let ba = b.cross(&a);
+    /// assert!(ab == Coordinates::new(&[8, -4, 4]));
+    /// assert!(ba == Coordinates::new(&[-8, 4, -4]));
+    /// ```
+    pub fn cross(&self, other: &Coordinates<3>) -> Self {
+        let u = self.values;
+        let v = other.values;
+        return Coordinates {
+            values: [
+                u[1] * v[2] - u[2] * v[1], 
+                u[2] * v[0] - u[0] * v[2], 
+                u[0] * v[1] - u[1] * v[0]
+            ]
+        }
     }
 }
