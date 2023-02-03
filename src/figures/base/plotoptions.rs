@@ -2,11 +2,15 @@
 
 pub struct Color(u8, u8, u8);
 
-pub struct PlotOptions{
-    color: Color,
-    thickness: f64
+impl Color {
+    fn to_str(&self) -> String {
+        let Color(r, g, b) = *self;
+        format!("#{:02x}{:02x}{:02x}", r, g, b)
+    }
 }
 
+
+#[derive(Clone)]
 pub enum TikzColor {
     Red,
     Green,
@@ -59,6 +63,37 @@ impl TikzColor {
             TikzColor::Teal => Color(0, 154, 154),
             TikzColor::Violet => Color(238, 130, 238),
             TikzColor::White => Color(238, 238, 238),
+        }
+    }
+
+    pub fn to_str(&self) -> String {
+        self.to_color().to_str()
+    }
+}
+
+pub struct PlotOptions{
+    color: TikzColor,
+    thickness: f64
+}
+
+impl PlotOptions {
+    pub fn new() -> PlotOptions {
+        PlotOptions { 
+            color: TikzColor::Black, 
+            thickness: 1., 
+        }
+    }
+
+    pub fn tikzify(&self) -> String {
+        format!("color={}, line width={}pt", self.color.to_str(), self.thickness)
+    }
+}
+
+impl Clone for PlotOptions {
+    fn clone(&self) -> Self {
+        PlotOptions { 
+            color: self.color.clone(),
+            thickness: self.thickness 
         }
     }
 }

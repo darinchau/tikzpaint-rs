@@ -1,4 +1,4 @@
-// use std::fmt::{Display, Error};
+use std::fmt::Display;
 use std::ops::{Add, Sub, Mul, Div, Index};
 use std::f64::EPSILON;
 
@@ -25,7 +25,7 @@ impl<const DIMS: usize> Coordinates<DIMS> {
     /// # Examples
     ///
     /// ```
-    /// use tikzpaint_rs::Coordinates;
+    /// use tikzpaint_rs::figures::Coordinates;
     /// let coord = Coordinates::new(&[1, 2, -3]);
     /// assert_eq!(1., coord.get(0).unwrap());
     /// assert_eq!(2., coord.get(1).unwrap());
@@ -45,7 +45,7 @@ impl<const DIMS: usize> Coordinates<DIMS> {
     /// # Examples
     ///
     /// ```
-    /// use tikzpaint_rs::Coordinates;
+    /// use tikzpaint_rs::figures::Coordinates;
     /// let coord = Coordinates::new(&[1, 2, -3]).scale(6);
     /// let coord2 = Coordinates::new(&[6, 12, -18]);
     /// assert!(coord == coord2);
@@ -67,7 +67,7 @@ impl<const DIMS: usize> Coordinates<DIMS> {
     /// # Examples
     ///
     /// ```
-    /// use tikzpaint_rs::Coordinates;
+    /// use tikzpaint_rs::figures::Coordinates;
     /// let coord = Coordinates::new(&[1, 2, -3]);
     /// let mag = (14 as f64).sqrt();
     /// assert!(coord.magnitude() - mag <= 1e-8);
@@ -87,7 +87,7 @@ impl<const DIMS: usize> Coordinates<DIMS> {
     /// # Examples
     ///
     /// ```
-    /// use tikzpaint_rs::Coordinates;
+    /// use tikzpaint_rs::figures::Coordinates;
     /// let coord = Coordinates::new(&[3, 4]).normalize();
     /// let coord2 = Coordinates::new(&[0.6, 0.8]);
     /// assert!(coord == coord2);
@@ -98,6 +98,17 @@ impl<const DIMS: usize> Coordinates<DIMS> {
             return self;
         }
         self * (1./mag)
+    }
+}
+
+impl<const DIMS: usize> Display for Coordinates<DIMS> {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        let mut s = String::new();
+        for i in 0..DIMS {
+            let f = if i < DIMS - 1 {format!("{}, ", self[i])} else {format!("{}", self[i])};
+            s.push_str(&f);
+        }
+        write!(f, "({})", s)
     }
 }
 
@@ -169,13 +180,19 @@ impl<const DIMS: usize> Index<usize> for Coordinates<DIMS> {
     }
 }
 
+impl<const DIMS: usize> Clone for Coordinates<DIMS> {
+    fn clone(&self) -> Self {
+        self.scale(1)
+    }
+}
+
 impl Coordinates<3> {
     /// The cross product. "a.cross(b)" indicates a x b
     ///
     /// # Examples
     ///
     /// ```
-    /// use tikzpaint_rs::Coordinates;
+    /// use tikzpaint_rs::figures::Coordinates;
     /// let a = Coordinates::new(&[3, 2, -4]);
     /// let b = Coordinates::new(&[1, 2, 0]);
     /// let ab = a.cross(&b);
