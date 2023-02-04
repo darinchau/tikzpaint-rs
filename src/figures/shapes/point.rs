@@ -16,18 +16,6 @@ impl<const DIMS: usize> Point<DIMS> {
     }
 }
 
-impl <const DIMS: usize> Clone for Point<DIMS> {
-    fn clone(&self) -> Self {
-        Point{
-            p: self.p.clone(),
-            option: PlotOptions {
-                color: self.options().color.clone(),
-                thickness: self.options().thickness 
-            }
-        }
-    }
-}
-
 impl<const DIMS: usize> FigureObject<DIMS> for Point<DIMS> {
     fn coordinates(&self) -> Vec<Coordinates<DIMS>> {
         vec![self.p.clone()]

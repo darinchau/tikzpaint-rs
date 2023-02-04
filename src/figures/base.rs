@@ -9,3 +9,6 @@ pub mod figure;
 
 #[allow(dead_code)]
 pub mod projection;
+
+#[allow(dead_code)]
+pub mod coordinates;

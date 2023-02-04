@@ -7,9 +7,15 @@ impl Color {
         let Color(r, g, b) = *self;
         format!("#{:02x}{:02x}{:02x}", r, g, b)
     }
+
+    fn to_tikz(&self) -> String {
+        let Color(r, g, b) = *self;
+        format!("{{rgb,255:red,{};green,{};blue,{}}}", r, g, b)
+    }
 }
 
 
+/// Colors enum containing all colors available in Tikz
 #[derive(Clone)]
 pub enum TikzColor {
     Red,
@@ -65,26 +71,31 @@ impl TikzColor {
             TikzColor::White => Color(238, 238, 238),
         }
     }
-
-    pub fn to_str(&self) -> String {
-        self.to_color().to_str()
-    }
 }
 
 pub struct PlotOptions{
-    pub color: TikzColor,
-    pub thickness: f64
+    pub fill_color: Option<Color>,
+    pub thickness: Option<f64>
 }
 
 impl PlotOptions {
     pub fn new() -> PlotOptions {
         PlotOptions { 
-            color: TikzColor::Black, 
-            thickness: 1., 
+            fill_color: Some(TikzColor::White.to_color()), 
+            thickness: Some(1.), 
         }
     }
 
     pub fn tikzify(&self) -> String {
-        format!("color={}, line width={}pt", self.color.to_str(), self.thickness)
+        let mut s = String::new();
+        if let Some(c) = &self.fill_color {
+            s.push_str("fill=");
+            s.push_str(&c.to_tikz());
+        }
+        if let Some(thickness) = self.thickness {
+            s.push_str("width=");
+            s.push_str(&thickness.to_string())
+        }
+        return s;
     }
 }
