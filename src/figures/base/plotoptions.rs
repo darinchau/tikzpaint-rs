@@ -72,8 +72,8 @@ impl TikzColor {
 }
 
 pub struct PlotOptions{
-    color: TikzColor,
-    thickness: f64
+    pub color: TikzColor,
+    pub thickness: f64
 }
 
 impl PlotOptions {
@@ -86,14 +86,5 @@ impl PlotOptions {
 
     pub fn tikzify(&self) -> String {
         format!("color={}, line width={}pt", self.color.to_str(), self.thickness)
-    }
-}
-
-impl Clone for PlotOptions {
-    fn clone(&self) -> Self {
-        PlotOptions { 
-            color: self.color.clone(),
-            thickness: self.thickness 
-        }
     }
 }

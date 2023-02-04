@@ -1,6 +1,6 @@
 //! Implementation of a node
 
-use crate::figures::{Displayable, PlotOptions, Coordinates};
+use crate::figures::{PlotOptions, Coordinates, FigureObject, base::figureobject::Plot};
 
 pub struct Point<const DIMS: usize> {
     p: Coordinates<DIMS>,
@@ -20,25 +20,30 @@ impl <const DIMS: usize> Clone for Point<DIMS> {
     fn clone(&self) -> Self {
         Point{
             p: self.p.clone(),
-            option: self.option.clone()
+            option: PlotOptions {
+                color: self.options().color.clone(),
+                thickness: self.options().thickness 
+            }
         }
     }
 }
 
-impl<const DIMS: usize> Displayable<DIMS> for Point<DIMS> {
-    fn tikzify(&self) -> String {
-        format!("\\node[{}] at {} {{}}", self.options().tikzify(), self.p)
-    }
-
+impl<const DIMS: usize> FigureObject<DIMS> for Point<DIMS> {
     fn coordinates(&self) -> Vec<Coordinates<DIMS>> {
         vec![self.p.clone()]
     }
 
-    fn options(&self) -> PlotOptions {
-        self.option.clone()
+    fn options(&self) -> &PlotOptions {
+        &self.option
     }
 
     fn len(&self) -> usize {
         1
+    }
+}
+
+impl Plot for Point<2> {
+    fn tikzify(&self) -> String {
+        format!("\\node[{}] at {} {{}}", self.options().tikzify(), self.p)
     }
 }
