@@ -1,27 +1,31 @@
 //! Projections are traits that takes coordinates and outputs coordinates
-
-// use std::ops::Mul;
-
 use crate::figures::Coordinates;
 
-pub struct Projection<const INPUT: usize, const OUTPUT: usize> {
-    f: Box<dyn Fn(&Coordinates<INPUT>) -> Coordinates<OUTPUT>>
+pub trait Projection<const INPUT: usize, const OUTPUT: usize> {
+    fn call(&self, v: &Coordinates<INPUT>) -> Coordinates<OUTPUT>;
 }
 
-impl<const INPUT: usize, const OUTPUT: usize> Projection<INPUT, OUTPUT> {
+struct Project<T, S, const INPUT: usize, const J: usize, const OUTPUT: usize> where 
+T: Projection<INPUT, J>,
+S: Projection<J, OUTPUT>
+{
+    proj1: T,
+    proj2: S,
+}
+
+impl<T, S, const INPUT: usize, const J: usize, const OUTPUT: usize> Projection<INPUT, OUTPUT> for Project<T, S, INPUT, J, OUTPUT> where 
+T: Projection<INPUT, J>,
+S: Projection<J, OUTPUT>
+{
     fn call(&self, v: &Coordinates<INPUT>) -> Coordinates<OUTPUT> {
-        return (self.f)(v);
+        self.proj2.call(&self.proj1.call(v))
     }
 }
 
-// impl<'a, const INPUT: usize, const i: usize, const OUTPUT: usize> Mul<Projection<i, OUTPUT>> for &'a Projection<INPUT, i> {
-//     type Output = Projection<INPUT, OUTPUT>;
-//     fn mul(self, rhs: Projection<i, OUTPUT>) -> Projection<INPUT, OUTPUT> {
-//         Projection {
-//             f: Box::new(|x| {
-//                 let y = self.call(x);
-//                 rhs.call(&y)
-//             })
-//         }
-//     }
-// }
+pub fn concat<const INPUT: usize, const J: usize, const OUTPUT: usize>
+    (p1: impl Projection<INPUT, J>, p2: impl Projection<J, OUTPUT>) -> impl Projection<INPUT, OUTPUT> {
+    Project {
+        proj1: p1,
+        proj2: p2
+    }
+}
