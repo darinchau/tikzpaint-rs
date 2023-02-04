@@ -1,6 +1,6 @@
 //! Implementation of a node
 
-use crate::figures::{PlotOptions, Coordinates, FigureObject, base::figureobject::Plot};
+use crate::figures::{PlotOptions, Coordinates, FigureObject, Plot, Projection};
 
 pub struct Point<const DIMS: usize> {
     p: Coordinates<DIMS>,
@@ -27,6 +27,14 @@ impl<const DIMS: usize> FigureObject<DIMS> for Point<DIMS> {
 
     fn len(&self) -> usize {
         1
+    }
+
+    fn project(&self, p: &Box<dyn Projection<DIMS, 2>>) -> Box<dyn Plot> {
+        let new_p = (*p).call(&self.p);
+        return Box::new(Point{
+            p: new_p,
+            option: self.option.clone()
+        });
     }
 }
 

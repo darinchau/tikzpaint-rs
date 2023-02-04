@@ -1,5 +1,6 @@
 //! PlotOptions is a struct that holds info (such as color, thickness etc) of a displayable/drawable
 
+#[derive(Clone)]
 pub struct Color(u8, u8, u8);
 
 impl Color {
@@ -73,6 +74,7 @@ impl TikzColor {
     }
 }
 
+#[derive(Clone)]
 pub struct PlotOptions{
     pub fill_color: Option<Color>,
     pub thickness: Option<f64>

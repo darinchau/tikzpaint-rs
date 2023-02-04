@@ -11,11 +11,9 @@ use crate::figures::Projection;
 pub trait FigureObject<const DIMS: usize> {
     fn coordinates(&self) -> Vec<Coordinates<DIMS>>;
     fn options(&self) -> &PlotOptions;
+    fn project(&self, p: &Box<dyn Projection<DIMS, 2>>) -> Box<dyn Plot>;
     fn len(&self) -> usize {
         return self.coordinates().len();
-    }
-    fn project<P: Projection<DIMS, 2>>(&self, p: P) -> Vec<Coordinates<2>> {
-        self.coordinates().iter().map(|x| { p.call(x) }).collect()
     }
 }
 
@@ -23,10 +21,9 @@ pub trait Plot: FigureObject<2> {
     fn tikzify(&self) -> String;
 }
 
-pub struct DrawWrapper<T: FigureObject<DIMS>, const DIMS: usize>(T);
-
 /// Drawables are high-level implementations of Figure objects. They contain methods and stuff to implement
-/// drawing multiple figure objects in a particular way
+/// drawing multiple figure objects in a particular way.
 pub trait Drawable<const DIMS: usize> {
-    fn draw(&self) -> Vec<DrawWrapper>;
+    /// We allow the draw method to return a reference because then we are allowed to cache the return value
+    fn draw(&self) -> &Vec<Box<dyn FigureObject<DIMS>>>;
 }
