@@ -1,7 +1,7 @@
 //! Implementation of a node. Our convention is to begin the name of every direct implementation of figure object
 //! with the prefix FO-
 
-use crate::figures::{PlotOptions, Coordinates, FigureObject, Plot, Projection};
+use crate::figures::{PlotOptions, Coordinates, FigureObject, Plot, Projection, base::plotoptions::tikzify_field};
 
 pub struct FOPoint<const DIMS: usize> {
     point: Coordinates<DIMS>,
@@ -48,6 +48,14 @@ impl<const DIMS: usize> FigureObject<DIMS> for FOPoint<DIMS> {
 
 impl Plot for FOPoint<2> {
     fn tikzify(&self) -> String {
-        format!("\\node[{}] at {} {{}}", self.options().tikzify(), self.point)
+        format!("\\node[{}] at {} {{}}", self.tikz_options(), self.point)
+    }
+
+    fn tikz_options(&self) -> String {
+        let mut s = String::new();
+        let opt = self.options();
+        tikzify_field(&mut s, &opt.fill_color, "fill=");
+        tikzify_field(&mut s, &opt.thickness, "width=");
+        return s;
     }
 }

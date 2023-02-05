@@ -1,5 +1,6 @@
 mod base;
 mod figureobjects;
+mod drawables;
 
 pub use base::coordinates::Coordinates;
 
@@ -17,3 +18,6 @@ pub use base::projection::Projection;
 pub use base::projection::Identity;
 pub use base::projection::Matrix;
 pub use base::projection::Concat;
+
+pub use figureobjects::point::FOPoint;
+pub use drawables::point::Point;

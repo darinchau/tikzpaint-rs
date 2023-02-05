@@ -24,8 +24,8 @@ impl<'a, const INPUT: usize, const OUTPUT: usize> Projection<INPUT, OUTPUT> for 
 /// Example
 /// ```
 /// use tikzpaint_rs::figures::{Identity, Coordinates, Projection};
-/// let x = Coordinates::new(&[3, 4, 5]);
-/// let y = Coordinates::new(&[3, 4, 5]);
+/// let x = Coordinates::new([3, 4, 5]);
+/// let y = Coordinates::new([3, 4, 5]);
 /// let proj = Identity::<3>;
 /// assert!(x[0] == proj.call(&y)[0]);
 /// assert!(x[1] == proj.call(&y)[1]);
@@ -51,7 +51,7 @@ impl<'a, const I: usize, const J: usize, const K: usize> Concat<'a, I, J, K> {
     /// Examples:
     /// ```
     /// use tikzpaint_rs::figures::{Coordinates, Matrix, Concat, Projection};
-    /// let x = Coordinates::new(&[3, 4, 5]);
+    /// let x = Coordinates::new([3, 4, 5]);
     /// let proj1 = Matrix::new([
     ///     [1, 0, 0],
     ///     [0, 1, 0],
@@ -63,13 +63,13 @@ impl<'a, const I: usize, const J: usize, const K: usize> Concat<'a, I, J, K> {
     /// ]);
     /// let proj3 = Concat::from(proj1, proj2);
     /// let y3 = proj3.call(&x);
-    /// assert!(y3 == Coordinates::new(&[23, 12]));
+    /// assert!(y3 == Coordinates::new([23, 12]));
     /// ```
     /// 
     /// We can also retreive both projections (sorta) as follows
     /// ```
     /// use tikzpaint_rs::figures::{Coordinates, Matrix, Concat, Projection};
-    /// let x = Coordinates::new(&[3, 4, 5]);
+    /// let x = Coordinates::new([3, 4, 5]);
     /// let proj1 = Matrix::new([
     ///     [1, 0, 0],
     ///     [0, 1, 0],
@@ -82,11 +82,11 @@ impl<'a, const I: usize, const J: usize, const K: usize> Concat<'a, I, J, K> {
     /// let proj3 = Concat::from(proj1, proj2);
     /// let this_is_also_proj1 = proj3.first();
     /// let y1 = this_is_also_proj1.call(&x);
-    /// assert!(y1 == Coordinates::new(&[3, 4, 10]));
+    /// assert!(y1 == Coordinates::new([3, 4, 10]));
     /// 
     /// let this_is_also_proj2 = proj3.second();
     /// let y2 = this_is_also_proj2.call(&x);
-    /// assert!(y2 == Coordinates::new(&[13, 7]));
+    /// assert!(y2 == Coordinates::new([13, 7]));
     /// ```
     pub fn from<T, S>(proj1: T, proj2: S) -> Self where
     T: Projection<I, J> + 'a,
@@ -160,6 +160,6 @@ impl<const I: usize, const J: usize> Projection<J, I> for Matrix<I, J> {
         for i in 0..I {
             w[i] = (0..J).into_iter().map(|j| {v[j] * self.values[i][j]}).sum()
         }
-        Coordinates::new(&w)
+        Coordinates::new(w)
     }
 }

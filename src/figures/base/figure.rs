@@ -1,13 +1,12 @@
 //! A figure object serves as a canvas to convert drawables into displayables into code and shapes
 
 use crate::figures::{Drawable, Projection, Plot};
-use std::rc::Rc;
 
-pub struct Figure<const DIMS: usize> {
-    to_draw: Vec<Rc<dyn Drawable<DIMS>>>,
+pub struct Figure<'a, const DIMS: usize> {
+    to_draw: Vec<&'a dyn Drawable<DIMS>>,
 }
 
-impl<const DIMS: usize> Figure<DIMS> {
+impl<'a, const DIMS: usize> Figure<'a, DIMS> {
     pub fn new() -> Self {
         Figure {
             to_draw: vec![]
@@ -16,10 +15,9 @@ impl<const DIMS: usize> Figure<DIMS> {
 
     /// Adds 'obj' to the list of objects to be drawn. We use an RC because we don't want
     /// to take ownership of your lovely drawable object, but we also need the drawable object
-    /// to live long enough and the easiest way is to take ownership of the object
-    pub fn draw(&mut self, obj: &Rc<dyn Drawable<DIMS>>) {
-        let ptr = Rc::clone(obj);
-        self.to_draw.push(ptr);
+    /// to live long enough and the easiest way is to take ownership of the object via an Rc
+    pub fn draw(&mut self, obj: &'a dyn Drawable<DIMS>) where {
+        self.to_draw.push(obj);
     } 
 
     /// Load method takes a function object and a projection object. The method will feed

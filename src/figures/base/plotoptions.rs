@@ -1,9 +1,38 @@
 //! PlotOptions is a struct that holds info (such as color, thickness etc) of a displayable/drawable
 
+use std::fmt::{Display};
+
+/// An OptionField allows default options on specification. This forces us to handle defaults when parsing options
+#[derive(Clone)]
+pub enum OptionField<T> where
+T: DisplayOption + Clone {
+    Custom(T),
+    Default,
+}
+
+/// The DisplayOption trait specifies the formatting that we should display the types under different contexts
+pub trait DisplayOption {
+    /// The standard implementation of conversion to string
+    fn to_str(&self) -> String;
+    /// Converts the type into a tikz display inside the square bracket
+    fn to_tikz(&self) -> String;
+}
+
+impl<T: Display> DisplayOption for T {
+    fn to_str(&self) -> String {
+        format!("{}", self)
+    }
+
+    fn to_tikz(&self) -> String {
+        format!("{}", self)
+    }
+}
+
+
 #[derive(Clone)]
 pub struct Color(u8, u8, u8);
 
-impl Color {
+impl DisplayOption for Color {
     fn to_str(&self) -> String {
         let Color(r, g, b) = *self;
         format!("#{:02x}{:02x}{:02x}", r, g, b)
@@ -14,7 +43,6 @@ impl Color {
         format!("{{rgb,255:red,{};green,{};blue,{}}}", r, g, b)
     }
 }
-
 
 /// Colors enum containing all colors available in Tikz
 #[derive(Clone)]
@@ -76,28 +104,25 @@ impl TikzColor {
 
 #[derive(Clone)]
 pub struct PlotOptions{
-    pub fill_color: Option<Color>,
-    pub thickness: Option<f64>
+    pub fill_color: OptionField<Color>,
+    pub thickness: OptionField<usize>
 }
 
 impl PlotOptions {
     pub fn new() -> PlotOptions {
         PlotOptions { 
-            fill_color: Some(TikzColor::White.to_color()), 
-            thickness: Some(1.), 
+            fill_color: OptionField::Default, 
+            thickness: OptionField::Default, 
         }
     }
+}
 
-    pub fn tikzify(&self) -> String {
-        let mut s = String::new();
-        if let Some(c) = &self.fill_color {
-            s.push_str("fill=");
-            s.push_str(&c.to_tikz());
-        }
-        if let Some(thickness) = self.thickness {
-            s.push_str("width=");
-            s.push_str(&thickness.to_string())
-        }
-        return s;
+/// A helper function to convert a Plot Option into string
+pub fn tikzify_field<T>(s: &mut String, field: &OptionField<T>, field_name: &str) where
+T: DisplayOption + Clone {
+    if let OptionField::Custom(t) = field {
+        s.push_str(field_name);
+        s.push_str("=");
+        s.push_str(&t.to_tikz())
     }
 }

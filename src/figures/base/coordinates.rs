@@ -8,7 +8,7 @@ pub struct Coordinates<const DIMS: usize> {
 
 impl<const DIMS: usize> Coordinates<DIMS> {
     /// Creates a new coordinate point from array
-    pub fn new<T>(x: &[T; DIMS]) -> Coordinates<DIMS> where
+    pub fn new<T>(x: [T; DIMS]) -> Coordinates<DIMS> where
         T: Into<f64> + Copy 
     {
         let mut res: [f64; DIMS] = [0.; DIMS];
@@ -26,7 +26,7 @@ impl<const DIMS: usize> Coordinates<DIMS> {
     ///
     /// ```
     /// use tikzpaint_rs::figures::Coordinates;
-    /// let coord = Coordinates::new(&[1, 2, -3]);
+    /// let coord = Coordinates::new([1, 2, -3]);
     /// assert_eq!(1., coord.get(0).unwrap());
     /// assert_eq!(2., coord.get(1).unwrap());
     /// assert_eq!(-3., coord.get(2).unwrap());
@@ -46,8 +46,8 @@ impl<const DIMS: usize> Coordinates<DIMS> {
     ///
     /// ```
     /// use tikzpaint_rs::figures::Coordinates;
-    /// let coord = Coordinates::new(&[1, 2, -3]).scale(6);
-    /// let coord2 = Coordinates::new(&[6, 12, -18]);
+    /// let coord = Coordinates::new([1, 2, -3]).scale(6);
+    /// let coord2 = Coordinates::new([6, 12, -18]);
     /// assert!(coord == coord2);
     /// ```
     pub fn scale<T>(&self, other: T) -> Self where
@@ -68,7 +68,7 @@ impl<const DIMS: usize> Coordinates<DIMS> {
     ///
     /// ```
     /// use tikzpaint_rs::figures::Coordinates;
-    /// let coord = Coordinates::new(&[1, 2, -3]);
+    /// let coord = Coordinates::new([1, 2, -3]);
     /// let mag = (14 as f64).sqrt();
     /// assert!(coord.magnitude() - mag <= 1e-8);
     /// ```
@@ -88,8 +88,8 @@ impl<const DIMS: usize> Coordinates<DIMS> {
     ///
     /// ```
     /// use tikzpaint_rs::figures::Coordinates;
-    /// let coord = Coordinates::new(&[3, 4]).normalize();
-    /// let coord2 = Coordinates::new(&[0.6, 0.8]);
+    /// let coord = Coordinates::new([3, 4]).normalize();
+    /// let coord2 = Coordinates::new([0.6, 0.8]);
     /// assert!(coord == coord2);
     /// ```
     pub fn normalize(self) -> Self {
@@ -193,12 +193,12 @@ impl Coordinates<3> {
     ///
     /// ```
     /// use tikzpaint_rs::figures::Coordinates;
-    /// let a = Coordinates::new(&[3, 2, -4]);
-    /// let b = Coordinates::new(&[1, 2, 0]);
+    /// let a = Coordinates::new([3, 2, -4]);
+    /// let b = Coordinates::new([1, 2, 0]);
     /// let ab = a.cross(&b);
     /// let ba = b.cross(&a);
-    /// assert!(ab == Coordinates::new(&[8, -4, 4]));
-    /// assert!(ba == Coordinates::new(&[-8, 4, -4]));
+    /// assert!(ab == Coordinates::new([8, -4, 4]));
+    /// assert!(ba == Coordinates::new([-8, 4, -4]));
     /// ```
     pub fn cross(&self, other: &Coordinates<3>) -> Self {
         let u = self.values;
