@@ -1,5 +1,5 @@
 mod base;
-mod shapes;
+mod figureobjects;
 
 pub use base::coordinates::Coordinates;
 
@@ -14,5 +14,6 @@ pub use base::plotoptions::TikzColor;
 pub use base::figure::Figure;
 
 pub use base::projection::Projection;
-
-pub use shapes::point::Point;
+pub use base::projection::Identity;
+pub use base::projection::Matrix;
+pub use base::projection::Concat;

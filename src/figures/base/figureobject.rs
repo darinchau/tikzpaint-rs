@@ -11,7 +11,7 @@ use crate::figures::Projection;
 pub trait FigureObject<const DIMS: usize> {
     fn coordinates(&self) -> Vec<Coordinates<DIMS>>;
     fn options(&self) -> &PlotOptions;
-    fn project(&self, p: &Box<dyn Projection<DIMS, 2>>) -> Box<dyn Plot>;
+    fn project(&self, p: &Box<&dyn Projection<DIMS, 2>>) -> Box<dyn Plot>;
     fn len(&self) -> usize {
         return self.coordinates().len();
     }
