@@ -1,14 +1,7 @@
 //! Projections are traits that takes coordinates and outputs coordinates
-use crate::figures::{Coordinates};
+use std::rc::Rc;
 
-/// Separate implementation for this clone because we want to circumvent the object safety restriction
-/// Also makes implementation more explicit because we have to import it everytime we use it.
-/// At the time we need to turn a projection into a trait object, we can already throw away the clone method
-/// because then we would only need the 'call' method to project coordinates.
-/// The only thing this allows is for us to chain projections
-pub trait CloneProjection {
-    fn clone(&self) -> Self;
-}
+use crate::figures::{Coordinates};
 
 /// Basic implementation for a projection function trait object that takes Coordinates of INPUT dimensions and turn
 /// them into coordinates of OUTPUT dimensions
@@ -35,27 +28,25 @@ impl<const DIMS: usize> Projection<DIMS, DIMS> for Identity<DIMS> {
     }
 }
 
-impl<const DIMS: usize> CloneProjection for Identity<DIMS>{
-    fn clone(&self) -> Self {
-        Identity::<DIMS>
-    }
-}
-
 pub struct Concat<'a, const I: usize, const J: usize, const K: usize> {
-    proj1: Box<dyn Projection<I, J> + 'a>,
-    proj2: Box<dyn Projection<J, K> + 'a>
+    proj1: Rc<dyn Projection<I, J> + 'a>,
+    proj2: Rc<dyn Projection<J, K> + 'a>
 }
 
 impl<'a, const I: usize, const J: usize, const K: usize> Concat<'a, I, J, K> {
-    pub fn from<T, S>(proj1: T, proj2: S) -> Self where
-    T: Projection<I, J> + CloneProjection + 'a,
-    S: Projection<J, K> + CloneProjection + 'a {
-        let ptr1 = Box::new(proj1.clone()) as Box<dyn Projection<I, J>>;
-        let ptr2 = Box::new(proj2.clone()) as Box<dyn Projection<J, K>>;
-        Concat {
-            proj1: ptr1,
-            proj2: ptr2
-        }
+    /// We return also the RCs because we want people to be able to retreive
+    pub fn from<T, S>(proj1: T, proj2: S) -> (Self, Rc<T>, Rc<S>) where
+    T: Projection<I, J> + 'a,
+    S: Projection<J, K> + 'a {
+        let r1 = Rc::new(proj1);
+        let r2 = Rc::new(proj2);
+        
+        let res = Concat {
+            proj1: Rc::clone(&r1) as Rc<dyn Projection<I, J>>,
+            proj2: Rc::clone(&r2) as Rc<dyn Projection<J, K>>
+        };
+
+        (res, r1, r2)
     }
 }
 
@@ -103,11 +94,3 @@ impl<const I: usize, const J: usize> Projection<J, I> for Matrix<I, J> {
         Coordinates::new(&w)
     }
 }
-
-impl<const I: usize, const J: usize> CloneProjection for Matrix<I, J> {
-    fn clone(&self) -> Self {
-        Matrix{
-            values: self.values
-        }
-    }
-}   
