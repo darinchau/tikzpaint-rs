@@ -692,7 +692,10 @@ dependencies = [
 name = "tikzpaint-rs"
 version = "0.1.0"
 dependencies = [
+ "gloo-net",
  "num",
+ "serde",
+ "wasm-bindgen-futures",
  "yew",
 ]
 
