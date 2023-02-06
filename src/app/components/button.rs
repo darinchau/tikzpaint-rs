@@ -32,7 +32,6 @@ impl Component for Button {
         html! {
             <>
                 <button onclick={link.callback(|_| {
-                    println!("Hehe haha!");
                     Message::AddOne
                 })}>{
                     self.value
@@ -41,3 +40,4 @@ impl Component for Button {
         }
     }
 }
+
