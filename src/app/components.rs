@@ -1,10 +1,11 @@
 #[allow(dead_code)]
-mod atoms;
+pub mod atoms;
 
 #[allow(dead_code)]
-mod molecules;
+pub mod molecules;
 
 #[allow(dead_code)]
-mod compounds;
+pub mod compounds;
+
 
 
