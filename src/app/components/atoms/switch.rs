@@ -1,9 +1,13 @@
 //! The switch is a button that is either active or stale
 
+use gloo::console::log;
 use stylist::Style;
 use yew::prelude::*;
+use web_sys::HtmlElement;
+use wasm_bindgen::JsCast;
+use crate::app::{GetProperty, Serializable};
 
-#[derive(Clone)]
+#[derive(Clone, Debug)]
 pub enum SwitchState {
     Active,
     Stale
@@ -16,12 +20,46 @@ pub enum SwitchMessage {
 
 #[derive(Properties, PartialEq)]
 pub struct SwitchProperties{
+    pub id: AttrValue,
+    /// The callback is a function called right before the state change is triggered.
     pub cb: Option<Callback<MouseEvent, ()>>,
     pub children: Children,
 }
 
 pub struct Switch {
-    state: SwitchState
+    pub state: SwitchState
+}
+
+impl Switch {
+    pub fn new() -> Switch {
+        Switch { state: SwitchState::Stale }
+    }
+}
+
+impl Serializable for Switch {
+    fn into_str(&self) -> String {
+        format!("{:?}", self.state.clone())
+    }
+
+    fn from_str(s: &str) -> Option<Self> {
+        if s == "Active" {
+            return Some(Switch {
+                state: SwitchState::Active
+            });
+        }
+        else if s == "Stale" {
+            return Some(Switch {
+                state: SwitchState::Stale
+            });
+        }
+        else {
+            None
+        }
+    }
+}
+
+impl GetProperty for Switch {
+    const NAME: &'static str = "Switch";
 }
 
 impl Component for Switch {
@@ -47,18 +85,19 @@ impl Component for Switch {
             .unwrap_or(Callback::from(|_| ()));
         let link = ctx.link();
         let state = self.state.clone();
+        let properties = self.property();
         html! {
-            <div>
-                <button onclick={link.callback(move |x| {
-                    cb.emit(x);
-                    match state {
-                        SwitchState::Active => SwitchMessage::TurnOff,
-                        SwitchState::Stale => SwitchMessage::TurnOn,
-                    }
-                })}>
-                    {for children.iter()}
-                </button>
-            </div>
+            <button onclick={link.callback(move |x| {
+                cb.emit(x);
+                match state {
+                    SwitchState::Active => SwitchMessage::TurnOff,
+                    SwitchState::Stale => SwitchMessage::TurnOn,
+                }
+            })}>
+                {properties}
+                {for children.iter()}
+            </button>
         }
     }
 }
+

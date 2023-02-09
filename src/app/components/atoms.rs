@@ -1,4 +1,3 @@
-mod switch;
-
-pub use switch::Switch;
+#[allow(unused_imports)]
+pub mod switch;
 
