@@ -47,7 +47,7 @@ Self: Component + Serializable {
         }
     }
 
-    fn property(&self) -> Html {
+    fn property_html(&self) -> Html {
         html! {
             <properties hidden=true>
                 {format!("Type={}", Self::NAME)}
@@ -63,3 +63,4 @@ fn get_html<T: Into<Event>>(event: T) -> Option<HtmlElement> {
         .and_then(|t| t.dyn_into::<HtmlElement>().ok());
     return content;
 }
+

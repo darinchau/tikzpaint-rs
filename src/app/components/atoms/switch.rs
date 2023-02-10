@@ -20,8 +20,8 @@ pub enum SwitchMessage {
 
 #[derive(Properties, PartialEq)]
 pub struct SwitchProperties{
-    pub id: AttrValue,
     /// The callback is a function called right before the state change is triggered.
+    /// The input parameters is the mouse event and the state of the switch **before** the press
     pub cb: Option<Callback<MouseEvent, ()>>,
     pub children: Children,
 }
@@ -38,16 +38,19 @@ impl Switch {
 
 impl Serializable for Switch {
     fn into_str(&self) -> String {
-        format!("{:?}", self.state.clone())
+        match self.state {
+            SwitchState::Active => String::from("A"),
+            SwitchState::Stale => String::from("S"),
+        }
     }
 
     fn from_str(s: &str) -> Option<Self> {
-        if s == "Active" {
+        if s == "A" {
             return Some(Switch {
                 state: SwitchState::Active
             });
         }
-        else if s == "Stale" {
+        else if s == "S" {
             return Some(Switch {
                 state: SwitchState::Stale
             });
@@ -85,7 +88,7 @@ impl Component for Switch {
             .unwrap_or(Callback::from(|_| ()));
         let link = ctx.link();
         let state = self.state.clone();
-        let properties = self.property();
+        let properties = self.property_html();
         html! {
             <button onclick={link.callback(move |x| {
                 cb.emit(x);
@@ -100,4 +103,5 @@ impl Component for Switch {
         }
     }
 }
+
 
