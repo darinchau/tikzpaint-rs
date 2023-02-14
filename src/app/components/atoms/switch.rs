@@ -21,8 +21,9 @@ pub enum SwitchMessage {
 #[derive(Properties, PartialEq)]
 pub struct SwitchProperties{
     /// The callback is a function called right before the state change is triggered.
-    /// The input parameters is the mouse event and the state of the switch **before** the press
-    pub cb: Option<Callback<MouseEvent, ()>>,
+    /// The input parameters is the mouse event and the state of the switch **after** the press
+    pub name: AttrValue,
+    pub cb: Option<Callback<(MouseEvent, SwitchState), ()>>,
     pub children: Children,
 }
 
@@ -91,7 +92,12 @@ impl Component for Switch {
         let properties = self.property_html();
         html! {
             <button onclick={link.callback(move |x| {
-                cb.emit(x);
+                cb.emit((x, {
+                    match state {
+                        SwitchState::Active => SwitchState::Stale,
+                        SwitchState::Stale => SwitchState::Active,
+                    }
+                }));
                 match state {
                     SwitchState::Active => SwitchMessage::TurnOff,
                     SwitchState::Stale => SwitchMessage::TurnOn,

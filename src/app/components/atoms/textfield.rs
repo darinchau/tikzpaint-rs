@@ -7,8 +7,10 @@ use wasm_bindgen::JsCast;
 use crate::app::{GetProperty, Serializable, GetPropertyError};
 use web_sys::HtmlInputElement;
 
-pub struct TextFieldMessage {
-    msg: Option<String>
+pub enum TextFieldMessage {
+    Change(String),
+    Enter,
+    None,
 }
 
 #[derive(Properties, PartialEq)]
@@ -16,39 +18,41 @@ pub struct TextFieldProperties{
     pub name: AttrValue,
     pub label: AttrValue,
     /// The callback is a function called right before the state change is triggered.
-    pub cb: Option<Callback<(Event, String), ()>>,
+    pub onchange: Option<Callback<(Event, String), ()>>,
+    pub ontypeenter: Option<Callback<KeyboardEvent, ()>>,
 }
 
 pub struct TextField {
-    pub msg: String
+    pub msg: Option<String>
 }
 
 impl Serializable for TextField {
     fn from_str(s: &str) -> Option<Self> {
-        Some(TextField { msg: s.to_owned() })
+        if s.len() >= 1 && s.starts_with("s") {
+            return Some(TextField{
+                msg: Some(String::from(&s[1..]))
+            });
+        }
+
+        else if s.len() >= 1 && s.starts_with("n") {
+            return Some(TextField{
+                msg: None
+            });
+        }
+
+        return None
     }
 
     fn into_str(&self) -> String {
-        self.msg.clone()
+        if let Some(s) = self.msg.clone() {
+            return format!("s{}", s);
+        }
+        return String::from("n");
     }
 }
 
 impl GetProperty for TextField {
     const NAME: &'static str = "TextField";
-
-    fn get_component<T: Into<Event>>(event: T) -> Result<Self, GetPropertyError> {
-        let x: Event = event.into();
-        let input = x.target()
-        .and_then(|t| t.dyn_into::<HtmlInputElement>().ok());
-
-        if let Some(elem) = input {
-            return Ok(TextField {
-                msg: elem.value()
-            })
-        }
-
-        GetPropertyError::err(String::from("The target component of this event is not a TextField"))
-    }
 }
 
 impl Component for TextField {
@@ -57,39 +61,50 @@ impl Component for TextField {
 
     fn create(_ctx: &Context<Self>) -> Self {
         TextField {
-            msg: String::new()
+            msg: None
         }
     }
 
     fn view(&self, ctx: &Context<Self>) -> Html {
-        let cb = (&ctx.props().cb)
+        let onchange = (&ctx.props().onchange)
+            .clone()
+            .unwrap_or(Callback::from(|_| ()));
+        let onenter = (&ctx.props().ontypeenter)
             .clone()
             .unwrap_or(Callback::from(|_| ()));
         let link = ctx.link();
         let name = (&ctx.props().name).to_owned();
         let name2 = (&ctx.props().name).to_owned();
         let label = (&ctx.props().label).to_owned();
+        let property = self.property_html();
         html! {
-            <>
-                <label for={name}>{label}</label>
-                <input type="text" name={name2} onchange={link.callback(move |x: Event| {
-                    let input = x.target()
-                        .and_then(|t| t.dyn_into::<HtmlInputElement>().ok());
+            <div>
+                {property}
+                <label for={name}>{label}
+                    <input 
+                    type="text" 
+                    name={name2} 
+                    onchange={link.callback(move |x: Event| {
+                        let input = x.target()
+                            .and_then(|t| t.dyn_into::<HtmlInputElement>().ok());
 
-                    if let Some(elem) = input {
-                        cb.emit((x, elem.value()));
-                        return TextFieldMessage {
-                            msg: Some(elem.value())
+                        if let Some(elem) = input {
+                            onchange.emit((x, elem.value()));
+                            return TextFieldMessage::Change(elem.value())
                         }
-                    }
 
-                    TextFieldMessage {
-                        msg: None
-                    }
-                })}/>
-            </>
+                        TextFieldMessage::None
+                    })}
+                    onkeydown={link.callback(move |x: KeyboardEvent| {
+                        if x.key() == "Enter" {
+                            onenter.emit(x);
+                            return TextFieldMessage::Enter;
+                        }
+
+                        TextFieldMessage::None
+                    })}/>
+                </label>
+            </div>
         }
     }
 }
-
-

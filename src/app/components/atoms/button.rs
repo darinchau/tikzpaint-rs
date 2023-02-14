@@ -7,6 +7,13 @@ use web_sys::HtmlElement;
 use wasm_bindgen::JsCast;
 use crate::app::{GetProperty, Serializable};
 
+#[derive(PartialEq)]
+pub enum ButtonType {
+    Submit,
+    Reset,
+    Other
+}
+
 pub enum ButtonMessage {
     Press,
 }
@@ -15,6 +22,8 @@ pub enum ButtonMessage {
 pub struct ButtonProperties{
     /// The callback is a function called right before the state change is triggered.
     /// The input parameters is the mouse event and the state of the switch **before** the press
+    pub name: AttrValue,
+    pub button_type: ButtonType,
     pub cb: Option<Callback<MouseEvent, ()>>,
     pub children: Children,
 }
@@ -66,8 +75,13 @@ impl Component for Button {
             .unwrap_or(Callback::from(|_| ()));
         let link = ctx.link();
         let properties = self.property_html();
+        let t = match &ctx.props().button_type {
+            ButtonType::Submit => "submit",
+            ButtonType::Reset => "reset",
+            ButtonType::Other => "other"
+        };
         html! {
-            <button onclick={link.callback(move |x| {
+            <button kind={t} onclick={link.callback(move |x| {
                 cb.emit(x);
                 ButtonMessage::Press
             })}>

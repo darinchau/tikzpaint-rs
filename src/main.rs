@@ -1,24 +1,26 @@
+#![allow(unused)]
 use gloo::console::log;
 use yew::prelude::*;
-use tikzpaint_rs::app::{Switch, TextField, GetProperty};
+use tikzpaint_rs::app::{Switch, TextField, GetProperty, Button, ButtonType};
 
 #[function_component(App)]
 fn app() -> Html {
-    let fieldcb = Callback::from(|(_, _): (Event, String)| {
-
+    let state = use_state(|| String::new());
+    let onchange_state = state.clone();
+    let onchange = Callback::from(move |(_, x): (Event, String)| {
+        onchange_state.set(x);
     });
 
-    let switchcb = Callback::from(|x: MouseEvent| {
-        let switch = Switch::get_component(x).ok().unwrap();
-        log!(format!("{:?}", switch.state))
+    let buttoncb = Callback::from(move |x: MouseEvent| {
+        log!(format!("{}", &*state))
     });
 
     html! {
         <>
-            <TextField name={"something"} label={"Hiya! Enter stuff: "} cb={fieldcb}></TextField>
-            <Switch cb={switchcb}>
+            <TextField name={"something"} label={"Hiya! Enter stuff: "} onchange={onchange}></TextField>
+            <Button button_type={ButtonType::Submit} name={"submit"} cb={buttoncb}>
                 {"Press me"}
-            </Switch>
+            </Button>
         </>
     }
 }
@@ -26,7 +28,3 @@ fn app() -> Html {
 fn main() {
     yew::Renderer::<App>::new().render();
 }
-
-
-
-
