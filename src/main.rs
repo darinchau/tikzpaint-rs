@@ -1,27 +1,28 @@
 #![allow(unused)]
 use gloo::console::log;
 use yew::prelude::*;
-use tikzpaint_rs::app::{Switch, TextField, GetProperty, Button, ButtonType};
+use tikzpaint_rs::app::{Switch, TextField, GetProperty, Button, ButtonType, HeaderBar};
 
 #[function_component(App)]
 fn app() -> Html {
-    let state = use_state(|| String::new());
-    let onchange_state = state.clone();
-    let onchange = Callback::from(move |(_, x): (Event, String)| {
-        onchange_state.set(x);
+    let on_about = Callback::from(|x: MouseEvent| {
+        log!("Pressed about");
     });
-
-    let buttoncb = Callback::from(move |x: MouseEvent| {
-        log!(format!("{}", &*state))
+    let on_help = Callback::from(|x: MouseEvent| {
+        log!("Pressed help");
+    });
+    let on_undo = Callback::from(|x: MouseEvent| {
+        log!("Pressed undo");
+    });
+    let on_redo = Callback::from(|x: MouseEvent| {
+        log!("Pressed redo");
     });
 
     html! {
-        <>
-            <TextField name={"something"} label={"Hiya! Enter stuff: "} onchange={onchange}></TextField>
-            <Button button_type={ButtonType::Submit} name={"submit"} cb={buttoncb}>
-                {"Press me"}
-            </Button>
-        </>
+        <div>
+            <HeaderBar on_about={on_about} on_help={on_help} on_undo={on_undo} on_redo={on_redo}/>
+            {""}
+        <div/>
     }
 }
 

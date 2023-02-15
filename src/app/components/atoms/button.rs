@@ -78,10 +78,10 @@ impl Component for Button {
         let t = match &ctx.props().button_type {
             ButtonType::Submit => "submit",
             ButtonType::Reset => "reset",
-            ButtonType::Other => "other"
+            ButtonType::Other => "button"
         };
         html! {
-            <button kind={t} onclick={link.callback(move |x| {
+            <button type={t} onclick={link.callback(move |x| {
                 cb.emit(x);
                 ButtonMessage::Press
             })}>
