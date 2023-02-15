@@ -1,7 +1,7 @@
 #![allow(unused)]
 use gloo::console::log;
 use yew::prelude::*;
-use tikzpaint_rs::app::{Switch, TextField, GetProperty, Button, ButtonType, HeaderBar};
+use tikzpaint_rs::app::*;
 
 #[function_component(App)]
 fn app() -> Html {
@@ -21,8 +21,10 @@ fn app() -> Html {
     html! {
         <div>
             <HeaderBar on_about={on_about} on_help={on_help} on_undo={on_undo} on_redo={on_redo}/>
-            {""}
-        <div/>
+            {FILLER1}
+            {FILLER2}
+            {FILLER3}
+        </div>
     }
 }
 

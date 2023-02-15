@@ -12,3 +12,5 @@ pub use utils::getproperty::GetProperty;
 pub use utils::getproperty::GetPropertyError;
 
 pub use utils::serializable::Serializable;
+
+pub use utils::filler_text::*;

@@ -1,7 +1,14 @@
+/* All the styles related to the header bar goes here */
+
 /* Add a black background color to the top navigation */
 .topnav {
-    background-color: #333;
+    background-color: #3eb489;
     overflow: hidden;
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    z-index: 999;
 }
 
 /* Style the links inside the navigation bar */
@@ -11,7 +18,7 @@
     color: #f2f2f2;
     background-color: #333;
     text-align: center;
-    padding: 14px 16px;
+    padding: 4px 10px;
     text-decoration: none;
     font-size: 17px;
     /* padding: 0; */
@@ -37,5 +44,5 @@
 }
 
 .topnav svg {
-    transform: scale(0.7);
+    transform: scale(0.5);
 }
