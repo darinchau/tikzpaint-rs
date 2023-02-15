@@ -65,17 +65,17 @@ impl Component for HeaderBar {
 
         html! {
             <div class={"topnav"}>
-                <Button name={"undo"} button_type={ButtonType::Other} cb={on_undo}>
-                    {undo}
-                </Button>
-                <Button name={"redo"} button_type={ButtonType::Other} cb={on_redo}>
-                    {redo}
+                <Button name={"about"} button_type={ButtonType::Other} cb={on_about}>
+                    {about}
                 </Button>
                 <Button name={"help"} button_type={ButtonType::Other} cb={on_help}>
                     {help}
                 </Button>
-                <Button name={"about"} button_type={ButtonType::Other} cb={on_about}>
-                    {about}
+                <Button name={"redo"} button_type={ButtonType::Other} cb={on_redo}>
+                    {redo}
+                </Button>
+                <Button name={"undo"} button_type={ButtonType::Other} cb={on_undo}>
+                    {undo}
                 </Button>
             </div>
         }
