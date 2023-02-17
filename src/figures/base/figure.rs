@@ -18,7 +18,7 @@ impl<'a, const DIMS: usize> Figure<'a, DIMS> {
     /// to live long enough and the easiest way is to take ownership of the object via an Rc
     pub fn draw(&mut self, obj: &'a dyn Drawable<DIMS>) where {
         self.to_draw.push(obj);
-    } 
+    }
 
     /// Load method takes a function object and a projection object. The method will feed
     /// every coordinate in every drawable object through the function f that you provide.
@@ -43,11 +43,11 @@ impl<'a, const DIMS: usize> Figure<'a, DIMS> {
     /// Output Tikz is a wrapper around the load method, also the core of Tikz code
     /// generation. The function object we pass is x -> x.tikzify(), and we collect
     /// everything into one string.
-    /// 
+    ///
     /// Example:
     /// ```
     /// use tikzpaint_rs::figures::{Figure, Identity};
-    /// 
+    ///
     /// let fig = Figure::<2>::new();
     /// let st = fig.output_tikz(&Identity);
     /// assert_eq!(st, "\\begin{tikzpicture}\n\\end{tikzpicture}")

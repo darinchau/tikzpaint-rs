@@ -12,6 +12,7 @@ pub use components::molecules::maincanvas::MainCanvas;
 pub use utils::getproperty::GetProperty;
 pub use utils::getproperty::GetPropertyError;
 
-pub use utils::serializable::Serializable;
-
 pub use utils::filler_text::*;
+
+// Reexport serializable since I don't want to break dependencies in this wrapper app
+pub use crate::figures::Serializable;

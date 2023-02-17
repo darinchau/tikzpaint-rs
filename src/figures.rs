@@ -1,6 +1,7 @@
 mod base;
 mod figureobjects;
 mod drawables;
+mod utils;
 
 pub use base::coordinates::Coordinates;
 
@@ -21,3 +22,5 @@ pub use base::projection::Concat;
 
 pub use figureobjects::point::FOPoint;
 pub use drawables::point::Point;
+
+pub use utils::serializable::Serializable;

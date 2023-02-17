@@ -2,6 +2,7 @@
 use gloo::console::log;
 use yew::prelude::*;
 use tikzpaint_rs::app::*;
+use std::rc::Rc;
 
 #[function_component(App)]
 fn app() -> Html {
@@ -18,12 +19,16 @@ fn app() -> Html {
         log!("Pressed redo");
     });
 
+    // Create all the proportions for stuff
+    let header_height: usize = 60;
+    let side_bar_width: usize = 72;
+    let main_canvas_height = AttrValue::from(format!("calc(100% - {}px)", header_height));
+    let main_canvas_width = AttrValue::from(format!("calc(100%-{}px", side_bar_width));
+
     html! {
         <div>
-            <HeaderBar height={100} on_about={on_about} on_help={on_help} on_undo={on_undo} on_redo={on_redo}/>
-            {FILLER1}
-            {FILLER2}
-            {FILLER3}
+            <HeaderBar height={header_height} on_about={on_about} on_help={on_help} on_undo={on_undo} on_redo={on_redo}/>
+            <MainCanvas top_px_offset={header_height} left_px_offset={side_bar_width}/>
         </div>
     }
 }

@@ -7,4 +7,3 @@ Self: Sized {
     fn into_str(&self) -> String;
     fn from_str(s: &str) -> Option<Self>;
 }
-

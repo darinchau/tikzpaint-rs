@@ -75,13 +75,13 @@ impl Component for Button {
             .unwrap_or(Callback::from(|_| ()));
         let link = ctx.link();
         let properties = self.property_html();
-        let t = match &ctx.props().button_type {
+        let button_type = match &ctx.props().button_type {
             ButtonType::Submit => "submit",
             ButtonType::Reset => "reset",
             ButtonType::Other => "button"
         };
         html! {
-            <button type={t} onclick={link.callback(move |x| {
+            <button type={button_type} onclick={link.callback(move |x| {
                 cb.emit(x);
                 ButtonMessage::Press
             })}>
