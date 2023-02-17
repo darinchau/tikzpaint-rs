@@ -7,6 +7,7 @@ pub use components::atoms::button::Button;
 pub use components::atoms::button::ButtonType;
 
 pub use components::molecules::headerbar::HeaderBar;
+pub use components::molecules::maincanvas::MainCanvas;
 
 pub use utils::getproperty::GetProperty;
 pub use utils::getproperty::GetPropertyError;

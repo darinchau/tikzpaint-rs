@@ -20,7 +20,7 @@ fn app() -> Html {
 
     html! {
         <div>
-            <HeaderBar on_about={on_about} on_help={on_help} on_undo={on_undo} on_redo={on_redo}/>
+            <HeaderBar height={100} on_about={on_about} on_help={on_help} on_undo={on_undo} on_redo={on_redo}/>
             {FILLER1}
             {FILLER2}
             {FILLER3}

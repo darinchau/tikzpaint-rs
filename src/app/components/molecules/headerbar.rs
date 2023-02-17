@@ -17,6 +17,7 @@ pub enum HeaderBarMessage {
 
 #[derive(Properties, PartialEq)]
 pub struct HeaderBarProps {
+    pub height: usize,
     pub on_undo: Callback<MouseEvent, ()>,
     pub on_redo: Callback<MouseEvent, ()>,
     pub on_about: Callback<MouseEvent, ()>,
@@ -63,8 +64,18 @@ impl Component for HeaderBar {
         let undo = Html::from_html_unchecked(self.undo_icon.clone());
         let help = Html::from_html_unchecked(self.help_icon.clone());
 
+        let h = (&ctx.props()).height.to_string();
+
+        let height_style = Style::new(format!("height: {}px;", h))
+            .unwrap_or_else(|_| {
+                log!("Failed to load headbar height style");
+                Style::new("").unwrap()
+            });
+
+        let h_style_name = height_style.get_class_name();
+
         html! {
-            <div class={"topnav"}>
+            <div class={format!("topnav {}", h_style_name)}>
                 <Button name={"about"} button_type={ButtonType::Other} cb={on_about}>
                     {about}
                 </Button>
