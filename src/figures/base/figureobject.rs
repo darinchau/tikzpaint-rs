@@ -5,6 +5,7 @@
 use crate::figures::Coordinates;
 use crate::figures::PlotOptions;
 use crate::figures::Projection;
+use std::rc::Rc;
 
 /// Figure Objects serve as the atomic base objects that will be translated to shapes on the Figure and
 /// into (Tikz or svg) code.
@@ -20,6 +21,10 @@ pub trait FigureObject<const DIMS: usize> {
     }
 }
 
+pub struct FigureObjectWrapper<const DIMS: usize> {
+    obj: Rc<dyn FigureObject<DIMS>>
+}
+
 pub trait Plot: FigureObject<2> {
     fn tikzify(&self) -> String;
     fn tikz_options(&self) -> String;
@@ -30,4 +35,11 @@ pub trait Plot: FigureObject<2> {
 pub trait Drawable<const DIMS: usize> {
     /// Returns a vector of FigureObject that we will pass to the figure to draw.
     fn draw(&self) -> Vec<&dyn FigureObject<DIMS>>;
+}
+
+/// If we look at the requirements for a Drawable object, we see we need the draw method, sized, clone, and no lifetime parameters
+pub trait DrawableObject<const DIMS: usize> where
+    Self: Drawable<DIMS> + Sized + Clone + 'static
+{
+
 }

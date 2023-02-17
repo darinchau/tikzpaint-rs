@@ -1,9 +1,9 @@
 //! This is a direct implementation of a point out of the FOPoint
 
-use crate::figures::{Coordinates, Drawable, FigureObject, FOPoint};
+use crate::figures::{Coordinates, Drawable, FigureObject, FOPoint, DrawableObject};
 
 /// The implementation of a node with no contents.
-/// 
+///
 /// Example
 /// ```
 /// use tikzpaint_rs::figures::{Point, Coordinates, Figure, Identity};
@@ -12,11 +12,13 @@ use crate::figures::{Coordinates, Drawable, FigureObject, FOPoint};
 /// let mut fig = Figure::<2>::new();
 /// fig.draw(&p1);
 /// fig.draw(&p2);
-/// 
+///
 /// let result = fig.output_tikz(&Identity);
 /// let expect = "\\begin{tikzpicture}\n\t\\node[] at (2, 3) {}\n\t\\node[] at (4, 5) {}\n\\end{tikzpicture}";
 /// assert_eq!(result, expect);
 /// ```
+
+#[derive(Clone)]
 pub struct Point<const DIMS: usize> {
     p: FOPoint<DIMS>,
 }
@@ -34,3 +36,5 @@ impl<const DIMS: usize> Drawable<DIMS> for Point<DIMS> {
         return vec![&self.p]
     }
 }
+
+impl<const DIMS: usize> DrawableObject<DIMS> for Point<DIMS>{}

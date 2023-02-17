@@ -1,8 +1,9 @@
 //! Implementation of a node. Our convention is to begin the name of every direct implementation of figure object
 //! with the prefix FO-
 
-use crate::figures::{PlotOptions, Coordinates, FigureObject, Plot, Projection, base::plotoptions::tikzify_field};
+use crate::figures::*;
 
+#[derive(Clone)]
 pub struct FOPoint<const DIMS: usize> {
     point: Coordinates<DIMS>,
     option: PlotOptions,

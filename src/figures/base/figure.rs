@@ -1,12 +1,31 @@
 //! A figure object serves as a canvas to convert drawables into displayables into code and shapes
 
-use crate::figures::{Drawable, Projection, Plot};
+use crate::figures::{Drawable, Projection, Plot, DrawableObject};
+use std::rc::Rc;
 
-pub struct Figure<'a, const DIMS: usize> {
-    to_draw: Vec<&'a dyn Drawable<DIMS>>,
+pub struct Figure<const DIMS: usize> {
+    to_draw: Vec<DrawableFigureWrapper<DIMS>>,
 }
 
-impl<'a, const DIMS: usize> Figure<'a, DIMS> {
+struct DrawableFigureWrapper<const DIMS: usize> {
+    obj: Rc<dyn Drawable<DIMS>>
+}
+
+impl<const DIMS: usize> DrawableFigureWrapper<DIMS> {
+    fn new<T: Drawable<DIMS> + Sized + Clone + 'static>(obj: & T) -> Self {
+        let obj_copy = Rc::new(obj.to_owned()) as Rc<dyn Drawable<DIMS>>;
+        DrawableFigureWrapper {
+            obj: obj_copy
+        }
+    }
+
+    fn get(&self) -> Rc<dyn Drawable<DIMS>> {
+        let obj_copy = Rc::clone(&self.obj);
+        return obj_copy;
+    }
+}
+
+impl<const DIMS: usize> Figure<DIMS> {
     pub fn new() -> Self {
         Figure {
             to_draw: vec![]
@@ -16,8 +35,9 @@ impl<'a, const DIMS: usize> Figure<'a, DIMS> {
     /// Adds 'obj' to the list of objects to be drawn. We use an RC because we don't want
     /// to take ownership of your lovely drawable object, but we also need the drawable object
     /// to live long enough and the easiest way is to take ownership of the object via an Rc
-    pub fn draw(&mut self, obj: &'a dyn Drawable<DIMS>) where {
-        self.to_draw.push(obj);
+    pub fn draw<T: DrawableObject<DIMS>>(&mut self, obj: &T) where {
+        let obj_copy = DrawableFigureWrapper::new(obj);
+        self.to_draw.push(obj_copy);
     }
 
     /// Load method takes a function object and a projection object. The method will feed
@@ -30,7 +50,7 @@ impl<'a, const DIMS: usize> Figure<'a, DIMS> {
         let project = Box::new(proj as &dyn Projection<DIMS, 2>);
         let mut v: Vec<S> = Vec::new();
         for x in &self.to_draw {
-            for obj in x.draw() {
+            for obj in x.get().draw() {
                 let new_obj = obj.project(&project);
                 let ret_s = f(new_obj);
                 v.push(ret_s);
