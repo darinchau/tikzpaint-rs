@@ -27,10 +27,6 @@ pub trait FigureObject<const DIMS: usize> where
     Self: FO<DIMS> + Serializable + Hashable
 { }
 
-pub struct FigureObjectWrapper<const DIMS: usize> {
-    obj: Rc<dyn FO<DIMS>>
-}
-
 pub trait Plot: FO<2> {
     fn tikzify(&self) -> String;
     fn tikz_options(&self) -> String;

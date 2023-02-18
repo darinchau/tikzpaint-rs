@@ -6,6 +6,7 @@ mod utils;
 pub use base::coordinates::Coordinates;
 
 pub use base::figureobject::FO;
+pub use base::figureobject::FigureObject;
 pub use base::figureobject::DrawableObject;
 pub use base::figureobject::Drawable;
 pub use base::figureobject::Plot;

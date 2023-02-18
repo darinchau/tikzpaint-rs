@@ -37,9 +37,19 @@ impl<const DIMS: usize> Drawable<DIMS> for Point<DIMS> {
     }
 }
 
-// impl<const DIMS: usize> Serializable for Point<DIMS>{
+impl<const DIMS: usize> Serializable for Point<DIMS>{
+    fn from_str(s: &str) -> Option<Self> {
+        if s.starts_with("pt") {
+            if let Some(x) = FOPoint::<DIMS>::from_str(&s[2..]) {
 
-// }
+            }
+        }
+    }
+
+    fn into_str(&self) -> String {
+        format!("pt{}", self.p.into_str())
+    }
+}
 
 impl<const DIMS: usize> Hashable for Point<DIMS>{
     fn hash(&self) -> i64 {
@@ -47,4 +57,4 @@ impl<const DIMS: usize> Hashable for Point<DIMS>{
     }
 }
 
-// impl<const DIMS: usize> DrawableObject<DIMS> for Point<DIMS>{}
+impl<const DIMS: usize> DrawableObject<DIMS> for Point<DIMS>{}

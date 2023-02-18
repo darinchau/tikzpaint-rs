@@ -66,3 +66,15 @@ impl Plot for FOPoint<2> {
         return s;
     }
 }
+
+impl<const DIMS: usize> Serializable for FOPoint<DIMS> {
+    fn from_str(s: &str) -> Option<Self> {
+
+    }
+
+    fn into_str(&self) -> String {
+
+    }
+}
+
+impl<const DIMS: usize> FigureObject<DIMS> for FOPoint<DIMS> {}

@@ -1,5 +1,10 @@
 //! A trait which, when defined, lets us serialize components/structs into strings and the other way round
+
+#![feature(generic_const_exprs)]
+
 use std::{fmt::Write, num::ParseIntError};
+use std::any::TypeId;
+use std::mem::size_of;
 
 /// The serializable trait allows components/struct to turn from or into string.
 /// let s = Self::from_str(self.into_str()); should be identical to Clone
@@ -9,6 +14,7 @@ Self: Sized {
     fn from_str(s: &str) -> Option<Self>;
 }
 
+// Implementing Serializable for all the primitives and String
 fn decode_hex(s: &str) -> Result<Vec<u8>, ParseIntError> {
     (0..s.len())
         .step_by(2)
@@ -16,54 +22,108 @@ fn decode_hex(s: &str) -> Result<Vec<u8>, ParseIntError> {
         .collect()
 }
 
-impl Serializable for f64 {
-    /// Serializes a float into hex array
-    ///
-    /// # Examples
-    ///
-    /// ```
-    /// use tikzpaint_rs::figures::Serializable;
-    /// let x = 5.1;
-    /// let hex_array = x.into_str();
-    /// assert_eq!(hex_array, "f4014666666666666");
-    ///
-    /// ```
-    ///
-    /// # The classic example where 0.1 + 0.2 != 0.3
-    /// ```
-    /// use tikzpaint_rs::figures::Serializable;
-    /// let x = (0.1 + 0.2).into_str();
-    /// let y = (0.3).into_str();
-    /// assert!(x != y);
-    /// ```
-    fn from_str(s: &str) -> Option<Self> {
-        if s.starts_with('f') {
-            if let Some(r) = decode_hex(&s[1..]).ok() {
-                if r.len() != 8 {
+fn encode_to_hex<const N: usize>(a: &'static str, s: [u8; N]) -> String {
+    let mut res = String::from(a);
+    for u in s.into_iter() {
+        res.push_str(&(format!("{:x}", u)));
+    }
+    res
+}
+
+fn decode_from_hex<const N: usize>(a: &'static str, s: &str) -> Option<[u8; N]> {
+    if s.starts_with(a) {
+        if let Some(r) = decode_hex(&s[a.len()..]).ok() {
+            if r.len() != N {
+                return None;
+            }
+
+            let y = {
+                let mut t = [0_u8; N];
+                for i in 0..N {
+                    t[i] = r[i];
+                }
+                t
+            };
+
+            return Some(y);
+        }
+        return None;
+    }
+    return None;
+}
+
+// I am using combinations of macros and generics so I can write simpler macros
+macro_rules! seriz {
+    {$($t:ty : $id:expr),*} => {
+        $ (
+            impl Serializable for $t {
+                fn from_str(s: &str) -> Option<Self> {
+                    if let Some(x) = decode_from_hex($id, s) {
+                        return Some(<$t>::from_be_bytes(x));
+                    }
                     return None;
                 }
 
-                let y = {
-                    let mut t = [0_u8; 8];
-                    for i in 0..8 {
-                        t[i] = r[i];
-                    }
-                    t
-                };
+                fn into_str(&self) -> String {
+                    let y = self.to_be_bytes();
+                    encode_to_hex($id, y)
+                }
+            }
+        )*
+    }
+}
 
-                Some(f64::from_be_bytes(y))
-            }
-            else {
-                return None;
-            }
+seriz!(
+    u128: "q",
+    i128: "w",
+    u64: "u",
+    i64: "i",
+    f64: "f",
+    i32: "e",
+    u32: "r",
+    f32: "t",
+    u16: "y",
+    i16: "o",
+    u8: "p",
+    i8: "a"
+);
+
+impl Serializable for bool {
+    fn from_str(s: &str) -> Option<Self> {
+        if s == "1" {
+            return Some(true);
         }
-        else {
-            None
+        else if s == "0" {
+            return Some(false);
         }
+        return None;
     }
 
     fn into_str(&self) -> String {
-        let y = self.to_be_bytes();
-        format!("f{:x}{:x}{:x}{:x}{:x}{:x}{:x}{:x}", y[0], y[1], y[2], y[3], y[4], y[5], y[6], y[7])
+        if *self {String::from("1")} else {String::from("0")}
+    }
+}
+
+impl Serializable for char {
+    fn into_str(&self) -> String {
+        String::from(*self)
+    }
+
+    fn from_str(s: &str) -> Option<Self> {
+        let sa: Vec<char> = s.chars().collect();
+        if sa.len() == 1 {
+            return Some(sa[0]);
+        }
+        return None;
+    }
+}
+
+impl Serializable for String {
+    fn from_str(s: &str) -> Option<Self> {
+        Some(String::from(s))
+    }
+
+    fn into_str(&self) -> String {
+        String::from(self)
     }
 }

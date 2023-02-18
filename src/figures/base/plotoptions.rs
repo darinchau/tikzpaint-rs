@@ -1,14 +1,40 @@
 //! PlotOptions is a struct that holds info (such as color, thickness etc) of a displayable/drawable
 
 use std::fmt::{Display};
+use crate::figures::Serializable;
 
 /// An OptionField allows default options on specification. This forces us to handle defaults when parsing options
 #[derive(Clone)]
 pub enum OptionField<T> where
-T: DisplayOption + Clone {
+T: DisplayOption + Clone + Serializable {
     Custom(T),
     Default,
     None
+}
+
+impl<T: DisplayOption + Clone + Serializable> Serializable for OptionField<T> {
+    fn from_str(s: &str) -> Option<Self> {
+        if s.starts_with("opt") {
+            if s[3..] == "d" {
+                return Some(OptionField::Default);
+            }
+            else if s[3..] == "n" {
+                return Some(OptionField::None);
+            }
+            else if let Some(t) = T::from_str(&s[3..]) {
+                return Some(OptionField::Custom((t)));
+            }
+        }
+        return None;
+    }
+
+    fn into_str(&self) -> String {
+        match self {
+            OptionField::Default => String::from("optd"),
+            OptionField::None => String::from("optn"),
+            OptionField::Custom(t) => format!("opt{}", t.into_str())
+        }
+    }
 }
 
 /// The DisplayOption trait specifies the formatting that we should display the types under different contexts
@@ -42,6 +68,16 @@ impl DisplayOption for Color {
     fn to_tikz(&self) -> String {
         let Color(r, g, b) = *self;
         format!("{{rgb,255:red,{};green,{};blue,{}}}", r, g, b)
+    }
+}
+
+impl Serializable for Color {
+    fn into_str(&self) -> String {
+        self.to_str()
+    }
+
+    fn from_str(s: &str) -> Option<Self> {
+
     }
 }
 
@@ -106,7 +142,7 @@ impl TikzColor {
 #[derive(Clone)]
 pub struct PlotOptions{
     pub fill_color: OptionField<Color>,
-    pub thickness: OptionField<usize>
+    pub thickness: OptionField<u64>
 }
 
 impl PlotOptions {
@@ -120,7 +156,7 @@ impl PlotOptions {
 
 /// A helper function to convert a Plot Option into string
 pub fn tikzify_field<T>(s: &mut String, field: &OptionField<T>, field_name: &str) where
-T: DisplayOption + Clone {
+T: DisplayOption + Clone + Serializable {
     if let OptionField::Custom(t) = field {
         s.push_str(field_name);
         s.push_str("=");
