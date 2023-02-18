@@ -1,6 +1,6 @@
 //! This is a direct implementation of a point out of the FOPoint
 
-use crate::figures::{Coordinates, Drawable, FigureObject, FOPoint, DrawableObject};
+use crate::{figures::{Coordinates, Drawable, FO, FOPoint, DrawableObject, Hashable, Serializable}};
 
 /// The implementation of a node with no contents.
 ///
@@ -32,9 +32,19 @@ impl<const DIMS: usize> Point<DIMS> {
 }
 
 impl<const DIMS: usize> Drawable<DIMS> for Point<DIMS> {
-    fn draw(&self) -> Vec<&dyn FigureObject<DIMS>> {
+    fn draw(&self) -> Vec<&dyn FO<DIMS>> {
         return vec![&self.p]
     }
 }
 
-impl<const DIMS: usize> DrawableObject<DIMS> for Point<DIMS>{}
+// impl<const DIMS: usize> Serializable for Point<DIMS>{
+
+// }
+
+impl<const DIMS: usize> Hashable for Point<DIMS>{
+    fn hash(&self) -> i64 {
+        return 7 * self.p.hash();
+    }
+}
+
+// impl<const DIMS: usize> DrawableObject<DIMS> for Point<DIMS>{}

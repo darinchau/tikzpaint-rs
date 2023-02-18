@@ -1,6 +1,10 @@
 use std::fmt::Display;
+use std::hash::Hash;
 use std::ops::{Add, Sub, Mul, Div, Index};
 use std::f64::EPSILON;
+
+use crate::app::Serializable;
+use crate::figures::Hashable;
 
 pub struct Coordinates<const DIMS: usize> {
     values: [f64; DIMS],
@@ -9,7 +13,7 @@ pub struct Coordinates<const DIMS: usize> {
 impl<const DIMS: usize> Coordinates<DIMS> {
     /// Creates a new coordinate point from array
     pub fn new<T>(x: [T; DIMS]) -> Coordinates<DIMS> where
-        T: Into<f64> + Copy 
+        T: Into<f64> + Copy
     {
         let mut res: [f64; DIMS] = [0.; DIMS];
         for i in 0..DIMS {
@@ -51,7 +55,7 @@ impl<const DIMS: usize> Coordinates<DIMS> {
     /// assert!(coord == coord2);
     /// ```
     pub fn scale<T>(&self, other: T) -> Self where
-        T: Into<f64> + Copy  
+        T: Into<f64> + Copy
     {
         let mut res = [0.; DIMS];
         for i in 0..DIMS {
@@ -205,10 +209,33 @@ impl Coordinates<3> {
         let v = other.values;
         return Coordinates {
             values: [
-                u[1] * v[2] - u[2] * v[1], 
-                u[2] * v[0] - u[0] * v[2], 
+                u[1] * v[2] - u[2] * v[1],
+                u[2] * v[0] - u[0] * v[2],
                 u[0] * v[1] - u[1] * v[0]
             ]
         }
+    }
+}
+
+// impl<const DIMS: usize> Serializable for Coordinates<DIMS> {
+//     fn into_str(&self) -> String {
+//         let mut s = format!("cd{}", DIMS);
+//         for v in self.values {
+//             s.push_str(&v.into_str());
+//         }
+
+//         s
+//     }
+
+//     fn from_str(s: &str) -> Option<Self> {
+//         if not s.starts_with(pat)
+//     }
+// }
+
+impl <const DIMS: usize> Hashable for Coordinates<DIMS> {
+    fn hash(&self) -> i64 {
+        return self.values.iter().enumerate().map(|(i, x)| {
+            i as i64 | x.hash()
+        }).sum();
     }
 }

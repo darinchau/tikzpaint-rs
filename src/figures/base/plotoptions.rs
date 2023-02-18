@@ -8,6 +8,7 @@ pub enum OptionField<T> where
 T: DisplayOption + Clone {
     Custom(T),
     Default,
+    None
 }
 
 /// The DisplayOption trait specifies the formatting that we should display the types under different contexts
@@ -110,9 +111,9 @@ pub struct PlotOptions{
 
 impl PlotOptions {
     pub fn new() -> PlotOptions {
-        PlotOptions { 
-            fill_color: OptionField::Default, 
-            thickness: OptionField::Default, 
+        PlotOptions {
+            fill_color: OptionField::Default,
+            thickness: OptionField::Default,
         }
     }
 }

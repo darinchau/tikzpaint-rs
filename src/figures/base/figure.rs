@@ -5,6 +5,13 @@ use std::rc::Rc;
 
 pub struct Figure<const DIMS: usize> {
     to_draw: Vec<DrawableFigureWrapper<DIMS>>,
+    hash: i64
+}
+
+impl<const DIMS: usize> PartialEq for Figure<DIMS> {
+    fn eq(&self, other: &Self) -> bool {
+        return self.hash == other.hash;
+    }
 }
 
 struct DrawableFigureWrapper<const DIMS: usize> {
@@ -28,7 +35,8 @@ impl<const DIMS: usize> DrawableFigureWrapper<DIMS> {
 impl<const DIMS: usize> Figure<DIMS> {
     pub fn new() -> Self {
         Figure {
-            to_draw: vec![]
+            to_draw: vec![],
+            hash: 0
         }
     }
 

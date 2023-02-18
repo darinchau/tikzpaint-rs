@@ -1,3 +1,5 @@
+use yew::prelude::*;
+
 mod components;
 mod utils;
 
@@ -16,3 +18,14 @@ pub use utils::filler_text::*;
 
 // Reexport serializable since I don't want to break dependencies in this wrapper app
 pub use crate::figures::Serializable;
+
+// ================================================================================== //
+// ============================= Main implementation ================================ //
+// ================================================================================== //
+
+use crate::figures::Figure;
+
+/// The main app is a coordinator component that coordinates all three main components
+pub struct CanvasManager {
+    fig: Figure<2>,
+}

@@ -24,7 +24,7 @@ impl<const DIMS: usize> FOPoint<DIMS> {
     }
 }
 
-impl<const DIMS: usize> FigureObject<DIMS> for FOPoint<DIMS> {
+impl<const DIMS: usize> FO<DIMS> for FOPoint<DIMS> {
     fn coordinates(&self) -> Vec<Coordinates<DIMS>> {
         vec![self.point.clone()]
     }
@@ -44,6 +44,12 @@ impl<const DIMS: usize> FigureObject<DIMS> for FOPoint<DIMS> {
             option: self.option.clone(),
             content: self.content.clone()
         });
+    }
+}
+
+impl<const DIMS: usize> Hashable for FOPoint<DIMS>  {
+    fn hash(&self) -> i64 {
+        return 17 * self.point.hash();
     }
 }
 
