@@ -69,11 +69,22 @@ impl Plot for FOPoint<2> {
 
 impl<const DIMS: usize> Serializable for FOPoint<DIMS> {
     fn from_str(s: &str) -> Option<Self> {
+        let mut split = s.split("--");
+        if split.next()? != "fpt" {
+            return None;
+        }
 
+        let point = Coordinates::<DIMS>::from_str(split.next()?)?;
+        let option = PlotOptions::from_str(split.next()?)?;
+        let content = String::from_str(split.next()?)?;
+
+        return Some(Self {
+            point, option, content
+        });
     }
 
     fn into_str(&self) -> String {
-
+        format!("fpt--{}--{}--{}", self.point.into_str(), self.option.into_str(), self.content)
     }
 }
 

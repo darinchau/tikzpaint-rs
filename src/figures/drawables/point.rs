@@ -39,11 +39,17 @@ impl<const DIMS: usize> Drawable<DIMS> for Point<DIMS> {
 
 impl<const DIMS: usize> Serializable for Point<DIMS>{
     fn from_str(s: &str) -> Option<Self> {
-        if s.starts_with("pt") {
-            if let Some(x) = FOPoint::<DIMS>::from_str(&s[2..]) {
-
-            }
+        if !s.starts_with("pt") {
+            return None;
         }
+
+        if let Some(x) = FOPoint::<DIMS>::from_str(&s[2..]) {
+            return Some(Self {
+                p: x,
+            });
+        }
+
+        return None;
     }
 
     fn into_str(&self) -> String {

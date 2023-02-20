@@ -14,17 +14,21 @@ T: DisplayOption + Clone + Serializable {
 
 impl<T: DisplayOption + Clone + Serializable> Serializable for OptionField<T> {
     fn from_str(s: &str) -> Option<Self> {
-        if s.starts_with("opt") {
-            if s[3..] == "d" {
-                return Some(OptionField::Default);
-            }
-            else if s[3..] == "n" {
-                return Some(OptionField::None);
-            }
-            else if let Some(t) = T::from_str(&s[3..]) {
-                return Some(OptionField::Custom((t)));
-            }
+        if !s.starts_with("opt") {
+            return None;
         }
+
+        let trail = &s[3..];
+        if trail == "d" {
+            return Some(OptionField::Default);
+        }
+        else if trail == "n" {
+            return Some(OptionField::None);
+        }
+        else if let Some(t) = T::from_str(trail) {
+            return Some(OptionField::Custom((t)));
+        }
+
         return None;
     }
 
@@ -77,7 +81,14 @@ impl Serializable for Color {
     }
 
     fn from_str(s: &str) -> Option<Self> {
+        if !s.starts_with("#") || s.chars().count() != 7 {
+            return None;
+        }
 
+        let r = s[1..3].parse::<u8>().ok()?;
+        let g = s[3..5].parse::<u8>().ok()?;
+        let b = s[5..7].parse::<u8>().ok()?;
+        return Some(Color(r, g, b));
     }
 }
 
@@ -151,6 +162,28 @@ impl PlotOptions {
             fill_color: OptionField::Default,
             thickness: OptionField::Default,
         }
+    }
+}
+
+impl Serializable for PlotOptions {
+    fn into_str(&self) -> String {
+        let mut s = String::from("po");
+        s.push_str(&self.fill_color.into_str());
+        s.push_str("; ");
+        s.push_str(&self.thickness.into_str());
+        s.push_str("; ");
+        return s;
+    }
+
+    fn from_str(s: &str) -> Option<Self> {
+        if !s.starts_with("po") {
+            return None
+        }
+
+        let mut tokens = (&s[2..]).split("; ");
+        let fill_color = OptionField::<Color>::from_str(tokens.next()?)?;
+        let thickness = OptionField::<u64>::from_str(tokens.next()?)?;
+        return Some(Self {fill_color, thickness});
     }
 }
 

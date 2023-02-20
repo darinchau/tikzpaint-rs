@@ -92,4 +92,3 @@ impl Component for HeaderBar {
         }
     }
 }
-

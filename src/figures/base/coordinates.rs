@@ -217,20 +217,44 @@ impl Coordinates<3> {
     }
 }
 
-// impl<const DIMS: usize> Serializable for Coordinates<DIMS> {
-//     fn into_str(&self) -> String {
-//         let mut s = format!("cd{}", DIMS);
-//         for v in self.values {
-//             s.push_str(&v.into_str());
-//         }
+impl<const DIMS: usize> Serializable for Coordinates<DIMS> {
+    fn into_str(&self) -> String {
+        let mut s = format!("cd{},", DIMS);
+        for v in self.values {
+            s.push_str(&v.into_str());
+            s.push_str(",");
+        }
 
-//         s
-//     }
+        s
+    }
 
-//     fn from_str(s: &str) -> Option<Self> {
-//         if not s.starts_with(pat)
-//     }
-// }
+    fn from_str(s: &str) -> Option<Self> {
+        if !s.starts_with("cd") {
+            return None;
+        }
+
+        let mut split = (&s[2..]).split(",");
+
+        let num_dims = split
+            .next()?
+            .parse::<usize>()
+            .ok()?;
+
+        if num_dims != DIMS {
+            return None;
+        }
+
+        let mut v = [0.; DIMS];
+
+        for i in (0..DIMS) {
+            v[i] = f64::from_str(split.next()?)?;
+        }
+
+        return Some(Self {
+            values: v
+        })
+    }
+}
 
 impl <const DIMS: usize> Hashable for Coordinates<DIMS> {
     fn hash(&self) -> i64 {
