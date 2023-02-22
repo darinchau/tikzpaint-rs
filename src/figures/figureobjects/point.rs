@@ -37,7 +37,7 @@ impl<const DIMS: usize> FO<DIMS> for FOPoint<DIMS> {
         1
     }
 
-    fn project(&self, proj: &Box<&dyn Projection<DIMS, 2>>) -> Box<dyn Plot> {
+    fn project(&self, proj: &Box<&dyn Projection<DIMS, 2>>) -> Box<dyn Plottable> {
         let new_p = (*proj).call(&self.point);
         return Box::new(FOPoint{
             point: new_p,
@@ -53,7 +53,7 @@ impl<const DIMS: usize> Hashable for FOPoint<DIMS>  {
     }
 }
 
-impl Plot for FOPoint<2> {
+impl Plottable for FOPoint<2> {
     fn tikzify(&self) -> String {
         format!("\\node[{}] at {} {{}}", self.tikz_options(), self.point)
     }
@@ -88,4 +88,4 @@ impl<const DIMS: usize> Serializable for FOPoint<DIMS> {
     }
 }
 
-impl<const DIMS: usize> FigureObject<DIMS> for FOPoint<DIMS> {}
+impl<const DIMS: usize> HasCoordinates<DIMS> for FOPoint<DIMS> {}

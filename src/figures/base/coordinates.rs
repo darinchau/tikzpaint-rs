@@ -14,12 +14,12 @@ pub struct Coordinates {
 
 impl Coordinates {
     /// Creates a new coordinate point from array
-    pub fn new<T>(&x: Vec<T>) -> Coordinates where
+    pub fn new<T>(x: &Vec<T>) -> Coordinates where
         T: Into<f64> + Clone
     {
         let n = x.len();
         let res = x.iter().map(|val| {
-            val.into();
+            (*val).clone().into()
         }).collect::<Vec<f64>>();
         Coordinates {
             values: res,
@@ -57,11 +57,11 @@ impl Coordinates {
     /// let coord2 = Coordinates::new(vec![6, 12, -18]);
     /// assert!(coord == coord2);
     /// ```
-    pub fn scale<T>(&self, &other: T) -> Self where
+    pub fn scale<T>(&self, other: &T) -> Self where
         T: Into<f64> + Clone
     {
-        let res = self.values.iter().map(|x: f64| {
-            x * other
+        let res = self.values.iter().map(|x: &f64| {
+            x * (*other).clone().into()
         }).collect();
 
         Coordinates {
@@ -121,28 +121,26 @@ impl Display for Coordinates {
 }
 
 impl PartialEq for Coordinates {
-    fn eq(&self, other: &Self) -> Result<bool, DimensionError> {
+    /// Returns true if the dimensions are the same and every entry is the same (within certain threshold)
+    fn eq(&self, other: &Self) -> bool {
         if self.dims != other.dims {
-            return Err(DimensionError{
-                msg: format!("Cannot compare coordinate points of unequal dimensions ({} != {})", self.dims, other.dims),
-                source: "PartialEq for Coordinates"
-            })
+            return false
         }
 
         for i in 0..self.dims {
             if (self.values[i] - other.values[i]).abs() >= 1e-8 {
-                return Ok(false);
+                return false;
             }
         }
 
-        Ok(true)
+        true
     }
 }
 
 impl Add for Coordinates {
     type Output = Result<Self, DimensionError>;
 
-    fn add(self, other: &Self) -> Self::Output {
+    fn add(self, other: Self) -> Self::Output {
         if self.dims != other.dims {
             return Err(DimensionError{
                 msg: format!("Cannot add coordinate points of unequal dimensions ({} != {})", self.dims, other.dims),
@@ -150,18 +148,21 @@ impl Add for Coordinates {
             })
         }
 
-        let res = (0..self.dims).iter().map(|i| {
+        let res = (0..self.dims).into_iter().map(|i| {
             self.values[i] + other.values[i]
         }).collect();
 
-        return Some(Coordinates { values: res, dims: self.dims });
+        return Ok(Coordinates {
+            values: res,
+            dims: self.dims }
+        );
     }
 }
 
 impl Sub for Coordinates {
     type Output = Result<Self, DimensionError>;
 
-    fn sub(self, other: &Self) -> Self::Output {
+    fn sub(self, other: Self) -> Self::Output {
         if self.dims != other.dims {
             return Err(DimensionError{
                 msg: format!("Cannot subtract coordinate points of unequal dimensions ({} != {})", self.dims, other.dims),
@@ -169,32 +170,42 @@ impl Sub for Coordinates {
             })
         }
 
-        let res = (0..self.dims).iter().map(|i| {
+        let res = (0..self.dims).into_iter().map(|i| {
             self.values[i] - other.values[i]
         }).collect();
 
-        return Some(Coordinates { values: res, dims: self.dims });
+        return Ok(Coordinates {
+            values: res,
+            dims: self.dims
+        });
     }
 }
 
 impl Mul<f64> for Coordinates {
     type Output = Self;
 
+    /// Represents scalar multiplication
     fn mul(self, other: f64) -> Self {
-        let res = (0..self.dims).iter().map(|i| {
+        let res = (0..self.dims).into_iter().map(|i| {
             self.values[i] * other
         }).collect();
 
-        return Some(Coordinates { values: res, dims: self.dims });
+        return Coordinates {
+            values: res,
+            dims: self.dims
+        };
     }
 }
 
-impl Div<f64> for Coordinates {
-    type Output = Result<Self, &'static str>;
+pub struct DivisionByZeroError;
 
-    fn div(self, other: f64) -> Result<Self, &'static str> {
+impl Div<f64> for Coordinates {
+    type Output = Result<Self, DivisionByZeroError>;
+
+    /// Represents scalar division. Returns an error if division by 0.
+    fn div(self, other: f64) -> Self::Output {
         if other < EPSILON {
-            return Err("Division by 0");
+            return Err(DivisionByZeroError);
         }
 
         Ok(self * (1./other))
@@ -242,8 +253,8 @@ impl Coordinates {
             });
         }
 
-        let u = self.values;
-        let v = other.values;
+        let u = &self.values;
+        let v = &other.values;
         return Ok(Coordinates {
             values: vec![
                 u[1] * v[2] - u[2] * v[1],
@@ -258,7 +269,7 @@ impl Coordinates {
 impl Serializable for Coordinates {
     fn into_str(&self) -> String {
         let mut s = format!("cd{},", self.dims);
-        for v in self.values {
+        for v in &self.values {
             s.push_str(&v.into_str());
             s.push_str(",");
         }
@@ -278,7 +289,7 @@ impl Serializable for Coordinates {
             .parse::<usize>()
             .ok()?;
 
-        let mut v = vec![0; num_dims];
+        let mut v = vec![0_f64; num_dims];
 
         for i in (0..num_dims) {
             v.push(f64::from_str(split.next()?)?);

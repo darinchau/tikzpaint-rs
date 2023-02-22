@@ -5,7 +5,7 @@ use crate::figures::{Coordinates, DimensionError};
 
 /// Basic implementation for a projection function trait object that takes Coordinates of INPUT dimensions and turn
 /// them into coordinates of OUTPUT dimensions
-pub trait Projection where
+pub trait IsProjection where
 Self: 'static {
     fn input(&self) -> usize;
     fn output(&self) -> usize;
@@ -13,11 +13,20 @@ Self: 'static {
     fn call(&self, v: &Coordinates) -> Result<Coordinates, DimensionError>;
 }
 
-struct BoundProjectionDispatcher {
-    ptr: Rc<dyn Projection>
+pub struct Projection {
+    ptr: Rc<dyn IsProjection>
 }
 
-impl Projection for BoundProjectionDispatcher {
+impl Clone for Projection {
+    fn clone(&self) -> Self {
+        let obj = Rc::clone(&self.ptr);
+        return Projection {
+            ptr: obj
+        }
+    }
+}
+
+impl IsProjection for Projection {
     fn input(&self) -> usize {
         self.ptr.input()
     }
@@ -30,11 +39,11 @@ impl Projection for BoundProjectionDispatcher {
         if v.dims != self.input() {
             return Err(DimensionError{
                 msg: format!("Found incorrect input dimensions. Expect {}, found {}", self.input(), v.dims),
-                source: "call() from BoundProjectionDispatcher (did you extract a projection from a concatenated projection?)"
+                source: "call() from Projection (did you extract a projection from a concatenated projection?)"
             });
         }
 
-        Ok(self.ptr.call(v))
+        self.ptr.call(v)
     }
 }
 
@@ -50,17 +59,34 @@ impl Projection for BoundProjectionDispatcher {
 /// assert!(x[1] == proj.call(&y)[1]);
 /// assert!(x[2] == proj.call(&y)[2]);
 /// ```
-pub struct Identity;
-impl Projection for Identity {
-    fn call(&self, v: &Coordinates) -> Result<Coordinates, DimensionError>{
+pub struct Identity {
+    dims: usize,
+}
+
+impl IsProjection for Identity {
+    fn call(&self, v: &Coordinates) -> Result<Coordinates, DimensionError> {
+        if v.dims != self.dims {
+            return Err(DimensionError {
+                msg: format!("Expected the number of dimensions of the coordinate ({}) to match the projection ({})", v.dims, self.dims),
+                source: "call() from Identity"
+            })
+        }
         return Ok(v.clone());
+    }
+
+    fn input(&self) -> usize {
+        self.dims
+    }
+
+    fn output(&self) -> usize {
+        self.dims
     }
 }
 
 ///The concat type allows us to construct new projections from existing projections.
 pub struct Concat {
-    proj1: Rc<dyn Projection>,
-    proj2: Rc<dyn Projection>
+    proj1: Rc<dyn IsProjection>,
+    proj2: Rc<dyn IsProjection>
 }
 
 impl Concat {
@@ -108,7 +134,7 @@ impl Concat {
     /// let y2 = this_is_also_proj2.call(&x);
     /// assert!(y2 == Coordinates::new([13, 7]));
     /// ```
-    pub fn from(proj1: &Rc<dyn Projection>, proj2: &Rc<dyn Projection>) -> Result<Self, DimensionError> {
+    pub fn from(proj1: &Rc<dyn IsProjection>, proj2: &Rc<dyn IsProjection>) -> Result<Self, DimensionError> {
         if proj1.output() != proj2.output() {
             return Err(DimensionError{
                 msg: format!("Expect the inner dimensions of projection 1 ({} -> {}) and projection 2 ({} -> {}) to match",
@@ -120,7 +146,7 @@ impl Concat {
         let r1 = Rc::clone(&proj1);
         let r2 = Rc::clone(&proj2);
 
-        Some(Concat {
+        Ok(Concat {
             proj1: r1,
             proj2: r2
         })
@@ -128,22 +154,22 @@ impl Concat {
 
     /// Returns the first projection object in this chained projection, with the same lifetime as this chained projection object
     /// i.e. the intersection of T and S. Check the documentation for Concat::from for usage.
-    pub fn first(&self) -> impl Projection {
-        BoundProjectionDispatcher {
+    pub fn first(&self) -> impl IsProjection {
+        Projection {
             ptr: Rc::clone(&self.proj1)
         }
     }
 
     /// Returns the second projection object in this chained projection, with the same lifetime as this chained projection object
     /// i.e. the intersection of T and S. Check the documentation for Concat::from for usage.
-    pub fn second(&self) -> impl Projection {
-        BoundProjectionDispatcher {
+    pub fn second(&self) -> impl IsProjection {
+        Projection {
             ptr: Rc::clone(&self.proj2)
         }
     }
 }
 
-impl Projection for Concat {
+impl IsProjection for Concat {
     fn call(&self, v: &Coordinates) -> Result<Coordinates, DimensionError> {
         let y = self.proj1.call(v)?;
         let z = self.proj2.call(&y)?;
@@ -185,7 +211,7 @@ impl Matrix {
         }
 
         Ok(Matrix {
-            values: vec![vec![0; cols]; rows],
+            values: vec![vec![0_f64; cols]; rows],
             rows,
             cols
         })
@@ -218,11 +244,11 @@ impl Matrix {
             }
 
             for j in 0..cols {
-                x[i][j] = vals[i][j].into();
+                x[i][j] = vals[i][j].clone().into();
             }
         }
 
-        Some(Matrix {
+        Ok(Matrix {
             values: x,
             rows,
             cols
@@ -230,7 +256,7 @@ impl Matrix {
     }
 }
 
-impl Projection for Matrix {
+impl IsProjection for Matrix {
     fn input(&self) -> usize {
         self.cols
     }
@@ -246,7 +272,7 @@ impl Projection for Matrix {
                 source: "call() from Matrix",
             })
         }
-        let w = (0..self.rows).iter().map(|i| {
+        let w = (0..self.rows).into_iter().map(|i| {
             (0..self.cols).into_iter().map(|j| v[j] * self.values[i][j]).sum()
         }).collect::<Vec<f64>>();
 
