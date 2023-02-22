@@ -17,6 +17,7 @@ pub use base::plotoptions::TikzColor;
 pub use base::plotoptions::tikzify_field;
 
 pub use base::figure::Figure;
+pub use base::figure::DrawableFigureWrapper;
 
 pub use base::projection::Projection;
 pub use base::projection::Identity;

@@ -28,7 +28,6 @@ fn app() -> Html {
     html! {
         <div>
             <HeaderBar height={header_height} on_about={on_about} on_help={on_help} on_undo={on_undo} on_redo={on_redo}/>
-            // <MainCanvas top_px_offset={header_height} left_px_offset={side_bar_width}/>
         </div>
     }
 }

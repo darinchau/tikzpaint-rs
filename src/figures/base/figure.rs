@@ -14,7 +14,7 @@ impl<const DIMS: usize> PartialEq for Figure<DIMS> {
     }
 }
 
-struct DrawableFigureWrapper<const DIMS: usize> {
+pub struct DrawableFigureWrapper<const DIMS: usize> {
     obj: Rc<dyn Drawable<DIMS>>
 }
 
