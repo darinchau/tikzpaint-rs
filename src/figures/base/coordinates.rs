@@ -4,23 +4,26 @@ use std::ops::{Add, Sub, Mul, Div, Index};
 use std::f64::EPSILON;
 
 use crate::app::Serializable;
-use crate::figures::Hashable;
+use crate::figures::{Hashable, DimensionError};
 
-pub struct Coordinates<const DIMS: usize> {
-    values: [f64; DIMS],
+#[derive(Clone)]
+pub struct Coordinates {
+    values: Vec<f64>,
+    pub dims: usize
 }
 
-impl<const DIMS: usize> Coordinates<DIMS> {
+impl Coordinates {
     /// Creates a new coordinate point from array
-    pub fn new<T>(x: [T; DIMS]) -> Coordinates<DIMS> where
-        T: Into<f64> + Copy
+    pub fn new<T>(&x: Vec<T>) -> Coordinates where
+        T: Into<f64> + Clone
     {
-        let mut res: [f64; DIMS] = [0.; DIMS];
-        for i in 0..DIMS {
-            res[i] = x[i].into();
-        }
+        let n = x.len();
+        let res = x.iter().map(|val| {
+            val.into();
+        }).collect::<Vec<f64>>();
         Coordinates {
             values: res,
+            dims: x.len()
         }
     }
 
@@ -30,14 +33,14 @@ impl<const DIMS: usize> Coordinates<DIMS> {
     ///
     /// ```
     /// use tikzpaint_rs::figures::Coordinates;
-    /// let coord = Coordinates::new([1, 2, -3]);
+    /// let coord = Coordinates::new(vec![1, 2, -3]);
     /// assert_eq!(1., coord.get(0).unwrap());
     /// assert_eq!(2., coord.get(1).unwrap());
     /// assert_eq!(-3., coord.get(2).unwrap());
     /// assert_eq!(None, coord.get(3));
     /// ```
     pub fn get(&self, index: usize) -> Option<f64> {
-        if index >= DIMS {
+        if index >= self.dims {
             return None
         }
 
@@ -50,19 +53,20 @@ impl<const DIMS: usize> Coordinates<DIMS> {
     ///
     /// ```
     /// use tikzpaint_rs::figures::Coordinates;
-    /// let coord = Coordinates::new([1, 2, -3]).scale(6);
-    /// let coord2 = Coordinates::new([6, 12, -18]);
+    /// let coord = Coordinates::new(vec![1, 2, -3]).scale(6);
+    /// let coord2 = Coordinates::new(vec![6, 12, -18]);
     /// assert!(coord == coord2);
     /// ```
-    pub fn scale<T>(&self, other: T) -> Self where
-        T: Into<f64> + Copy
+    pub fn scale<T>(&self, &other: T) -> Self where
+        T: Into<f64> + Clone
     {
-        let mut res = [0.; DIMS];
-        for i in 0..DIMS {
-            res[i] = self.values[i] * other.into();
-        }
+        let res = self.values.iter().map(|x: f64| {
+            x * other
+        }).collect();
+
         Coordinates {
-            values: res
+            values: res,
+            dims: self.dims
         }
     }
 
@@ -72,14 +76,14 @@ impl<const DIMS: usize> Coordinates<DIMS> {
     ///
     /// ```
     /// use tikzpaint_rs::figures::Coordinates;
-    /// let coord = Coordinates::new([1, 2, -3]);
+    /// let coord = Coordinates::new(vec![1, 2, -3]);
     /// let mag = (14 as f64).sqrt();
     /// assert!(coord.magnitude() - mag <= 1e-8);
     /// ```
     pub fn magnitude(&self) -> f64
     {
         self.values
-            .into_iter()
+            .iter()
             .map(|x| { x * x })
             .sum::<f64>()
             .sqrt()
@@ -92,8 +96,8 @@ impl<const DIMS: usize> Coordinates<DIMS> {
     ///
     /// ```
     /// use tikzpaint_rs::figures::Coordinates;
-    /// let coord = Coordinates::new([3, 4]).normalize();
-    /// let coord2 = Coordinates::new([0.6, 0.8]);
+    /// let coord = Coordinates::new(vec![3, 4]).normalize();
+    /// let coord2 = Coordinates::new(vec![0.6, 0.8]);
     /// assert!(coord == coord2);
     /// ```
     pub fn normalize(self) -> Self {
@@ -105,63 +109,87 @@ impl<const DIMS: usize> Coordinates<DIMS> {
     }
 }
 
-impl<const DIMS: usize> Display for Coordinates<DIMS> {
+impl Display for Coordinates {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         let mut s = String::new();
-        for i in 0..DIMS {
-            let f = if i < DIMS - 1 {format!("{}, ", self[i])} else {format!("{}", self[i])};
+        for i in 0..self.dims {
+            let f = if i < self.dims - 1 {format!("{}, ", self[i])} else {format!("{}", self[i])};
             s.push_str(&f);
         }
         write!(f, "({})", s)
     }
 }
 
-impl<const DIMS: usize> PartialEq for Coordinates<DIMS> {
-    fn eq(&self, other: &Self) -> bool {
-        for i in 0..DIMS {
+impl PartialEq for Coordinates {
+    fn eq(&self, other: &Self) -> Result<bool, DimensionError> {
+        if self.dims != other.dims {
+            return Err(DimensionError{
+                msg: format!("Cannot compare coordinate points of unequal dimensions ({} != {})", self.dims, other.dims),
+                source: "PartialEq for Coordinates"
+            })
+        }
+
+        for i in 0..self.dims {
             if (self.values[i] - other.values[i]).abs() >= 1e-8 {
-                return false;
+                return Ok(false);
             }
         }
 
-        true
+        Ok(true)
     }
 }
 
-impl<const DIMS: usize> Add for Coordinates<DIMS> {
+impl Add for Coordinates {
+    type Output = Result<Self, DimensionError>;
+
+    fn add(self, other: &Self) -> Self::Output {
+        if self.dims != other.dims {
+            return Err(DimensionError{
+                msg: format!("Cannot add coordinate points of unequal dimensions ({} != {})", self.dims, other.dims),
+                source: "Add for Coordinates"
+            })
+        }
+
+        let res = (0..self.dims).iter().map(|i| {
+            self.values[i] + other.values[i]
+        }).collect();
+
+        return Some(Coordinates { values: res, dims: self.dims });
+    }
+}
+
+impl Sub for Coordinates {
+    type Output = Result<Self, DimensionError>;
+
+    fn sub(self, other: &Self) -> Self::Output {
+        if self.dims != other.dims {
+            return Err(DimensionError{
+                msg: format!("Cannot subtract coordinate points of unequal dimensions ({} != {})", self.dims, other.dims),
+                source: "Add for Coordinates"
+            })
+        }
+
+        let res = (0..self.dims).iter().map(|i| {
+            self.values[i] - other.values[i]
+        }).collect();
+
+        return Some(Coordinates { values: res, dims: self.dims });
+    }
+}
+
+impl Mul<f64> for Coordinates {
     type Output = Self;
 
-    fn add(mut self, other: Self) -> Self {
-        for i in 0..DIMS {
-            self.values[i] += other.values[i];
-        }
-        self
+    fn mul(self, other: f64) -> Self {
+        let res = (0..self.dims).iter().map(|i| {
+            self.values[i] * other
+        }).collect();
+
+        return Some(Coordinates { values: res, dims: self.dims });
     }
 }
 
-impl<const DIMS: usize> Sub for Coordinates<DIMS> {
-    type Output = Self;
-
-    fn sub(mut self, other: Self) -> Self {
-        for i in 0..DIMS {
-            self.values[i] -= other.values[i];
-        }
-        self
-    }
-}
-
-impl<const DIMS: usize> Mul<f64> for Coordinates<DIMS> {
-    type Output = Self;
-
-    fn mul(mut self, other: f64) -> Self {
-        for i in 0..DIMS {
-            self.values[i] *= other;
-        }
-        self
-    }
-}
-
-impl<const DIMS: usize> Div<f64> for Coordinates<DIMS> {
+impl Div<f64> for Coordinates {
     type Output = Result<Self, &'static str>;
 
     fn div(self, other: f64) -> Result<Self, &'static str> {
@@ -173,10 +201,11 @@ impl<const DIMS: usize> Div<f64> for Coordinates<DIMS> {
     }
 }
 
-impl<const DIMS: usize> Index<usize> for Coordinates<DIMS> {
+impl Index<usize> for Coordinates {
     type Output = f64;
+    /// operator[] panics if the index is out of range.
     fn index(&self, other: usize) -> &f64 {
-        if other >= DIMS {
+        if other >= self.dims {
             panic!("Index out of range");
         }
 
@@ -184,42 +213,51 @@ impl<const DIMS: usize> Index<usize> for Coordinates<DIMS> {
     }
 }
 
-impl<const DIMS: usize> Clone for Coordinates<DIMS> {
-    fn clone(&self) -> Self {
-        self.scale(1)
-    }
-}
-
-impl Coordinates<3> {
+impl Coordinates {
     /// The cross product. "a.cross(b)" indicates a x b
     ///
     /// # Examples
     ///
     /// ```
     /// use tikzpaint_rs::figures::Coordinates;
-    /// let a = Coordinates::new([3, 2, -4]);
-    /// let b = Coordinates::new([1, 2, 0]);
+    /// let a = Coordinates::new(vec![3, 2, -4]);
+    /// let b = Coordinates::new(vec![1, 2, 0]);
     /// let ab = a.cross(&b);
     /// let ba = b.cross(&a);
-    /// assert!(ab == Coordinates::new([8, -4, 4]));
-    /// assert!(ba == Coordinates::new([-8, 4, -4]));
+    /// assert!(ab == Coordinates::new(vec![8, -4, 4]));
+    /// assert!(ba == Coordinates::new(vec![-8, 4, -4]));
     /// ```
-    pub fn cross(&self, other: &Coordinates<3>) -> Self {
+    pub fn cross(&self, other: &Coordinates) -> Result<Self, DimensionError> {
+        if self.dims != 3 {
+            return Err(DimensionError{
+                msg: format!("Self dimension is not 3 (found {})", self.dims),
+                source: "cross() for Coordinates"
+            });
+        }
+
+        if other.dims != 3 {
+            return Err(DimensionError{
+                msg: format!("RHS dimension is not 3 (found {})", other.dims),
+                source: "cross() for Coordinates"
+            });
+        }
+
         let u = self.values;
         let v = other.values;
-        return Coordinates {
-            values: [
+        return Ok(Coordinates {
+            values: vec![
                 u[1] * v[2] - u[2] * v[1],
                 u[2] * v[0] - u[0] * v[2],
                 u[0] * v[1] - u[1] * v[0]
-            ]
-        }
+            ],
+            dims: 3
+        });
     }
 }
 
-impl<const DIMS: usize> Serializable for Coordinates<DIMS> {
+impl Serializable for Coordinates {
     fn into_str(&self) -> String {
-        let mut s = format!("cd{},", DIMS);
+        let mut s = format!("cd{},", self.dims);
         for v in self.values {
             s.push_str(&v.into_str());
             s.push_str(",");
@@ -240,23 +278,20 @@ impl<const DIMS: usize> Serializable for Coordinates<DIMS> {
             .parse::<usize>()
             .ok()?;
 
-        if num_dims != DIMS {
-            return None;
-        }
+        let mut v = vec![0; num_dims];
 
-        let mut v = [0.; DIMS];
-
-        for i in (0..DIMS) {
-            v[i] = f64::from_str(split.next()?)?;
+        for i in (0..num_dims) {
+            v.push(f64::from_str(split.next()?)?);
         }
 
         return Some(Self {
-            values: v
+            values: v,
+            dims: num_dims
         })
     }
 }
 
-impl <const DIMS: usize> Hashable for Coordinates<DIMS> {
+impl Hashable for Coordinates {
     fn hash(&self) -> i64 {
         return self.values.iter().enumerate().map(|(i, x)| {
             i as i64 | x.hash()

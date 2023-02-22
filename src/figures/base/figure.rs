@@ -1,40 +1,41 @@
 //! A figure object serves as a canvas to convert drawables into displayables into code and shapes
 
-use crate::figures::{Drawable, Projection, Plot, DrawableObject};
+use crate::figures::{Drawable, Projection, Plot, DimensionError};
 use std::rc::Rc;
 
-pub struct Figure<const DIMS: usize> {
-    to_draw: Vec<DrawableFigureWrapper<DIMS>>,
+pub struct Figure {
+    dims: usize,
+    to_draw: Vec<DrawableWrapper>,
     hash: i64
 }
 
-impl<const DIMS: usize> PartialEq for Figure<DIMS> {
+impl PartialEq for Figure {
     fn eq(&self, other: &Self) -> bool {
         return self.hash == other.hash;
     }
 }
 
-pub struct DrawableFigureWrapper<const DIMS: usize> {
-    obj: Rc<dyn Drawable<DIMS>>
+pub struct DrawableWrapper {
+    obj: Box<dyn Drawable>
 }
 
-impl<const DIMS: usize> DrawableFigureWrapper<DIMS> {
-    fn new<T: Drawable<DIMS> + Sized + Clone + 'static>(obj: & T) -> Self {
-        let obj_copy = Rc::new(obj.to_owned()) as Rc<dyn Drawable<DIMS>>;
-        DrawableFigureWrapper {
+impl<const DIMS: usize> DrawableWrapper {
+    fn new<T: Drawable>(obj: &T) -> Self {
+        let obj_copy = Box::new(obj.to_owned()) as Box<dyn Drawable>;
+        DrawableWrapper {
             obj: obj_copy
         }
     }
 
-    fn get(&self) -> Rc<dyn Drawable<DIMS>> {
-        let obj_copy = Rc::clone(&self.obj);
-        return obj_copy;
+    fn get(&self) -> impl Drawable {
+        return *self.obj;
     }
 }
 
-impl<const DIMS: usize> Figure<DIMS> {
-    pub fn new() -> Self {
+impl Figure {
+    pub fn new(dims: usize) -> Self {
         Figure {
+            dims,
             to_draw: vec![],
             hash: 0
         }
@@ -43,9 +44,9 @@ impl<const DIMS: usize> Figure<DIMS> {
     /// Adds 'obj' to the list of objects to be drawn. We use an RC because we don't want
     /// to take ownership of your lovely drawable object, but we also need the drawable object
     /// to live long enough and the easiest way is to take ownership of the object via an Rc
-    pub fn draw<T: DrawableObject<DIMS>>(&mut self, obj: &T) where {
-        let obj_copy = DrawableFigureWrapper::new(obj);
-        self.to_draw.push(obj_copy);
+    pub fn draw<T: Drawable>(&mut self, obj: &T) where {
+        let obj = DrawableWrapper::new(obj);
+        self.to_draw.push(obj);
     }
 
     /// Load method takes a function object and a projection object. The method will feed
@@ -53,9 +54,9 @@ impl<const DIMS: usize> Figure<DIMS> {
     /// The projection will be fed through the project method defined on the function object.
     pub fn load<T, S, P>(&self, f: T, proj: &P) -> Vec<S> where
     T: Fn(Box<dyn Plot>) -> S,
-    P: Projection<DIMS, 2>
+    P: Projection
     {
-        let project = Box::new(proj as &dyn Projection<DIMS, 2>);
+        let project = Box::new(proj as &dyn Projection);
         let mut v: Vec<S> = Vec::new();
         for x in &self.to_draw {
             for obj in x.get().draw() {
@@ -80,8 +81,9 @@ impl<const DIMS: usize> Figure<DIMS> {
     /// let st = fig.output_tikz(&Identity);
     /// assert_eq!(st, "\\begin{tikzpicture}\n\\end{tikzpicture}")
     /// ```
-    pub fn output_tikz<P>(&self, proj: &P) -> String where
-    P: Projection<DIMS, 2> {
+    pub fn output_tikz<P>(&self, proj: &P) -> Result<String, DimensionError> where
+    P: Projection {
+        if self.dims != proj
         let mut st = String::from("\\begin{tikzpicture}\n");
         for s in self.load(|x| {
             return x.tikzify();
@@ -91,6 +93,6 @@ impl<const DIMS: usize> Figure<DIMS> {
             st.push_str("\n");
         }
         st.push_str("\\end{tikzpicture}");
-        return st;
+        return Ok(st);
     }
 }

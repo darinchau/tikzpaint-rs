@@ -26,5 +26,5 @@ pub use crate::figures::Serializable;
 use crate::figures::*;
 /// The main app is a coordinator component that coordinates all three main components
 pub struct CanvasManager {
-    fig: Figure<2>,
+    fig: Figure,
 }

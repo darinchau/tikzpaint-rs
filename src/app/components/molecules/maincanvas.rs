@@ -97,7 +97,7 @@ pub struct MainCanvasProps {
     pub top_px_offset: usize,
     pub left_px_offset: usize,
     pub debug: Option<bool>,
-    pub figure: UseStateHandle<Figure<2>>
+    pub figure: UseStateHandle<Figure>
 }
 
 pub struct MainCanvas {

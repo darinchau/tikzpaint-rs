@@ -1,50 +1,69 @@
 //! Projections are traits that takes coordinates and outputs coordinates
 use std::rc::Rc;
 
-use crate::figures::{Coordinates};
+use crate::figures::{Coordinates, DimensionError};
 
 /// Basic implementation for a projection function trait object that takes Coordinates of INPUT dimensions and turn
 /// them into coordinates of OUTPUT dimensions
-pub trait Projection<const INPUT: usize, const OUTPUT: usize> where
+pub trait Projection where
 Self: 'static {
-    fn call(&self, v: &Coordinates<INPUT>) -> Coordinates<OUTPUT>;
+    fn input(&self) -> usize;
+    fn output(&self) -> usize;
+    /// Performs the projection.
+    fn call(&self, v: &Coordinates) -> Result<Coordinates, DimensionError>;
 }
 
-struct BoundProjectionDispatcher<const INPUT: usize, const OUTPUT: usize> {
-    ptr: Rc<dyn Projection<INPUT, OUTPUT>>
+struct BoundProjectionDispatcher {
+    ptr: Rc<dyn Projection>
 }
 
-impl<const INPUT: usize, const OUTPUT: usize> Projection<INPUT, OUTPUT> for BoundProjectionDispatcher<INPUT, OUTPUT> {
-    fn call(&self, v: &Coordinates<INPUT>) -> Coordinates<OUTPUT> {
-        self.ptr.call(v)
+impl Projection for BoundProjectionDispatcher {
+    fn input(&self) -> usize {
+        self.ptr.input()
+    }
+
+    fn output(&self) -> usize {
+        self.ptr.output()
+    }
+
+    fn call(&self, v: &Coordinates) -> Result<Coordinates, DimensionError>{
+        if v.dims != self.input() {
+            return Err(DimensionError{
+                msg: format!("Found incorrect input dimensions. Expect {}, found {}", self.input(), v.dims),
+                source: "call() from BoundProjectionDispatcher (did you extract a projection from a concatenated projection?)"
+            });
+        }
+
+        Ok(self.ptr.call(v))
     }
 }
 
-/// A struct signifying the identity projection.
+/// A struct signifying the identity projection. The call() method will never return an error.
 ///
 /// Example
 /// ```
 /// use tikzpaint_rs::figures::{Identity, Coordinates, Projection};
-/// let x = Coordinates::new([3, 4, 5]);
-/// let y = Coordinates::new([3, 4, 5]);
+/// let x = Coordinates::new(vec![3, 4, 5]);
+/// let y = Coordinates::new(vec![3, 4, 5]);
 /// let proj = Identity::<3>;
 /// assert!(x[0] == proj.call(&y)[0]);
 /// assert!(x[1] == proj.call(&y)[1]);
 /// assert!(x[2] == proj.call(&y)[2]);
 /// ```
-pub struct Identity<const DIMS: usize>;
-impl<const DIMS: usize> Projection<DIMS, DIMS> for Identity<DIMS> {
-    fn call(&self, v: &Coordinates<DIMS>) -> Coordinates<DIMS> {
-        return v.clone();
+pub struct Identity;
+impl Projection for Identity {
+    fn call(&self, v: &Coordinates) -> Result<Coordinates, DimensionError>{
+        return Ok(v.clone());
     }
 }
 
-pub struct Concat<const I: usize, const J: usize, const K: usize> {
-    proj1: Rc<dyn Projection<I, J>>,
-    proj2: Rc<dyn Projection<J, K>>
+///The concat type allows us to construct new projections from existing projections.
+pub struct Concat {
+    proj1: Rc<dyn Projection>,
+    proj2: Rc<dyn Projection>
 }
 
-impl<const I: usize, const J: usize, const K: usize> Concat<I, J, K> {
+impl Concat {
     /// This allows us to construct new projections from existing projections.
     /// Concat::from(p1, p2) is a projection object that essentially does
     /// proj2(proj1(v)) when called
@@ -89,23 +108,27 @@ impl<const I: usize, const J: usize, const K: usize> Concat<I, J, K> {
     /// let y2 = this_is_also_proj2.call(&x);
     /// assert!(y2 == Coordinates::new([13, 7]));
     /// ```
-    pub fn from<T, S>(proj1: T, proj2: S) -> Self where
-    T: Projection<I, J>,
-    S: Projection<J, K> {
-        let r1 = Rc::new(proj1);
-        let r2 = Rc::new(proj2);
+    pub fn from(proj1: &Rc<dyn Projection>, proj2: &Rc<dyn Projection>) -> Result<Self, DimensionError> {
+        if proj1.output() != proj2.output() {
+            return Err(DimensionError{
+                msg: format!("Expect the inner dimensions of projection 1 ({} -> {}) and projection 2 ({} -> {}) to match",
+                    proj1.input(), proj1.output(), proj2.input(), proj2.output()),
+                source: "from() from Concat"
+            });
+        }
 
-        let res = Concat {
-            proj1: Rc::clone(&r1) as Rc<dyn Projection<I, J>>,
-            proj2: Rc::clone(&r2) as Rc<dyn Projection<J, K>>
-        };
+        let r1 = Rc::clone(&proj1);
+        let r2 = Rc::clone(&proj2);
 
-        res
+        Some(Concat {
+            proj1: r1,
+            proj2: r2
+        })
     }
 
     /// Returns the first projection object in this chained projection, with the same lifetime as this chained projection object
     /// i.e. the intersection of T and S. Check the documentation for Concat::from for usage.
-    pub fn first(&self) -> impl Projection<I, J> {
+    pub fn first(&self) -> impl Projection {
         BoundProjectionDispatcher {
             ptr: Rc::clone(&self.proj1)
         }
@@ -113,54 +136,120 @@ impl<const I: usize, const J: usize, const K: usize> Concat<I, J, K> {
 
     /// Returns the second projection object in this chained projection, with the same lifetime as this chained projection object
     /// i.e. the intersection of T and S. Check the documentation for Concat::from for usage.
-    pub fn second(&self) -> impl Projection<J, K> {
+    pub fn second(&self) -> impl Projection {
         BoundProjectionDispatcher {
             ptr: Rc::clone(&self.proj2)
         }
     }
 }
 
-impl<const I: usize, const J: usize, const K: usize> Projection<I, K> for Concat<I, J, K> {
-    fn call(&self, v: &Coordinates<I>) -> Coordinates<K> {
-        let y = self.proj1.call(v);
-        self.proj2.call(&y)
+impl Projection for Concat {
+    fn call(&self, v: &Coordinates) -> Result<Coordinates, DimensionError> {
+        let y = self.proj1.call(v)?;
+        let z = self.proj2.call(&y)?;
+        return Ok(z)
+    }
+
+    fn input(&self) -> usize {
+        self.proj1.input()
+    }
+
+    fn output(&self) -> usize {
+        self.proj2.output()
     }
 }
 
 
-pub struct Matrix<const I: usize, const J: usize> {
-    values: [[f64; J]; I]
+pub struct Matrix {
+    values: Vec<Vec<f64>>,
+    rows: usize,
+    cols: usize,
 }
 
-impl<const I: usize, const J: usize> Matrix<I, J> {
-    /// Returns the zero matrix
-    pub fn zero<T>() -> Self where
-    T: Into<f64> + Copy {
-        Matrix {
-            values: [[0.; J]; I]
+impl Matrix {
+    /// Returns the zero matrix. This only returns an error if either rows or cols is 0
+    pub fn zero<T>(rows: usize, cols: usize) -> Result<Self, DimensionError> where
+    T: Into<f64> + Clone {
+        if rows == 0 {
+            return Err(DimensionError{
+                msg: format!("Number of rows cannot be 0"),
+                source: "zero() from Matrix",
+            })
         }
+
+        if cols == 0 {
+            return Err(DimensionError{
+                msg: format!("Number of cols cannot be 0"),
+                source: "zero() from Matrix",
+            })
+        }
+
+        Ok(Matrix {
+            values: vec![vec![0; cols]; rows],
+            rows,
+            cols
+        })
     }
 
-    pub fn new<T>(vals: [[T; J]; I]) -> Self where
-    T: Into<f64> + Copy {
-        let mut x = [[0.; J]; I];
-        for i in 0..I {
-            for j in 0..J {
+    pub fn new<T>(vals: Vec<Vec<T>>) -> Result<Self, DimensionError> where
+    T: Into<f64> + Clone {
+        let rows = vals.len();
+        if rows == 0 {
+            return Err(DimensionError{
+                msg: format!("Number of rows cannot be 0"),
+                source: "new() from Matrix",
+            })
+        }
+        let cols = vals[0].len();
+        if cols == 0 {
+            return Err(DimensionError{
+                msg: format!("Number of columns cannot be 0"),
+                source: "new() from Matrix",
+            })
+        }
+
+        let mut x = vec![vec![0_f64; cols]; rows];
+        for i in 0..rows {
+            if vals[i].len() != cols {
+                return Err(DimensionError{
+                    msg: format!("Expect row {} to have {} entries, found {}", i, cols, vals[i].len()),
+                    source: "new() from Matrix",
+                })
+            }
+
+            for j in 0..cols {
                 x[i][j] = vals[i][j].into();
             }
         }
-        Matrix {
-            values: x
-        }
+
+        Some(Matrix {
+            values: x,
+            rows,
+            cols
+        })
     }
 }
 
-impl<const I: usize, const J: usize> Projection<J, I> for Matrix<I, J> {
-    fn call(&self, v: &Coordinates<J>) -> Coordinates<I> {
-        let mut w = [0.; I];
-        for i in 0..I {
-            w[i] = (0..J).into_iter().map(|j| {v[j] * self.values[i][j]}).sum()
+impl Projection for Matrix {
+    fn input(&self) -> usize {
+        self.cols
+    }
+
+    fn output(&self) -> usize {
+        self.rows
+    }
+
+    fn call(&self, v: &Coordinates) -> Result<Coordinates, DimensionError> {
+        if v.dims != self.cols {
+            return Err(DimensionError{
+                msg: format!("Expect the dimension of v to equal the number of columns ({}), found {}", self.cols, v.dims),
+                source: "call() from Matrix",
+            })
         }
-        Coordinates::new(w)
+        let w = (0..self.rows).iter().map(|i| {
+            (0..self.cols).into_iter().map(|j| v[j] * self.values[i][j]).sum()
+        }).collect::<Vec<f64>>();
+
+        Ok(Coordinates::new(&w))
     }
 }
