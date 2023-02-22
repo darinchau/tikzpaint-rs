@@ -14,7 +14,7 @@ pub struct Coordinates {
 
 impl Coordinates {
     /// Creates a new coordinate point from array
-    pub fn new<T>(x: &Vec<T>) -> Coordinates where
+    pub fn new<T>(x: Vec<T>) -> Coordinates where
         T: Into<f64> + Clone
     {
         let n = x.len();
@@ -57,11 +57,11 @@ impl Coordinates {
     /// let coord2 = Coordinates::new(vec![6, 12, -18]);
     /// assert!(coord == coord2);
     /// ```
-    pub fn scale<T>(&self, other: &T) -> Self where
+    pub fn scale<T>(&self, other: T) -> Self where
         T: Into<f64> + Clone
     {
         let res = self.values.iter().map(|x: &f64| {
-            x * (*other).clone().into()
+            x * other.clone().into()
         }).collect();
 
         Coordinates {
@@ -233,8 +233,8 @@ impl Coordinates {
     /// use tikzpaint_rs::figures::Coordinates;
     /// let a = Coordinates::new(vec![3, 2, -4]);
     /// let b = Coordinates::new(vec![1, 2, 0]);
-    /// let ab = a.cross(&b);
-    /// let ba = b.cross(&a);
+    /// let ab = a.cross(&b).unwrap();
+    /// let ba = b.cross(&a).unwrap();
     /// assert!(ab == Coordinates::new(vec![8, -4, 4]));
     /// assert!(ba == Coordinates::new(vec![-8, 4, -4]));
     /// ```

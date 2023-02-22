@@ -60,7 +60,7 @@ impl Figure {
     /// use tikzpaint_rs::figures::{Figure, Identity};
     ///
     /// let fig = Figure::new(2);
-    /// let st = fig.output_tikz(&Identity);
+    /// let st = fig.output_tikz(&Identity{dims: 2}).unwrap();
     /// assert_eq!(st, "\\begin{tikzpicture}\n\\end{tikzpicture}")
     /// ```
     pub fn output_tikz<P>(&self, proj: &P) -> Result<String, DimensionError> where

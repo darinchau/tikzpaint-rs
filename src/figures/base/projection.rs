@@ -51,16 +51,17 @@ impl IsProjection for Projection {
 ///
 /// Example
 /// ```
-/// use tikzpaint_rs::figures::{Identity, Coordinates, Projection};
+/// use tikzpaint_rs::figures::{Identity, Coordinates, Projection, IsProjection};
 /// let x = Coordinates::new(vec![3, 4, 5]);
 /// let y = Coordinates::new(vec![3, 4, 5]);
-/// let proj = Identity::<3>;
-/// assert!(x[0] == proj.call(&y)[0]);
-/// assert!(x[1] == proj.call(&y)[1]);
-/// assert!(x[2] == proj.call(&y)[2]);
+/// let proj = Identity{ dims: 3 };
+/// let projected = proj.call(&y).unwrap();
+/// assert!(x[0] == projected[0]);
+/// assert!(x[1] == projected[1]);
+/// assert!(x[2] == projected[2]);
 /// ```
 pub struct Identity {
-    dims: usize,
+    pub dims: usize,
 }
 
 impl IsProjection for Identity {
@@ -96,46 +97,30 @@ impl Concat {
     ///
     /// Examples:
     /// ```
-    /// use tikzpaint_rs::figures::{Coordinates, Matrix, Concat, Projection};
-    /// let x = Coordinates::new([3, 4, 5]);
-    /// let proj1 = Matrix::new([
+    /// use tikzpaint_rs::figures::{Coordinates, Matrix, Concat, Projection, IsProjection};
+    ///
+    /// let x = Coordinates::new(vec![3, 4, 5]);
+    /// let proj1 = Matrix::array([
     ///     [1, 0, 0],
     ///     [0, 1, 0],
     ///     [0, 0, 2]
     /// ]);
-    /// let proj2 = Matrix::new([
+    /// let proj2 = Matrix::array([
     ///     [1, 0, 2],
     ///     [2, -1, 1]
     /// ]);
-    /// let proj3 = Concat::from(proj1, proj2);
-    /// let y3 = proj3.call(&x);
-    /// assert!(y3 == Coordinates::new([23, 12]));
+    /// let proj3 = Concat::from(proj1, proj2).unwrap();
+    /// let y3 = proj3.call(&x).unwrap();
+    /// assert!(y3 == Coordinates::new(vec![23, 12]));
     /// ```
-    ///
-    /// We can also retreive both projections (sorta) as follows
-    /// ```
-    /// use tikzpaint_rs::figures::{Coordinates, Matrix, Concat, Projection};
-    /// let x = Coordinates::new([3, 4, 5]);
-    /// let proj1 = Matrix::new([
-    ///     [1, 0, 0],
-    ///     [0, 1, 0],
-    ///     [0, 0, 2]
-    /// ]);
-    /// let proj2 = Matrix::new([
-    ///     [1, 0, 2],
-    ///     [2, -1, 1]
-    /// ]);
-    /// let proj3 = Concat::from(proj1, proj2);
-    /// let this_is_also_proj1 = proj3.first();
-    /// let y1 = this_is_also_proj1.call(&x);
-    /// assert!(y1 == Coordinates::new([3, 4, 10]));
-    ///
-    /// let this_is_also_proj2 = proj3.second();
-    /// let y2 = this_is_also_proj2.call(&x);
-    /// assert!(y2 == Coordinates::new([13, 7]));
-    /// ```
-    pub fn from(proj1: &Rc<dyn IsProjection>, proj2: &Rc<dyn IsProjection>) -> Result<Self, DimensionError> {
-        if proj1.output() != proj2.output() {
+    pub fn from<P1: IsProjection, P2: IsProjection>(proj1: P1, proj2: P2) -> Result<Self, DimensionError> {
+        let r1 = Rc::new(proj1);
+        let r2 = Rc::new(proj2);
+        return Self::new(r1, r2);
+    }
+
+    pub fn new(proj1: Rc<dyn IsProjection>, proj2: Rc<dyn IsProjection>) -> Result<Self, DimensionError> {
+        if proj1.output() != proj2.input() {
             return Err(DimensionError{
                 msg: format!("Expect the inner dimensions of projection 1 ({} -> {}) and projection 2 ({} -> {}) to match",
                     proj1.input(), proj1.output(), proj2.input(), proj2.output()),
@@ -154,6 +139,25 @@ impl Concat {
 
     /// Returns the first projection object in this chained projection, with the same lifetime as this chained projection object
     /// i.e. the intersection of T and S. Check the documentation for Concat::from for usage.
+    /// We can also retreive both projections (sorta) as follows
+    /// ```
+    /// use tikzpaint_rs::figures::{Coordinates, Matrix, Concat, Projection, IsProjection};
+    ///
+    /// let x = Coordinates::new(vec![3, 4, 5]);
+    /// let proj1 = Matrix::array([
+    ///     [1, 0, 0],
+    ///     [0, 1, 0],
+    ///     [0, 0, 2]
+    /// ]);
+    /// let proj2 = Matrix::array([
+    ///     [1, 0, 2],
+    ///     [2, -1, 1]
+    /// ]);
+    /// let proj3 = Concat::from(proj1, proj2).unwrap();
+    /// let this_is_also_proj1 = proj3.first();
+    /// let y1 = this_is_also_proj1.call(&x).unwrap();
+    /// assert!(y1 == Coordinates::new(vec![3, 4, 10]));
+    /// ```
     pub fn first(&self) -> impl IsProjection {
         Projection {
             ptr: Rc::clone(&self.proj1)
@@ -162,6 +166,25 @@ impl Concat {
 
     /// Returns the second projection object in this chained projection, with the same lifetime as this chained projection object
     /// i.e. the intersection of T and S. Check the documentation for Concat::from for usage.
+    /// We can also retreive both projections (sorta) as follows
+    /// ```
+    /// use tikzpaint_rs::figures::{Coordinates, Matrix, Concat, Projection, IsProjection};
+    ///
+    /// let x = Coordinates::new(vec![3, 4, 5]);
+    /// let proj1 = Matrix::array([
+    ///     [1, 0, 0],
+    ///     [0, 1, 0],
+    ///     [0, 0, 2]
+    /// ]);
+    /// let proj2 = Matrix::array([
+    ///     [1, 0, 2],
+    ///     [2, -1, 1]
+    /// ]);
+    /// let proj3 = Concat::from(proj1, proj2).unwrap();
+    /// let this_is_also_proj2 = proj3.second();
+    /// let y2 = this_is_also_proj2.call(&x).unwrap();
+    /// assert!(y2 == Coordinates::new(vec![13, 7]));
+    /// ```
     pub fn second(&self) -> impl IsProjection {
         Projection {
             ptr: Rc::clone(&self.proj2)
@@ -217,8 +240,20 @@ impl Matrix {
         })
     }
 
+    pub fn array<T: Into<f64> + Clone, const I: usize, const J: usize>(x: [[T; J]; I]) -> Self {
+        let y = x.into_iter().map(|r| {
+            r.into_iter().map(|t| t.clone().into()).collect::<Vec<f64>>()
+        }).collect();
+        Matrix {
+            values: y,
+            rows: I,
+            cols: J
+        }
+    }
+
     pub fn new<T>(vals: Vec<Vec<T>>) -> Result<Self, DimensionError> where
-    T: Into<f64> + Clone {
+        T: Into<f64> + Clone
+    {
         let rows = vals.len();
         if rows == 0 {
             return Err(DimensionError{
@@ -276,6 +311,6 @@ impl IsProjection for Matrix {
             (0..self.cols).into_iter().map(|j| v[j] * self.values[i][j]).sum()
         }).collect::<Vec<f64>>();
 
-        Ok(Coordinates::new(&w))
+        Ok(Coordinates::new(w))
     }
 }
