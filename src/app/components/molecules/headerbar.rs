@@ -8,6 +8,7 @@ use web_sys::HtmlElement;
 use wasm_bindgen::JsCast;
 use crate::app::{GetProperty, Serializable, Button, ButtonType};
 
+#[derive(Clone, Copy, PartialEq, Debug)]
 pub enum HeaderBarMessage {
     Help,
     Undo,
@@ -18,10 +19,7 @@ pub enum HeaderBarMessage {
 #[derive(Properties, PartialEq)]
 pub struct HeaderBarProps {
     pub height: usize,
-    pub on_undo: Callback<MouseEvent, ()>,
-    pub on_redo: Callback<MouseEvent, ()>,
-    pub on_about: Callback<MouseEvent, ()>,
-    pub on_help: Callback<MouseEvent, ()>
+    pub on_button_clicked: Callback<(MouseEvent, HeaderBarMessage), ()>,
 }
 
 pub struct HeaderBar {
@@ -35,6 +33,17 @@ const ABOUT_ICON: &'static str = include_str!("./headerbar/images/info.svg");
 const REDO_ICON: &'static str = include_str!("./headerbar/images/redo.svg");
 const UNDO_ICON: &'static str = include_str!("./headerbar/images/undo.svg");
 const HELP_ICON: &'static str = include_str!("./headerbar/images/help.svg");
+
+fn wrap_callback<T>(x: &Callback<(MouseEvent, HeaderBarMessage), T>, msg: HeaderBarMessage) -> Callback<MouseEvent, T> where
+T: 'static {
+    let button_signal_emitter = x.clone();
+    let y = msg.clone();
+    let on_button = Callback::from(move |x: MouseEvent| {
+        let t = button_signal_emitter.emit((x, msg));
+        return t;
+    });
+    return on_button;
+}
 
 impl Component for HeaderBar {
     type Message = HeaderBarMessage;
@@ -54,10 +63,11 @@ impl Component for HeaderBar {
     }
 
     fn view(&self, ctx: &Context<Self>) -> Html {
-        let on_undo = (&ctx.props().on_undo).clone();
-        let on_redo = (&ctx.props().on_redo).clone();
-        let on_about = (&ctx.props().on_about).clone();
-        let on_help = (&ctx.props().on_help).clone();
+        let on_button_clicked = &ctx.props().on_button_clicked;
+        let on_undo = wrap_callback(on_button_clicked, HeaderBarMessage::Undo);
+        let on_redo = wrap_callback(on_button_clicked, HeaderBarMessage::Redo);
+        let on_about = wrap_callback(on_button_clicked, HeaderBarMessage::About);
+        let on_help = wrap_callback(on_button_clicked, HeaderBarMessage::Help);
 
         let about = Html::from_html_unchecked(self.about_icon.clone());
         let redo = Html::from_html_unchecked(self.redo_icon.clone());

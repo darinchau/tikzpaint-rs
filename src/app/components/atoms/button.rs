@@ -85,7 +85,6 @@ impl Component for Button {
                 cb.emit(x);
                 ButtonMessage::Press
             })}>
-                {properties}
                 {for children.iter()}
             </button>
         }
