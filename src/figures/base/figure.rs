@@ -1,14 +1,14 @@
 //! A figure object serves as a canvas to convert drawables into displayables into code and shapes
 
-use crate::figures::{Drawable, IsProjection, Plottable, DimensionError, DrawableWrapper, WrappableAsDrawable};
+use crate::figures::{Drawable, IsProjection, Plottable, DimensionError, DrawableObject, WrappableAsDrawable};
 
-use super::projection::WrappableAsProjection;
+use super::{projection::WrappableAsProjection, figureobject::PlottableObject};
 use crate::figures::Projection;
 
 // Rerender every time we draw/project/do anything basically
 pub struct Figure {
     dims: usize,
-    to_draw: Vec<DrawableWrapper>,
+    to_draw: Vec<DrawableObject>,
     hash: usize
 }
 
@@ -37,7 +37,7 @@ impl Figure {
     /// every coordinate in every drawable object through the function f that you provide.
     /// The projection will be fed through the project method defined on the function object.
     pub fn load<T, S>(&self, f: T, proj: Projection) -> Result<Vec<S>, DimensionError> where
-        T: Fn(Box<dyn Plottable>) -> S,
+        T: Fn(PlottableObject) -> S,
     {
         if proj.output() != 2 {
             return Err(DimensionError{
@@ -46,12 +46,11 @@ impl Figure {
             })
         }
 
-        let project = proj.wrap();
         let mut v: Vec<S> = Vec::new();
         for x in &self.to_draw {
             for obj in x.draw() {
-                let new_p = project.clone();
-                let new_obj = (*obj).project_to_plot(new_p)?;
+                let new_p = proj.clone();
+                let new_obj = obj.project_to_plot(new_p)?;
                 let ret_s = f(new_obj);
                 v.push(ret_s);
             }

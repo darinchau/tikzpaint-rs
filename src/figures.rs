@@ -5,11 +5,17 @@ mod utils;
 
 pub use base::coordinates::Coordinates;
 
-pub use base::figureobject::Drawable;
+// Using the wrap design pattern (invented by me??) :))
 pub use base::figureobject::Plottable;
+pub use base::figureobject::PlottableObject;
+
+pub use base::figureobject::IsFigureObject;
 pub use base::figureobject::FigureObject;
-use base::figureobject::DrawableWrapper;
-use base::figureobject::WrappableAsDrawable;
+pub use base::figureobject::WrappableAsFigureObject;
+
+pub use base::figureobject::Drawable;
+use base::figureobject::DrawableObject;
+pub use base::figureobject::WrappableAsDrawable;
 
 pub use base::plotoptions::Color;
 pub use base::plotoptions::PlotOptions;

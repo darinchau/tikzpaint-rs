@@ -11,19 +11,14 @@ Self: 'static {
     fn input(&self) -> usize;
     /// Returns the output dimension of this projection
     fn output(&self) -> usize;
-    /// Performs the projection. You are responsible for checking whether the coordinates dimension matches the input dimension -
-    /// if not, return a DimensionError
-    fn call(&self, v: &Coordinates) -> Result<Coordinates, DimensionError>;
-    /// Used for outputing error message
-    fn dims(&self) -> String {
-        format!("({} -> {})", self.input(), self.output())
-    }
+    /// Performs the projection. We guarantee the coordinates passed into this trait has correct number of dimensions.
+    fn call(&self, v: &Coordinates) -> Coordinates;
 }
 
 pub trait WrappableAsProjection {
     fn wrap(self) -> Projection where
         Self: Sized + IsProjection {
-        Projection { ptr: Rc::new(self) }
+        Projection { obj: Rc::new(self) }
     }
 }
 
@@ -32,28 +27,28 @@ impl<T: IsProjection + Sized> WrappableAsProjection for T {}
 /// You probably got a generic projection because you called the wrap() function on an object with IsProjection.
 /// Internally this is just an Rc wrapping a dynamic trait object. Hence cloning is very cheap.
 pub struct Projection {
-    ptr: Rc<dyn IsProjection>
+    obj: Rc<dyn IsProjection>
 }
 
 impl Clone for Projection {
     fn clone(&self) -> Self {
-        let obj = Rc::clone(&self.ptr);
+        let obj = Rc::clone(&self.obj);
         return Projection {
-            ptr: obj
+            obj
         }
     }
 }
 
-impl IsProjection for Projection {
-    fn input(&self) -> usize {
-        self.ptr.input()
+impl Projection {
+    pub fn input(&self) -> usize {
+        self.obj.input()
     }
 
-    fn output(&self) -> usize {
-        self.ptr.output()
+    pub fn output(&self) -> usize {
+        self.obj.output()
     }
 
-    fn call(&self, v: &Coordinates) -> Result<Coordinates, DimensionError>{
+    pub fn call(&self, v: &Coordinates) -> Result<Coordinates, DimensionError>{
         if v.dims != self.input() {
             return Err(DimensionError{
                 msg: format!("Found incorrect input dimensions. Expect {}, found {}", self.input(), v.dims),
@@ -61,7 +56,12 @@ impl IsProjection for Projection {
             });
         }
 
-        self.ptr.call(v)
+        Ok(self.obj.call(v))
+    }
+
+    /// Used for outputing error message
+    pub fn dims(&self) -> String {
+        format!("({} -> {})", self.input(), self.output())
     }
 }
 
@@ -83,14 +83,8 @@ pub struct Identity {
 }
 
 impl IsProjection for Identity {
-    fn call(&self, v: &Coordinates) -> Result<Coordinates, DimensionError> {
-        if v.dims != self.dims {
-            return Err(DimensionError {
-                msg: format!("Expected the number of dimensions of the coordinate ({}) to match the projection ({})", v.dims, self.dims),
-                source: "call() from Identity"
-            })
-        }
-        return Ok(v.clone());
+    fn call(&self, v: &Coordinates) -> Coordinates {
+        v.clone()
     }
 
     fn input(&self) -> usize {
@@ -197,16 +191,16 @@ impl Concat {
     /// let y2 = this_is_also_proj2.call(&x).unwrap();
     /// assert!(y2 == Coordinates::new(vec![13, 7]));
     /// ```
-    pub fn second(&self) -> impl IsProjection {
+    pub fn second(&self) -> Projection {
         self.proj2.clone()
     }
 }
 
 impl IsProjection for Concat {
-    fn call(&self, v: &Coordinates) -> Result<Coordinates, DimensionError> {
-        let y = self.proj1.call(v)?;
-        let z = self.proj2.call(&y)?;
-        return Ok(z)
+    fn call(&self, v: &Coordinates) -> Coordinates {
+        let y = self.proj1.call(v).unwrap();
+        let z = self.proj2.call(&y).unwrap();
+        return z
     }
 
     fn input(&self) -> usize {
@@ -310,17 +304,11 @@ impl IsProjection for Matrix {
         self.rows
     }
 
-    fn call(&self, v: &Coordinates) -> Result<Coordinates, DimensionError> {
-        if v.dims != self.cols {
-            return Err(DimensionError{
-                msg: format!("Expect the dimension of v to equal the number of columns ({}), found {}", self.cols, v.dims),
-                source: "call() from Matrix",
-            })
-        }
+    fn call(&self, v: &Coordinates) -> Coordinates {
         let w = (0..self.rows).into_iter().map(|i| {
             (0..self.cols).into_iter().map(|j| v[j] * self.values[i][j]).sum()
         }).collect::<Vec<f64>>();
 
-        Ok(Coordinates::new(w))
+        Coordinates::new(w)
     }
 }
