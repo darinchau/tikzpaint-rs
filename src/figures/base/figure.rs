@@ -1,11 +1,15 @@
 //! A figure object serves as a canvas to convert drawables into displayables into code and shapes
 
-use crate::figures::{Drawable, IsProjection, Plottable, DimensionError, DrawableWrapper};
+use crate::figures::{Drawable, IsProjection, Plottable, DimensionError, DrawableWrapper, WrappableAsDrawable};
 
+use super::projection::WrappableAsProjection;
+use crate::figures::Projection;
+
+// Rerender every time we draw/project/do anything basically
 pub struct Figure {
     dims: usize,
     to_draw: Vec<DrawableWrapper>,
-    hash: i64
+    hash: usize
 }
 
 impl PartialEq for Figure {
@@ -23,24 +27,31 @@ impl Figure {
         }
     }
 
-    /// Adds 'obj' to the list of objects to be drawn.
-    pub fn draw(&mut self, obj: DrawableWrapper) where {
-        self.to_draw.push(obj);
+    /// Adds 'obj' to the list of objects to be drawn. This forces the
+    pub fn draw<T: Drawable + WrappableAsDrawable>(&mut self, obj: T) where {
+        self.to_draw.push(obj.wrap());
         self.hash += 1;
     }
 
     /// Load method takes a function object and a projection object. The method will feed
     /// every coordinate in every drawable object through the function f that you provide.
     /// The projection will be fed through the project method defined on the function object.
-    pub fn load<T, S, P>(&self, f: T, proj: &P) -> Result<Vec<S>, DimensionError> where
+    pub fn load<T, S>(&self, f: T, proj: Projection) -> Result<Vec<S>, DimensionError> where
         T: Fn(Box<dyn Plottable>) -> S,
-        P: IsProjection
     {
-        let project = Box::new(proj as &dyn IsProjection);
+        if proj.output() != 2 {
+            return Err(DimensionError{
+                msg: format!("The output dimension of the projection ({}) should be 2", proj.dims()),
+                source: "load() from Figure"
+            })
+        }
+
+        let project = proj.wrap();
         let mut v: Vec<S> = Vec::new();
         for x in &self.to_draw {
             for obj in x.draw() {
-                let new_obj = (*obj).project_to_plot(&project)?;
+                let new_p = project.clone();
+                let new_obj = (*obj).project_to_plot(new_p)?;
                 let ret_s = f(new_obj);
                 v.push(ret_s);
             }
@@ -61,8 +72,7 @@ impl Figure {
     /// let st = fig.output_tikz(&Identity{dims: 2}).unwrap();
     /// assert_eq!(st, "\\begin{tikzpicture}\n\\end{tikzpicture}")
     /// ```
-    pub fn output_tikz<P>(&self, proj: &P) -> Result<String, DimensionError> where
-    P: IsProjection {
+    pub fn output_tikz(&self, proj: Projection) -> Result<String, DimensionError> {
         if self.dims != proj.input() {
             return Err(DimensionError{
                 msg: format!("The input dimension of the projection ({}) should be the same as the figure dimension ({})", proj.input(), self.dims),
@@ -71,7 +81,7 @@ impl Figure {
         }
         if proj.output() != 2 {
             return Err(DimensionError{
-                msg: format!("The output dimension of the projection ({}) should be 2", proj.output()),
+                msg: format!("The output dimension of the projection ({}) should be 2", proj.dims()),
                 source: "output_tikz() from Figure"
             })
         }

@@ -1,6 +1,6 @@
 //! This is a direct implementation of a point out of the FOPoint
 
-use crate::{figures::{Coordinates, Drawable, Hashable, Serializable}};
+use crate::figures::{Coordinates, Drawable, Hashable, Serializable};
 
 /// The implementation of a node with no contents.
 ///
@@ -17,7 +17,6 @@ use crate::{figures::{Coordinates, Drawable, Hashable, Serializable}};
 /// let expect = "\\begin{tikzpicture}\n\t\\node[] at (2, 3) {}\n\t\\node[] at (4, 5) {}\n\\end{tikzpicture}";
 /// assert_eq!(result, expect);
 /// ```
-
 #[derive(Clone)]
 pub struct Point<const DIMS: usize> {
     p: FOPoint<DIMS>,

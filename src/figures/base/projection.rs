@@ -4,15 +4,33 @@ use std::rc::Rc;
 use crate::figures::{Coordinates, DimensionError};
 
 /// Basic implementation for a projection function trait object that takes Coordinates of INPUT dimensions and turn
-/// them into coordinates of OUTPUT dimensions
+/// them into coordinates of OUTPUT dimensions. Implicitly we also have to satisfy Sized.
 pub trait IsProjection where
 Self: 'static {
+    /// Returns the input dimension of this projection
     fn input(&self) -> usize;
+    /// Returns the output dimension of this projection
     fn output(&self) -> usize;
-    /// Performs the projection.
+    /// Performs the projection. You are responsible for checking whether the coordinates dimension matches the input dimension -
+    /// if not, return a DimensionError
     fn call(&self, v: &Coordinates) -> Result<Coordinates, DimensionError>;
+    /// Used for outputing error message
+    fn dims(&self) -> String {
+        format!("({} -> {})", self.input(), self.output())
+    }
 }
 
+pub trait WrappableAsProjection {
+    fn wrap(self) -> Projection where
+        Self: Sized + IsProjection {
+        Projection { ptr: Rc::new(self) }
+    }
+}
+
+impl<T: IsProjection + Sized> WrappableAsProjection for T {}
+
+/// You probably got a generic projection because you called the wrap() function on an object with IsProjection.
+/// Internally this is just an Rc wrapping a dynamic trait object. Hence cloning is very cheap.
 pub struct Projection {
     ptr: Rc<dyn IsProjection>
 }
@@ -39,7 +57,7 @@ impl IsProjection for Projection {
         if v.dims != self.input() {
             return Err(DimensionError{
                 msg: format!("Found incorrect input dimensions. Expect {}, found {}", self.input(), v.dims),
-                source: "call() from Projection (did you extract a projection from a concatenated projection?)"
+                source: "call() from Projection"
             });
         }
 
@@ -86,8 +104,8 @@ impl IsProjection for Identity {
 
 ///The concat type allows us to construct new projections from existing projections.
 pub struct Concat {
-    proj1: Rc<dyn IsProjection>,
-    proj2: Rc<dyn IsProjection>
+    proj1: Projection,
+    proj2: Projection
 }
 
 impl Concat {
@@ -114,26 +132,22 @@ impl Concat {
     /// assert!(y3 == Coordinates::new(vec![23, 12]));
     /// ```
     pub fn from<P1: IsProjection, P2: IsProjection>(proj1: P1, proj2: P2) -> Result<Self, DimensionError> {
-        let r1 = Rc::new(proj1);
-        let r2 = Rc::new(proj2);
+        let r1 = proj1.wrap();
+        let r2 = proj2.wrap();
         return Self::new(r1, r2);
     }
 
-    pub fn new(proj1: Rc<dyn IsProjection>, proj2: Rc<dyn IsProjection>) -> Result<Self, DimensionError> {
+    pub fn new(proj1: Projection, proj2: Projection) -> Result<Self, DimensionError> {
         if proj1.output() != proj2.input() {
             return Err(DimensionError{
-                msg: format!("Expect the inner dimensions of projection 1 ({} -> {}) and projection 2 ({} -> {}) to match",
-                    proj1.input(), proj1.output(), proj2.input(), proj2.output()),
+                msg: format!("Expect the inner dimensions of projection 1 {} and projection 2 {} to match", proj1.dims(), proj2.dims()),
                 source: "from() from Concat"
             });
         }
 
-        let r1 = Rc::clone(&proj1);
-        let r2 = Rc::clone(&proj2);
-
         Ok(Concat {
-            proj1: r1,
-            proj2: r2
+            proj1,
+            proj2
         })
     }
 
@@ -158,10 +172,8 @@ impl Concat {
     /// let y1 = this_is_also_proj1.call(&x).unwrap();
     /// assert!(y1 == Coordinates::new(vec![3, 4, 10]));
     /// ```
-    pub fn first(&self) -> impl IsProjection {
-        Projection {
-            ptr: Rc::clone(&self.proj1)
-        }
+    pub fn first(&self) -> Projection {
+        self.proj1.clone()
     }
 
     /// Returns the second projection object in this chained projection, with the same lifetime as this chained projection object
@@ -186,9 +198,7 @@ impl Concat {
     /// assert!(y2 == Coordinates::new(vec![13, 7]));
     /// ```
     pub fn second(&self) -> impl IsProjection {
-        Projection {
-            ptr: Rc::clone(&self.proj2)
-        }
+        self.proj2.clone()
     }
 }
 
