@@ -1,9 +1,7 @@
 //! A figure object serves as a canvas to convert drawables into displayables into code and shapes
 
-use crate::figures::{Drawable, IsProjection, Plottable, DimensionError, DrawableObject, WrappableAsDrawable};
-
-use super::{projection::WrappableAsProjection, figureobject::PlottableObject};
-use crate::figures::Projection;
+use std::any::{TypeId, Any};
+use crate::figures::*;
 
 // Rerender every time we draw/project/do anything basically
 pub struct Figure {
@@ -36,12 +34,14 @@ impl Figure {
     /// Load method takes a function object and a projection object. The method will feed
     /// every coordinate in every drawable object through the function f that you provide.
     /// The projection will be fed through the project method defined on the function object.
-    pub fn load<T, S>(&self, f: T, proj: Projection) -> Result<Vec<S>, DimensionError> where
+    pub fn load<T, S, P>(&self, f: T, proj: P) -> Result<Vec<S>, DimensionError> where
         T: Fn(PlottableObject) -> S,
+        P: IsProjection + Any + 'static
     {
-        if proj.output() != 2 {
+        let fig_proj = proj.wrap();
+        if fig_proj.output() != 2 {
             return Err(DimensionError{
-                msg: format!("The output dimension of the projection ({}) should be 2", proj.dims()),
+                msg: format!("The output dimension of the projection ({}) should be 2", fig_proj.dims()),
                 source: "load() from Figure"
             })
         }
@@ -49,7 +49,7 @@ impl Figure {
         let mut v: Vec<S> = Vec::new();
         for x in &self.to_draw {
             for obj in x.draw() {
-                let new_p = proj.clone();
+                let new_p = fig_proj.clone();
                 let new_obj = (&obj).project_to_plot(new_p)?;
                 let ret_s = f(new_obj);
                 v.push(ret_s);
@@ -69,10 +69,13 @@ impl Figure {
     /// use tikzpaint_rs::figures::WrappableAsProjection;
     ///
     /// let fig = Figure::new(2);
-    /// let st = fig.output_tikz(Identity{dims: 2}.wrap()).unwrap();
+    /// let st = fig.output_tikz(Identity{dims: 2}).unwrap();
     /// assert_eq!(st, "\\begin{tikzpicture}\n\\end{tikzpicture}")
     /// ```
-    pub fn output_tikz(&self, proj: Projection) -> Result<String, DimensionError> {
+    pub fn output_tikz<P: IsProjection + Any + 'static>(&self, projection: P) -> Result<String, DimensionError> {
+        // If p is not a projection make it a projection, otherwise leave it as is.
+        let proj = projection.wrap();
+
         if self.dims != proj.input() {
             return Err(DimensionError{
                 msg: format!("The input dimension of the projection ({}) should be the same as the figure dimension ({})", proj.input(), self.dims),

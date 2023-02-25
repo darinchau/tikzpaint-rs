@@ -1,6 +1,6 @@
 //! Projections are traits that takes coordinates and outputs coordinates
 use std::rc::Rc;
-
+use std::any::Any;
 use crate::figures::{Coordinates, DimensionError};
 
 /// Basic implementation for a projection function trait object that takes Coordinates of INPUT dimensions and turn
@@ -13,12 +13,21 @@ Self: 'static {
     fn output(&self) -> usize;
     /// Performs the projection. We guarantee the coordinates passed into this trait has correct number of dimensions.
     fn call(&self, v: &Coordinates) -> Coordinates;
+
+    /// Used for outputing error message
+    fn dims(&self) -> String {
+        format!("({} -> {})", self.input(), self.output())
+    }
 }
 
 pub trait WrappableAsProjection {
-    fn wrap(self) -> Projection where
-        Self: Sized + IsProjection {
-        Projection { obj: Rc::new(self) }
+    fn wrap(self) -> Projection where Self: Sized + IsProjection + Any + 'static {
+        if let Some(pro) = (&self as &dyn Any).downcast_ref::<Projection>() {
+            pro.clone()
+        }
+        else {
+            Projection { obj: Rc::new(self) }
+        }
     }
 }
 
@@ -40,15 +49,7 @@ impl Clone for Projection {
 }
 
 impl Projection {
-    pub fn input(&self) -> usize {
-        self.obj.input()
-    }
-
-    pub fn output(&self) -> usize {
-        self.obj.output()
-    }
-
-    pub fn call(&self, v: &Coordinates) -> Result<Coordinates, DimensionError>{
+    pub fn project(&self, v: &Coordinates) -> Result<Coordinates, DimensionError>{
         if v.dims != self.input() {
             return Err(DimensionError{
                 msg: format!("Found incorrect input dimensions. Expect {}, found {}", self.input(), v.dims),
@@ -58,10 +59,19 @@ impl Projection {
 
         Ok(self.obj.call(v))
     }
+}
 
-    /// Used for outputing error message
-    pub fn dims(&self) -> String {
-        format!("({} -> {})", self.input(), self.output())
+impl IsProjection for Projection {
+    fn input(&self) -> usize {
+        self.obj.input()
+    }
+
+    fn output(&self) -> usize {
+        self.obj.output()
+    }
+
+    fn call(&self, v: &Coordinates) -> Coordinates {
+        self.obj.call(v)
     }
 }
 
@@ -199,8 +209,8 @@ impl Concat {
 
 impl IsProjection for Concat {
     fn call(&self, v: &Coordinates) -> Coordinates {
-        let y = self.proj1.call(v).unwrap();
-        let z = self.proj2.call(&y).unwrap();
+        let y = self.proj1.project(v).unwrap();
+        let z = self.proj2.project(&y).unwrap();
         return z
     }
 

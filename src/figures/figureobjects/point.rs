@@ -45,7 +45,7 @@ impl IsFigureObject for FOPoint {
     }
 
     fn project(&self, p: Projection) -> FigureObject {
-        let new_p = p.call(&self.point).unwrap();
+        let new_p = p.project(&self.point).unwrap();
         let new_self = Self {
             point: new_p,
             option: self.option.clone(),
