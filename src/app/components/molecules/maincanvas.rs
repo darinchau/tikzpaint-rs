@@ -6,21 +6,21 @@ use stylist::Style;
 use yew::prelude::*;
 use web_sys::HtmlElement;
 use wasm_bindgen::JsCast;
-use crate::app::{GetProperty, Button, ButtonType, Serializable};
+use crate::app::{GetProperty, Button, ButtonType, Serializable, ButtonInfo};
 use crate::figures::Figure;
 
 #[derive(PartialEq, Debug, Clone)]
 pub struct MousePosition(usize, usize);
 
 #[derive(Properties, PartialEq)]
-pub struct SensorCanvasProps {
+pub struct MainCanvasProps {
     pub top: usize,
     pub left: usize,
     pub debug: Option<bool>,
-    pub svg_content: Html
+    pub svg_content: String
 }
 
-fn get_css(props: &SensorCanvasProps) -> String {
+fn get_css(props: &MainCanvasProps) -> String {
     let debug_mode = props.debug.is_some() && props.debug.unwrap();
     let topbar_height_px = props.top.to_string();
     let sidebar_width_px = props.left.to_string();
@@ -49,80 +49,36 @@ fn get_css(props: &SensorCanvasProps) -> String {
     }
 }
 
-// We use higher order components as a workaround for not having hooks and direct access to internal states simultaneously
-#[function_component(SensorCanvasPair)]
-fn sensor_canvas(props: &SensorCanvasProps) -> Html {
-    let debug_mode = props.debug.is_some() && props.debug.unwrap();
+fn process_svg(s: String) -> String {
+    return String::new();
+}
 
+// We use higher order components as a workaround for not having hooks and direct access to internal states simultaneously
+#[function_component(MainCanvas)]
+pub fn main_canvas(props: &MainCanvasProps) -> Html {
     // Parse main canvas dimensions
     let class_id = get_css(props);
 
     // We are using a button under a canvas as a mouse sensor. Get the position data from a button underneath the svg.
     let pos_state = use_state(|| MousePosition(0, 0));
     let pos_state_getter = pos_state.clone();
-    let cb = Callback::from(move |x: MouseEvent| {
-        pos_state_getter.set(MousePosition(
+    let cb = Callback::from(move |(x, _): (MouseEvent, ButtonInfo)| {
+        pos_state_getter.set(MousePosition (
             if x.screen_x() >= 0 {x.screen_x() as usize} else {0},
             if x.screen_y() >= 0 {x.screen_y() as usize} else {0},
         ));
     });
 
-    let svg_content = props.svg_content.clone();
+    let svg_content = process_svg(props.svg_content.clone());
 
     html! {
         <div class={class_id}>
             <svg>
                 {svg_content}
             </svg>
-            <Button name={"canvas sensor"} button_type={ButtonType::Other} cb={cb}>
+            <Button name={"main canvas"} button_type={ButtonType::Other} cb={cb}>
                 {format!("{:?}", *pos_state)}
             </Button>
         </div>
-    }
-}
-
-// Implementation of main canvas
-#[derive(PartialEq, Debug, Clone)]
-pub enum ClickType {
-    Point,
-}
-#[derive(PartialEq, Debug, Clone)]
-pub struct MainCanvasMessage {
-    position: MousePosition,
-    click: ClickType,
-}
-
-#[derive(Properties, PartialEq)]
-pub struct MainCanvasProps {
-    pub top_px_offset: usize,
-    pub left_px_offset: usize,
-    pub debug: Option<bool>,
-    pub figure: UseStateHandle<Figure>
-}
-
-pub struct MainCanvas {
-
-}
-
-
-impl Component for MainCanvas {
-    type Message = MainCanvasMessage;
-    type Properties = MainCanvasProps;
-
-    fn create(ctx: &Context<Self>) -> Self {
-        MainCanvas {  }
-    }
-
-    fn view(&self, ctx: &Context<Self>) -> Html {
-        let top = (&ctx.props()).top_px_offset;
-        let left = (&ctx.props()).left_px_offset;
-        let deb = (&ctx.props()).debug;
-
-        // TODO: write rendering magic - convert figure into svg
-        let svg_content = html!();
-
-        html! {
-            <SensorCanvasPair top={top} left={left} debug={deb} svg_content={svg_content}/>
-        }
     }
 }

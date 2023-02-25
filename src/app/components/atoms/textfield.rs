@@ -7,104 +7,131 @@ use wasm_bindgen::JsCast;
 use crate::app::{GetProperty, Serializable, GetPropertyError};
 use web_sys::HtmlInputElement;
 
-pub enum TextFieldMessage {
-    Change(String),
-    Enter,
-    None,
+#[derive(Clone, Debug)]
+pub enum TextFieldEvent {
+    Change(Event),
+    Enter(KeyboardEvent),
+}
+
+#[derive(Clone, Debug)]
+pub struct TextFieldInfo {
+    pub event: TextFieldEvent,
+    _state: UseStateHandle<String>
+}
+
+impl TextFieldInfo {
+    pub fn get_text(&self) -> String {
+        return (&*self._state).clone();
+    }
+
+    pub fn set_text(&mut self, text: String) {
+        self._state.set(text);
+    }
+}
+
+#[derive(PartialEq, Clone, Copy)]
+pub enum TextFieldInputType {
+    Button,
+    Checkbox,
+    Color,
+    Date,
+    DateTimeLocal,
+    Email,
+    File,
+    Hidden,
+    Image,
+    Month,
+    Number,
+    Password,
+    Radio,
+    Range,
+    Reset,
+    Search,
+    Submit,
+    Tel,
+    Text,
+    Time,
+    Url,
+    Week,
+}
+
+impl TextFieldInputType {
+    pub fn to_string(&self) -> &'static str {
+        match self {
+            TextFieldInputType::Button => {"button"},
+            TextFieldInputType::Checkbox => {"checkbox"},
+            TextFieldInputType::Color => {"color"},
+            TextFieldInputType::Date => {"date"},
+            TextFieldInputType::DateTimeLocal => {"datetime-local"},
+            TextFieldInputType::Email => {"email"},
+            TextFieldInputType::File => {"file"},
+            TextFieldInputType::Hidden => {"hidden"},
+            TextFieldInputType::Image => {"image"},
+            TextFieldInputType::Month => {"month"},
+            TextFieldInputType::Number => {"number"},
+            TextFieldInputType::Password => {"password"},
+            TextFieldInputType::Radio => {"radio"},
+            TextFieldInputType::Range => {"range"},
+            TextFieldInputType::Reset => {"reset"},
+            TextFieldInputType::Search => {"search"},
+            TextFieldInputType::Submit => {"submit"},
+            TextFieldInputType::Tel => {"tel"},
+            TextFieldInputType::Text => {"text"},
+            TextFieldInputType::Time => {"time"},
+            TextFieldInputType::Url => {"url"},
+            TextFieldInputType::Week => {"week"},
+        }
+    }
 }
 
 #[derive(Properties, PartialEq)]
-pub struct TextFieldProperties{
+pub struct TextFieldProps{
     pub name: AttrValue,
     pub label: AttrValue,
-    /// The callback is a function called right before the state change is triggered.
-    pub onchange: Option<Callback<(Event, String), ()>>,
-    pub ontypeenter: Option<Callback<KeyboardEvent, ()>>,
+    pub field_type: TextFieldInputType,
+    /// The callback is a function called after the state is triggered but before rerender
+    pub cb: Option<Callback<TextFieldInfo, ()>>,
 }
 
-pub struct TextField {
-    pub msg: Option<String>
-}
+#[function_component(TextField)]
+pub fn text_field(props: &TextFieldProps) -> Html {
+    let cb = props.cb.clone().unwrap_or(Callback::from(|_| ()));
+    let cb2 = cb.clone();
 
-impl Serializable for TextField {
-    fn from_str(s: &str) -> Option<Self> {
-        if s.len() >= 1 && s.starts_with("s") {
-            return Some(TextField{
-                msg: Some(String::from(&s[1..]))
-            });
-        }
+    let name = props.name.clone();
+    let name2 = props.name.clone();
+    let label = props.label.clone();
+    let ftype = props.field_type.to_string();
 
-        else if s.len() >= 1 && s.starts_with("n") {
-            return Some(TextField{
-                msg: None
-            });
-        }
+    let state = use_state(|| String::new());
+    let state_1 = state.clone();
 
-        return None
-    }
+    html! {
+        <label for={name}>{label}
+            <input type={ftype} name={name2}
+            onchange={Callback::from(move |x: Event| {
+                let input = x.target().and_then(|t| t.dyn_into::<HtmlInputElement>().ok());
 
-    fn into_str(&self) -> String {
-        if let Some(s) = self.msg.clone() {
-            return format!("s{}", s);
-        }
-        return String::from("n");
-    }
-}
+                if let Some(elem) = input {
+                    let info = TextFieldInfo {
+                        event: TextFieldEvent::Change(x),
+                        _state: state.clone(),
+                    };
 
-impl GetProperty for TextField {
-    const NAME: &'static str = "TextField";
-}
+                    cb.emit(info);
+                }
+            })}
 
-impl Component for TextField {
-    type Message = TextFieldMessage;
-    type Properties = TextFieldProperties;
+            onkeydown={Callback::from(move |x: KeyboardEvent| {
+                if x.key() == "Enter" {
+                    let info = TextFieldInfo {
+                        event: TextFieldEvent::Enter(x),
+                        _state: state_1.clone(),
+                    };
 
-    fn create(_ctx: &Context<Self>) -> Self {
-        TextField {
-            msg: None
-        }
-    }
-
-    fn view(&self, ctx: &Context<Self>) -> Html {
-        let onchange = (&ctx.props().onchange)
-            .clone()
-            .unwrap_or(Callback::from(|_| ()));
-        let onenter = (&ctx.props().ontypeenter)
-            .clone()
-            .unwrap_or(Callback::from(|_| ()));
-        let link = ctx.link();
-        let name = (&ctx.props().name).to_owned();
-        let name2 = (&ctx.props().name).to_owned();
-        let label = (&ctx.props().label).to_owned();
-        let property = self.property_html();
-        html! {
-            <div>
-                {property}
-                <label for={name}>{label}
-                    <input 
-                    type="text" 
-                    name={name2} 
-                    onchange={link.callback(move |x: Event| {
-                        let input = x.target()
-                            .and_then(|t| t.dyn_into::<HtmlInputElement>().ok());
-
-                        if let Some(elem) = input {
-                            onchange.emit((x, elem.value()));
-                            return TextFieldMessage::Change(elem.value())
-                        }
-
-                        TextFieldMessage::None
-                    })}
-                    onkeydown={link.callback(move |x: KeyboardEvent| {
-                        if x.key() == "Enter" {
-                            onenter.emit(x);
-                            return TextFieldMessage::Enter;
-                        }
-
-                        TextFieldMessage::None
-                    })}/>
-                </label>
-            </div>
-        }
+                    cb2.emit(info);
+                }
+            })}/>
+        </label>
     }
 }

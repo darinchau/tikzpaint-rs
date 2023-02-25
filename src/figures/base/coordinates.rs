@@ -3,7 +3,7 @@ use std::hash::Hash;
 use std::ops::{Add, Sub, Mul, Div, Index};
 use std::f64::EPSILON;
 
-use crate::app::Serializable;
+use crate::figures::Serializable;
 use crate::figures::{Hashable, DimensionError};
 
 #[derive(Clone)]

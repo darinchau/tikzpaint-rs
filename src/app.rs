@@ -7,8 +7,10 @@ pub use components::atoms::switch::Switch;
 pub use components::atoms::textfield::TextField;
 pub use components::atoms::button::Button;
 pub use components::atoms::button::ButtonType;
+pub use components::atoms::button::ButtonInfo;
 
 pub use components::molecules::headerbar::HeaderBar;
+pub use components::molecules::headerbar::HeaderBarMessage;
 pub use components::molecules::maincanvas::MainCanvas;
 
 pub use utils::getproperty::GetProperty;
@@ -16,16 +18,11 @@ pub use utils::getproperty::GetPropertyError;
 
 pub use utils::filler_text::*;
 
-// Reexport serializable since I don't want to break dependencies in this wrapper app
-pub use crate::figures::Serializable;
-
 // ================================================================================== //
 // ============================= Main implementation ================================ //
 // ================================================================================== //
 
 use crate::figures::*;
-
-use self::components::molecules::headerbar::HeaderBarMessage;
 
 /// Dictates the height of the header and the maximum width of the side bar
 #[derive(PartialEq, Properties)]
@@ -59,6 +56,7 @@ pub fn canvas_manager(props: &CanvasManagerProps) -> Html {
     html!{
         <>
             <HeaderBar height={header_height} on_button_clicked={cb}/>
+            // <MainCanvas />
         </>
     }
 }

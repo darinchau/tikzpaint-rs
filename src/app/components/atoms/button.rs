@@ -14,82 +14,45 @@ pub enum ButtonType {
     Other
 }
 
-pub enum ButtonMessage {
-    Press,
+#[derive(Clone)]
+pub struct ButtonInfo {
+    num_times_pressed: usize
 }
 
 #[derive(Properties, PartialEq)]
 pub struct ButtonProperties{
     /// The callback is a function called right before the state change is triggered.
-    /// The input parameters is the mouse event and the state of the switch **before** the press
+    /// It passes a mouse event and the number of times a button is pressed + 1 (i.e. what it would be after the press)
+    pub cb: Option<Callback<(MouseEvent, ButtonInfo), ()>>,
     pub name: AttrValue,
     pub button_type: ButtonType,
-    pub cb: Option<Callback<MouseEvent, ()>>,
     pub children: Children,
 }
 
-pub struct Button {
-    /// Number of times pressed
-    pub val: usize
-}
+#[function_component(Button)]
+pub fn button(props: &ButtonProperties) -> Html {
+    let cb = props.cb.clone().unwrap_or(Callback::from(|_| ()));
+    let button_type = match props.button_type {
+        ButtonType::Submit => "submit",
+        ButtonType::Reset => "reset",
+        ButtonType::Other => "button"
+    };
 
-impl Serializable for Button {
-    fn into_str(&self) -> String {
-        self.val.to_string()
-    }
+    let num_times_pressed = use_state(|| 0_usize);
+    let ntp = num_times_pressed.clone();
 
-    fn from_str(s: &str) -> Option<Self> {
-        if let Some(num) = str::parse::<usize>(s).ok() {
-            return Some(Button {
-                val: num
-            });
-        }
+    let name = props.name.clone();
 
-        None
-    }
-}
-
-impl GetProperty for Button {
-    const NAME: &'static str = "Button";
-}
-
-impl Component for Button {
-    type Message = ButtonMessage;
-    type Properties = ButtonProperties;
-
-    fn create(_ctx: &Context<Self>) -> Self {
-        Button { val: 0 }
-    }
-
-    fn update(&mut self, _ctx: &Context<Self>, msg: Self::Message) -> bool {
-        match msg {
-            ButtonMessage::Press => self.val += 1,
-        }
-        true
-    }
-
-    fn view(&self, ctx: &Context<Self>) -> Html {
-        let children = &ctx.props().children;
-        let cb = (&ctx.props().cb)
-            .clone()
-            .unwrap_or(Callback::from(|_| ()));
-        let link = ctx.link();
-        let properties = self.property_html();
-        let button_type = match &ctx.props().button_type {
-            ButtonType::Submit => "submit",
-            ButtonType::Reset => "reset",
-            ButtonType::Other => "button"
-        };
-        html! {
-            <button type={button_type} onclick={link.callback(move |x| {
-                cb.emit(x);
-                ButtonMessage::Press
-            })}>
-                {for children.iter()}
-            </button>
-        }
+    html! {
+        <button aria-label={name} type={button_type} onclick={Callback::from(move |x: MouseEvent| {
+            let before_press_num_times = &*ntp;
+            ntp.set(before_press_num_times + 1);
+            let info = ButtonInfo {
+                num_times_pressed: before_press_num_times + 1
+            };
+            cb.emit((x, info));
+        })}>
+            {for props.children.iter()}
+        </button>
     }
 }
-
-
-

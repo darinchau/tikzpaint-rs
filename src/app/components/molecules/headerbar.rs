@@ -6,7 +6,7 @@ use stylist::css;
 use yew::prelude::*;
 use web_sys::HtmlElement;
 use wasm_bindgen::JsCast;
-use crate::app::{GetProperty, Serializable, Button, ButtonType};
+use crate::app::{GetProperty, Serializable, Button, ButtonType, ButtonInfo};
 
 #[derive(Clone, Copy, PartialEq, Debug)]
 pub enum HeaderBarMessage {
@@ -34,11 +34,10 @@ const REDO_ICON: &'static str = include_str!("./headerbar/images/redo.svg");
 const UNDO_ICON: &'static str = include_str!("./headerbar/images/undo.svg");
 const HELP_ICON: &'static str = include_str!("./headerbar/images/help.svg");
 
-fn wrap_callback<T>(x: &Callback<(MouseEvent, HeaderBarMessage), T>, msg: HeaderBarMessage) -> Callback<MouseEvent, T> where
+fn wrap_callback<T>(x: &Callback<(MouseEvent, HeaderBarMessage), T>, msg: HeaderBarMessage) -> Callback<(MouseEvent, ButtonInfo), T> where
 T: 'static {
     let button_signal_emitter = x.clone();
-    let y = msg.clone();
-    let on_button = Callback::from(move |x: MouseEvent| {
+    let on_button = Callback::from(move |(x, _): (MouseEvent, ButtonInfo)| {
         let t = button_signal_emitter.emit((x, msg));
         return t;
     });

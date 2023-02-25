@@ -21,7 +21,7 @@
     z-index: 1;
 }
 
-/* Debug mode allows for a visible button aand mouse click position */
+/* Debug mode allows for a visible button and mouse click position */
 
 .main-canvas-debug {
     position: fixed;

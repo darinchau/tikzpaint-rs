@@ -2,7 +2,7 @@
 //! If you want to define your own layer zero struct, you must implement two traits:
 //! 1. FigureObject - an object that holds coordinates in DIMS dimension
 //! 2. Plot - The figure will transform DIM coordinates into 2 dimensions - implement Plot to turn it into everything else to plot it on screen
-use crate::app::Serializable;
+use crate::figures::Serializable;
 use crate::figures::Coordinates;
 use crate::figures::DimensionError;
 use crate::figures::Hashable;
