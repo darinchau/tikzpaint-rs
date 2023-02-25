@@ -11,7 +11,7 @@ use app::CanvasManager;
 pub fn app() -> Html {
     html! {
         <div>
-            <CanvasManager header_height={60} side_bar_width={72} figure_dims={2}/>
+            <CanvasManager header_height={60} side_bar_width={170} figure_dims={2}/>
         </div>
     }
 }

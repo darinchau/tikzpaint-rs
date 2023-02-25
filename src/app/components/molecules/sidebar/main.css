@@ -1,0 +1,60 @@
+.sidebar {
+    background-color: #dedede;
+    overflow: hidden;
+    position: fixed;
+    left: 0;
+    z-index: 999;
+    padding-left: 10px;
+    padding-right: 10px;
+    padding-top: 10px;
+}
+
+.sidebar .sidebar-label {
+    font-size: 17px;
+    padding-bottom: 10px;
+}
+
+.sidebar .grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(48px, 1fr));
+    grid-template-rows: 48px;
+    grid-gap: 10px;
+}
+
+.sidebar .grid button {
+    width: 48px;
+    height: 48px;
+    border: none;
+    background-color: #c0c0c0;
+    justify-content: center;
+}
+
+.sidebar .grid button:hover {
+    background-color: #aaaaaa;
+    color: black;
+}
+
+.sidebar .grid button.active {
+    background-color: #c0c0c0;
+    color: black;
+}
+
+/*
+                 __      __      __
+187 is       10 |48| 10 |48| 10 |48| 10
+                 ‾‾      ‾‾      ‾‾
+*/
+/* @media screen and (max-width: 187px) {
+    .sidebar button {
+        background-color: #0827d5;
+    }
+
+    .sidebar button:not(:last-child) {
+        background-color: #08d561;
+    }
+
+    .sidebar> :nth-last-child(-n+2) {
+        margin-right: 10px;
+        background-color: #d508cb;
+    }
+} */

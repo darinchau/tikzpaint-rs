@@ -3,3 +3,46 @@
 body {
     padding-top: 60px;
 }
+
+/* All the styles related to the main canvas goes here */
+
+.main-canvas {
+    position: fixed;
+}
+
+.main-canvas svg {
+    position: fixed;
+    border: none;
+    background: none;
+    z-index: 0;
+}
+
+.main-canvas button {
+    position: fixed;
+    float: right;
+    background-color: transparent;
+    border: transparent;
+    color: transparent;
+    padding: 0 0;
+    z-index: 1;
+}
+
+/* Debug mode allows for a visible button and mouse click position */
+
+.main-canvas-debug {
+    position: fixed;
+}
+
+.main-canvas-debug button {
+    position: fixed;
+    float: right;
+    display: block;
+    color: #674229;
+    background-color: #333;
+    text-align: center;
+    padding: 0 0;
+    text-decoration: none;
+    font-size: 17px;
+    background-color: transparent;
+    z-index: 1;
+}

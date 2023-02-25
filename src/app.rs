@@ -25,4 +25,8 @@ use components::molecules::canvassensor::CanvasSensor;
 use components::molecules::canvassensor::CanvasSensorEvent;
 pub use components::molecules::canvasmanager::CanvasManager;
 
+use components::molecules::sidebar::SideBar;
+use components::molecules::sidebar::SideBarEvent;
+use components::molecules::sidebar::SideBarType;
+
 use utils::util::*;
