@@ -50,7 +50,7 @@ impl Figure {
         for x in &self.to_draw {
             for obj in x.draw() {
                 let new_p = proj.clone();
-                let new_obj = obj.project_to_plot(new_p)?;
+                let new_obj = (&obj).project_to_plot(new_p)?;
                 let ret_s = f(new_obj);
                 v.push(ret_s);
             }

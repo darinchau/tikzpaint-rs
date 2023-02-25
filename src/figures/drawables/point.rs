@@ -1,6 +1,6 @@
 //! This is a direct implementation of a point out of the FOPoint
 
-use crate::figures::{Coordinates, Drawable, Hashable, Serializable};
+use crate::figures::*;
 
 /// The implementation of a node with no contents.
 ///
@@ -17,34 +17,39 @@ use crate::figures::{Coordinates, Drawable, Hashable, Serializable};
 /// let expect = "\\begin{tikzpicture}\n\t\\node[] at (2, 3) {}\n\t\\node[] at (4, 5) {}\n\\end{tikzpicture}";
 /// assert_eq!(result, expect);
 /// ```
-#[derive(Clone)]
-pub struct Point<const DIMS: usize> {
-    p: FOPoint<DIMS>,
+
+pub struct Point {
+    p: FigureObject,
 }
 
-impl<const DIMS: usize> Point<DIMS> {
-    pub fn new(x: Coordinates<DIMS>) -> Self {
+impl Point {
+    pub fn new(x: Coordinates) -> Self {
         Point {
-            p: FOPoint::new(x)
+            p: FOPoint::new(x).wrap(),
         }
     }
 }
 
-impl<const DIMS: usize> Drawable<DIMS> for Point<DIMS> {
-    fn draw(&self) -> Vec<&dyn FO<DIMS>> {
-        return vec![&self.p]
+impl Drawable for Point {
+    fn draw(&self) -> Vec<FigureObject> {
+        return vec![self.p.clone()];
+    }
+
+    fn dims(&self) -> usize {
+        return self.p.dims();
     }
 }
 
-impl<const DIMS: usize> Serializable for Point<DIMS>{
+// Blanket implementation for now
+impl Serializable for Point {
     fn from_str(s: &str) -> Option<Self> {
         if !s.starts_with("pt") {
             return None;
         }
 
-        if let Some(x) = FOPoint::<DIMS>::from_str(&s[2..]) {
+        if let Some(x) = FOPoint::from_str(&s[2..]) {
             return Some(Self {
-                p: x,
+                p: x.wrap(),
             });
         }
 
@@ -52,14 +57,6 @@ impl<const DIMS: usize> Serializable for Point<DIMS>{
     }
 
     fn into_str(&self) -> String {
-        format!("pt{}", self.p.into_str())
+        format!("pt{}", self.p.coordinates()[0].into_str())
     }
 }
-
-impl<const DIMS: usize> Hashable for Point<DIMS>{
-    fn hash(&self) -> i64 {
-        return 7 * self.p.hash();
-    }
-}
-
-impl<const DIMS: usize> DrawableObject<DIMS> for Point<DIMS>{}

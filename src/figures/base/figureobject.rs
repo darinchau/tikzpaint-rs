@@ -2,14 +2,7 @@
 //! If you want to define your own layer zero struct, you must implement two traits:
 //! 1. FigureObject - an object that holds coordinates in DIMS dimension
 //! 2. Plot - The figure will transform DIM coordinates into 2 dimensions - implement Plot to turn it into everything else to plot it on screen
-use crate::figures::Figure;
-use crate::figures::Serializable;
-use crate::figures::Coordinates;
-use crate::figures::DimensionError;
-use crate::figures::Hashable;
-use crate::figures::PlotOptions;
-use crate::figures::IsProjection;
-use crate::figures::Projection;
+use crate::figures::*;
 use std::rc::Rc;
 
 /// A plottable object is the last step before output. This is like the final state of the object to say we are about to plot stuff
@@ -122,6 +115,19 @@ impl FigureObject {
         Ok(PlottableObject { ptr })
     }
 }
+
+impl Clone for FigureObject {
+    fn clone(&self) -> Self {
+        FigureObject {
+            ptr: Rc::clone(&self.ptr),
+            name: self.name
+        }
+    }
+}
+
+// ==================================================================================================
+// ============================== Implement wrap pattern for Drawables ==============================
+// ==================================================================================================
 
 /// Drawables are high-level implementations of Figure objects. They contain methods and stuff to implement
 /// drawing multiple figure objects in a particular way.

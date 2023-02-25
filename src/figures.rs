@@ -31,8 +31,8 @@ pub use base::projection::Concat;
 pub use base::projection::Projection;
 pub use base::projection::WrappableAsProjection;
 
-// pub use figureobjects::point::FOPoint;
-// pub use drawables::point::Point;
+pub use figureobjects::point::FOPoint;
+pub use drawables::point::Point;
 
 pub use utils::serializable::Serializable;
 pub use utils::hashable::Hashable;

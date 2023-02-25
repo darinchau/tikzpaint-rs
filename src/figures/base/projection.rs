@@ -65,7 +65,7 @@ impl Projection {
     }
 }
 
-/// A struct signifying the identity projection. The call() method will never return an error.
+/// A struct signifying the identity projection.
 ///
 /// Example
 /// ```
