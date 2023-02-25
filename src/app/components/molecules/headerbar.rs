@@ -9,17 +9,26 @@ use wasm_bindgen::JsCast;
 use crate::app::{Button, ButtonType, ButtonInfo};
 
 #[derive(Clone, Copy, PartialEq, Debug)]
-pub enum HeaderBarMessage {
+pub enum HeaderBarButton {
     Help,
     Undo,
     Redo,
     About,
 }
 
+pub struct HeaderBarEvent {
+    /// Header bar button is about the button that we pressed in the header bar
+    pub button_type: HeaderBarButton,
+    pub event: MouseEvent,
+
+    /// Button info is some info about the underlying button
+    pub button_info: ButtonInfo,
+}
+
 #[derive(Properties, PartialEq)]
 pub struct HeaderBarProps {
     pub height: usize,
-    pub on_button_clicked: Callback<(MouseEvent, HeaderBarMessage), ()>,
+    pub cb: Callback<HeaderBarEvent, ()>,
 }
 
 pub struct HeaderBar {
@@ -34,18 +43,23 @@ const REDO_ICON: &'static str = include_str!("./headerbar/images/redo.svg");
 const UNDO_ICON: &'static str = include_str!("./headerbar/images/undo.svg");
 const HELP_ICON: &'static str = include_str!("./headerbar/images/help.svg");
 
-fn wrap_callback<T>(x: &Callback<(MouseEvent, HeaderBarMessage), T>, msg: HeaderBarMessage) -> Callback<(MouseEvent, ButtonInfo), T> where
+fn wrap_callback<T>(x: &Callback<HeaderBarEvent, T>, msg: HeaderBarButton) -> Callback<(MouseEvent, ButtonInfo), T> where
 T: 'static {
     let button_signal_emitter = x.clone();
-    let on_button = Callback::from(move |(x, _): (MouseEvent, ButtonInfo)| {
-        let t = button_signal_emitter.emit((x, msg));
+
+    let on_button = Callback::from(move |(e, info): (MouseEvent, ButtonInfo)| {
+        let t = button_signal_emitter.emit(HeaderBarEvent{
+            button_type: msg,
+            event: e,
+            button_info: info
+        });
         return t;
     });
     return on_button;
 }
 
 impl Component for HeaderBar {
-    type Message = HeaderBarMessage;
+    type Message = HeaderBarButton;
     type Properties = HeaderBarProps;
 
     fn create(ctx: &Context<Self>) -> Self {
@@ -62,11 +76,11 @@ impl Component for HeaderBar {
     }
 
     fn view(&self, ctx: &Context<Self>) -> Html {
-        let on_button_clicked = &ctx.props().on_button_clicked;
-        let on_undo = wrap_callback(on_button_clicked, HeaderBarMessage::Undo);
-        let on_redo = wrap_callback(on_button_clicked, HeaderBarMessage::Redo);
-        let on_about = wrap_callback(on_button_clicked, HeaderBarMessage::About);
-        let on_help = wrap_callback(on_button_clicked, HeaderBarMessage::Help);
+        let on_button_clicked = &ctx.props().cb;
+        let on_undo = wrap_callback(on_button_clicked, HeaderBarButton::Undo);
+        let on_redo = wrap_callback(on_button_clicked, HeaderBarButton::Redo);
+        let on_about = wrap_callback(on_button_clicked, HeaderBarButton::About);
+        let on_help = wrap_callback(on_button_clicked, HeaderBarButton::Help);
 
         let about = Html::from_html_unchecked(self.about_icon.clone());
         let redo = Html::from_html_unchecked(self.redo_icon.clone());

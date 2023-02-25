@@ -1,26 +1,25 @@
-//! Implementation of the main canvas part of the app. This is mostly a wrapper around a figure.
-//! The sensor and renderer is separated as their own higher-order component.
+//! Implementation of the canvas sensor. This component does two things:
+//! - Sense and process all button clicks
+//! - Renders the svg
+
 
 use gloo::console::log;
 use stylist::Style;
 use yew::prelude::*;
 use web_sys::HtmlElement;
 use wasm_bindgen::JsCast;
-use crate::app::{Button, ButtonType, ButtonInfo};
+use crate::app::{MouseSensor, MouseClickEvent, MouseClickType};
 use crate::figures::Figure;
 
-#[derive(PartialEq, Debug, Clone)]
-pub struct MousePosition(usize, usize);
-
 #[derive(Properties, PartialEq)]
-pub struct MainCanvasProps {
+pub struct CanvasSensorProps {
     pub top: usize,
     pub left: usize,
     pub debug: Option<bool>,
-    pub svg_content: String
+    pub svg_content: AttrValue
 }
 
-fn get_css(props: &MainCanvasProps) -> String {
+fn get_css(props: &CanvasSensorProps) -> String {
     let debug_mode = props.debug.is_some() && props.debug.unwrap();
     let topbar_height_px = props.top.to_string();
     let sidebar_width_px = props.left.to_string();
@@ -49,24 +48,23 @@ fn get_css(props: &MainCanvasProps) -> String {
     }
 }
 
-fn process_svg(s: String) -> String {
+fn process_svg(s: AttrValue) -> String {
     return String::new();
 }
 
-// We use higher order components as a workaround for not having hooks and direct access to internal states simultaneously
-#[function_component(MainCanvas)]
-pub fn main_canvas(props: &MainCanvasProps) -> Html {
+#[function_component(CanvasSensor)]
+pub fn main_canvas(props: &CanvasSensorProps) -> Html {
     // Parse main canvas dimensions
     let class_id = get_css(props);
 
-    // We are using a button under a canvas as a mouse sensor. Get the position data from a button underneath the svg.
-    let pos_state = use_state(|| MousePosition(0, 0));
-    let pos_state_getter = pos_state.clone();
-    let cb = Callback::from(move |(x, _): (MouseEvent, ButtonInfo)| {
-        pos_state_getter.set(MousePosition (
-            if x.screen_x() >= 0 {x.screen_x() as usize} else {0},
-            if x.screen_y() >= 0 {x.screen_y() as usize} else {0},
-        ));
+    let dragging_state = use_state(|| false);
+    let mouse_sensor_cb = Callback::from(move |event: MouseClickEvent| {
+        match event.click_type {
+            MouseClickType::MouseDown => {dragging_state.set(true)},
+            MouseClickType::MouseUp => {dragging_state.set(false)},
+            _ => ()
+        }
+
     });
 
     let svg_content = process_svg(props.svg_content.clone());
@@ -76,9 +74,7 @@ pub fn main_canvas(props: &MainCanvasProps) -> Html {
             <svg>
                 {svg_content}
             </svg>
-            <Button name={"main canvas"} button_type={ButtonType::Other} cb={cb}>
-                {format!("{:?}", *pos_state)}
-            </Button>
+            <MouseSensor cb={mouse_sensor_cb}/>
         </div>
     }
 }

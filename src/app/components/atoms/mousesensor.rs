@@ -30,7 +30,7 @@ pub enum MouseClickType {
 
 #[derive(PartialEq, Properties)]
 pub struct MouseSensorProps {
-    cb: Callback<MouseClickEvent>
+    pub cb: Callback<MouseClickEvent>
 }
 
 fn get_callback(props: &MouseSensorProps, t: MouseClickType) -> Callback<MouseEvent> {
@@ -50,7 +50,7 @@ fn get_callback(props: &MouseSensorProps, t: MouseClickType) -> Callback<MouseEv
 #[function_component(MouseSensor)]
 pub fn mouse_sensor(props: &MouseSensorProps) -> Html {
     html! {
-        <button hidden={true} aria-label={"mouse sensor"} type={"button"}
+        <button aria-label={"mouse sensor"} type={"button"}
             onauxclick={get_callback(props, MouseClickType::AuxilaryClick)}
             onclick={get_callback(props, MouseClickType::LeftClick)}
             oncontextmenu={get_callback(props, MouseClickType::RightClick)}
