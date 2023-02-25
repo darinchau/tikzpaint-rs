@@ -2,14 +2,23 @@ use std::fmt::{Display, Debug};
 use std::hash::Hash;
 use std::ops::{Add, Sub, Mul, Div, Index};
 use std::f64::EPSILON;
+use std::rc::Rc;
 
 use crate::figures::Serializable;
 use crate::figures::{Hashable, DimensionError};
 
-#[derive(Clone)]
 pub struct Coordinates {
-    values: Vec<f64>,
+    values: Rc<Vec<f64>>,
     pub dims: usize
+}
+
+impl Clone for Coordinates {
+    fn clone(&self) -> Self {
+        Coordinates {
+            values: Rc::clone(&self.values),
+            dims: self.dims
+        }
+    }
 }
 
 impl Coordinates {
@@ -22,7 +31,7 @@ impl Coordinates {
             (*val).clone().into()
         }).collect::<Vec<f64>>();
         Coordinates {
-            values: res,
+            values: Rc::new(res),
             dims: x.len()
         }
     }
@@ -60,12 +69,12 @@ impl Coordinates {
     pub fn scale<T>(&self, other: T) -> Self where
         T: Into<f64> + Clone
     {
-        let res = self.values.iter().map(|x: &f64| {
+        let res: Vec<f64> = self.values.iter().map(|x: &f64| {
             x * other.clone().into()
         }).collect();
 
         Coordinates {
-            values: res,
+            values: Rc::new(res),
             dims: self.dims
         }
     }
@@ -159,7 +168,7 @@ impl Add for Coordinates {
         }).collect();
 
         return Ok(Coordinates {
-            values: res,
+            values: Rc::new(res),
             dims: self.dims }
         );
     }
@@ -181,7 +190,7 @@ impl Sub for Coordinates {
         }).collect();
 
         return Ok(Coordinates {
-            values: res,
+            values: Rc::new(res),
             dims: self.dims
         });
     }
@@ -197,7 +206,7 @@ impl Mul<f64> for Coordinates {
         }).collect();
 
         return Coordinates {
-            values: res,
+            values: Rc::new(res),
             dims: self.dims
         };
     }
@@ -262,11 +271,11 @@ impl Coordinates {
         let u = &self.values;
         let v = &other.values;
         return Ok(Coordinates {
-            values: vec![
+            values: Rc::new(vec![
                 u[1] * v[2] - u[2] * v[1],
                 u[2] * v[0] - u[0] * v[2],
                 u[0] * v[1] - u[1] * v[0]
-            ],
+            ]),
             dims: 3
         });
     }
@@ -275,7 +284,7 @@ impl Coordinates {
 impl Serializable for Coordinates {
     fn into_str(&self) -> String {
         let mut s = format!("cd{},", self.dims);
-        for v in &self.values {
+        for v in &*self.values {
             s.push_str(&v.into_str());
             s.push_str(",");
         }
@@ -302,7 +311,7 @@ impl Serializable for Coordinates {
         }
 
         return Some(Self {
-            values: v,
+            values: Rc::new(v),
             dims: num_dims
         })
     }

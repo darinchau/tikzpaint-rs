@@ -70,9 +70,10 @@ impl Projection {
 /// Example
 /// ```
 /// use tikzpaint_rs::figures::{Identity, Coordinates, Projection, IsProjection};
+/// use tikzpaint_rs::figures::WrappableAsProjection;
 /// let x = Coordinates::new(vec![3, 4, 5]);
 /// let y = Coordinates::new(vec![3, 4, 5]);
-/// let proj = Identity{ dims: 3 };
+/// let proj = Identity{ dims: 3 }.wrap();
 /// let projected = proj.call(&y).unwrap();
 /// assert!(x[0] == projected[0]);
 /// assert!(x[1] == projected[1]);
@@ -122,7 +123,7 @@ impl Concat {
     ///     [2, -1, 1]
     /// ]);
     /// let proj3 = Concat::from(proj1, proj2).unwrap();
-    /// let y3 = proj3.call(&x).unwrap();
+    /// let y3 = proj3.call(&x);
     /// assert!(y3 == Coordinates::new(vec![23, 12]));
     /// ```
     pub fn from<P1: IsProjection, P2: IsProjection>(proj1: P1, proj2: P2) -> Result<Self, DimensionError> {

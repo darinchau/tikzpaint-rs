@@ -14,13 +14,13 @@ pub use base::figureobject::FigureObject;
 pub use base::figureobject::WrappableAsFigureObject;
 
 pub use base::figureobject::Drawable;
-use base::figureobject::DrawableObject;
+pub use base::figureobject::DrawableObject;
 pub use base::figureobject::WrappableAsDrawable;
 
 pub use base::plotoptions::Color;
 pub use base::plotoptions::PlotOptions;
 pub use base::plotoptions::TikzColor;
-use base::plotoptions::tikzify_field;
+pub use base::plotoptions::tikzify_field;
 
 pub use base::figure::Figure;
 
@@ -29,7 +29,7 @@ pub use base::projection::Identity;
 pub use base::projection::Matrix;
 pub use base::projection::Concat;
 pub use base::projection::Projection;
-use base::projection::WrappableAsProjection;
+pub use base::projection::WrappableAsProjection;
 
 // pub use figureobjects::point::FOPoint;
 // pub use drawables::point::Point;

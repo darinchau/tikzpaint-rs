@@ -66,9 +66,10 @@ impl Figure {
     /// Example:
     /// ```
     /// use tikzpaint_rs::figures::{Figure, Identity};
+    /// use tikzpaint_rs::figures::WrappableAsProjection;
     ///
     /// let fig = Figure::new(2);
-    /// let st = fig.output_tikz(&Identity{dims: 2}).unwrap();
+    /// let st = fig.output_tikz(Identity{dims: 2}.wrap()).unwrap();
     /// assert_eq!(st, "\\begin{tikzpicture}\n\\end{tikzpicture}")
     /// ```
     pub fn output_tikz(&self, proj: Projection) -> Result<String, DimensionError> {
