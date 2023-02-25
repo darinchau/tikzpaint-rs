@@ -4,10 +4,8 @@
 
 pub mod figures;
 pub mod app;
-use gloo::console::log;
 use yew::prelude::*;
-use app::*;
-use std::rc::Rc;
+use app::CanvasManager;
 
 #[function_component(App)]
 pub fn app() -> Html {

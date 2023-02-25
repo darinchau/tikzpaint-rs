@@ -6,7 +6,7 @@ use stylist::Style;
 use yew::prelude::*;
 use web_sys::HtmlElement;
 use wasm_bindgen::JsCast;
-use crate::app::{GetProperty, Button, ButtonType, Serializable, ButtonInfo};
+use crate::app::{Button, ButtonType, ButtonInfo};
 use crate::figures::Figure;
 
 #[derive(PartialEq, Debug, Clone)]

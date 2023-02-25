@@ -4,7 +4,6 @@ use stylist::Style;
 use yew::prelude::*;
 use web_sys::{HtmlElement, Text};
 use wasm_bindgen::JsCast;
-use crate::app::{GetProperty, Serializable, GetPropertyError};
 use web_sys::HtmlInputElement;
 
 #[derive(Clone, Debug)]

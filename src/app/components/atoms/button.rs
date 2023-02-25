@@ -5,7 +5,6 @@ use stylist::Style;
 use yew::prelude::*;
 use web_sys::HtmlElement;
 use wasm_bindgen::JsCast;
-use crate::app::{GetProperty, Serializable};
 
 #[derive(PartialEq)]
 pub enum ButtonType {

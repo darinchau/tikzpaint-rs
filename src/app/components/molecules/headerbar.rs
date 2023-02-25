@@ -6,7 +6,7 @@ use stylist::css;
 use yew::prelude::*;
 use web_sys::HtmlElement;
 use wasm_bindgen::JsCast;
-use crate::app::{GetProperty, Serializable, Button, ButtonType, ButtonInfo};
+use crate::app::{Button, ButtonType, ButtonInfo};
 
 #[derive(Clone, Copy, PartialEq, Debug)]
 pub enum HeaderBarMessage {
