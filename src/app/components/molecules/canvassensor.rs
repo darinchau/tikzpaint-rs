@@ -7,7 +7,7 @@ use stylist::Style;
 use yew::prelude::*;
 use web_sys::HtmlElement;
 use wasm_bindgen::JsCast;
-use crate::app::{MouseSensor, MouseClickEvent, MouseClickInfo};
+use crate::app::{MouseSensor, MouseClickEvent, MouseClickType, is_true};
 use crate::figures::Figure;
 
 #[derive(PartialEq, Clone)]
@@ -25,7 +25,7 @@ pub struct CanvasSensorProps {
 }
 
 fn get_css(props: &CanvasSensorProps) -> String {
-    let debug_mode = props.debug.is_some() && props.debug.unwrap();
+    let debug_mode = is_true(props.debug);
     let topbar_height_px = props.top.to_string();
     let sidebar_width_px = props.left.to_string();
 
@@ -67,8 +67,8 @@ pub fn main_canvas(props: &CanvasSensorProps) -> Html {
     let dragging_state = use_state(|| false);
     let mouse_sensor_cb = Callback::from(move |event: MouseClickEvent| {
         match event.click_type {
-            MouseClickInfo::MouseDown => {dragging_state.set(true)},
-            MouseClickInfo::MouseUp => {dragging_state.set(false)},
+            MouseClickType::MouseDown => {dragging_state.set(true)},
+            MouseClickType::MouseUp => {dragging_state.set(false)},
             _ => ()
         }
 

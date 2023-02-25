@@ -1,6 +1,6 @@
 //! This is a direct implementation of a point out of the FOPoint
 
-use crate::{figures::{Coordinates, Drawable, FOPoint, Hashable, Serializable}};
+use crate::{figures::{Coordinates, Drawable, Hashable, Serializable}};
 
 /// The implementation of a node with no contents.
 ///

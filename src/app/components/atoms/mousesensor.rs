@@ -8,13 +8,13 @@ use wasm_bindgen::JsCast;
 
 #[derive(PartialEq, Clone)]
 pub struct MouseClickEvent {
-    pub click_type: MouseClickInfo,
+    pub click_type: MouseClickType,
     pub client_pos: (i32, i32),
     pub screen_pos: (i32, i32)
 }
 
 #[derive(PartialEq, Clone, Copy)]
-pub enum MouseClickInfo {
+pub enum MouseClickType {
     AuxilaryClick,
     LeftClick,
     RightClick,
@@ -33,7 +33,7 @@ pub struct MouseSensorProps {
     pub cb: Callback<MouseClickEvent>
 }
 
-fn get_callback(props: &MouseSensorProps, t: MouseClickInfo) -> Callback<MouseEvent> {
+fn get_callback(props: &MouseSensorProps, t: MouseClickType) -> Callback<MouseEvent> {
     let cb = props.cb.clone();
     let y = t.clone();
     Callback::from(move |event: MouseEvent| {
@@ -51,17 +51,17 @@ fn get_callback(props: &MouseSensorProps, t: MouseClickInfo) -> Callback<MouseEv
 pub fn mouse_sensor(props: &MouseSensorProps) -> Html {
     html! {
         <button aria-label={"mouse sensor"} type={"button"}
-            onauxclick={get_callback(props, MouseClickInfo::AuxilaryClick)}
-            onclick={get_callback(props, MouseClickInfo::LeftClick)}
-            oncontextmenu={get_callback(props, MouseClickInfo::RightClick)}
-            ondblclick={get_callback(props, MouseClickInfo::DoubleLeftClick)}
-            onmousedown={get_callback(props, MouseClickInfo::MouseDown)}
-            onmouseenter={get_callback(props, MouseClickInfo::MouseEnter)}
-            onmouseleave={get_callback(props, MouseClickInfo::MouseLeave)}
-            onmousemove={get_callback(props, MouseClickInfo::MouseMove)}
-            onmouseout={get_callback(props, MouseClickInfo::MouseOut)}
-            onmouseover={get_callback(props, MouseClickInfo::MouseOver)}
-            onmouseup={get_callback(props, MouseClickInfo::MouseUp)}
+            onauxclick={get_callback(props, MouseClickType::AuxilaryClick)}
+            onclick={get_callback(props, MouseClickType::LeftClick)}
+            oncontextmenu={get_callback(props, MouseClickType::RightClick)}
+            ondblclick={get_callback(props, MouseClickType::DoubleLeftClick)}
+            onmousedown={get_callback(props, MouseClickType::MouseDown)}
+            onmouseenter={get_callback(props, MouseClickType::MouseEnter)}
+            onmouseleave={get_callback(props, MouseClickType::MouseLeave)}
+            onmousemove={get_callback(props, MouseClickType::MouseMove)}
+            onmouseout={get_callback(props, MouseClickType::MouseOut)}
+            onmouseover={get_callback(props, MouseClickType::MouseOver)}
+            onmouseup={get_callback(props, MouseClickType::MouseUp)}
             >
         </button>
     }

@@ -12,7 +12,7 @@ use yew::prelude::*;
 use web_sys::HtmlElement;
 use wasm_bindgen::JsCast;
 use crate::figures::*;
-use crate::app::{HeaderBarButton, HeaderBar, HeaderBarEvent, CanvasSensor, CanvasSensorEvent};
+use crate::app::{HeaderBarType, HeaderBar, HeaderBarEvent, CanvasSensor, CanvasSensorEvent};
 
 /// Dictates the height of the header and the maximum width of the side bar
 #[derive(PartialEq, Properties)]
