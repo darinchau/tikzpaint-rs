@@ -7,18 +7,18 @@ use wasm_bindgen::JsCast;
 use web_sys::HtmlInputElement;
 
 #[derive(Clone, Debug)]
-pub enum TextFieldEvent {
+pub enum TextFieldEventType {
     Change(Event),
     Enter(KeyboardEvent),
 }
 
 #[derive(Clone, Debug)]
-pub struct TextFieldInfo {
-    pub event: TextFieldEvent,
+pub struct TextFieldEvent {
+    pub event: TextFieldEventType,
     _state: UseStateHandle<String>
 }
 
-impl TextFieldInfo {
+impl TextFieldEvent {
     pub fn get_text(&self) -> String {
         return (&*self._state).clone();
     }
@@ -89,7 +89,7 @@ pub struct TextFieldProps{
     pub label: AttrValue,
     pub field_type: TextFieldInputType,
     /// The callback is a function called after the state is triggered but before rerender
-    pub cb: Option<Callback<TextFieldInfo, ()>>,
+    pub cb: Option<Callback<TextFieldEvent, ()>>,
 }
 
 #[function_component(TextField)]
@@ -112,8 +112,8 @@ pub fn text_field(props: &TextFieldProps) -> Html {
                 let input = x.target().and_then(|t| t.dyn_into::<HtmlInputElement>().ok());
 
                 if let Some(elem) = input {
-                    let info = TextFieldInfo {
-                        event: TextFieldEvent::Change(x),
+                    let info = TextFieldEvent {
+                        event: TextFieldEventType::Change(x),
                         _state: state.clone(),
                     };
 
@@ -123,8 +123,8 @@ pub fn text_field(props: &TextFieldProps) -> Html {
 
             onkeydown={Callback::from(move |x: KeyboardEvent| {
                 if x.key() == "Enter" {
-                    let info = TextFieldInfo {
-                        event: TextFieldEvent::Enter(x),
+                    let info = TextFieldEvent {
+                        event: TextFieldEventType::Enter(x),
                         _state: state_1.clone(),
                     };
 

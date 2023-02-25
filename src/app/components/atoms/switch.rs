@@ -6,25 +6,26 @@ use yew::prelude::*;
 use web_sys::HtmlElement;
 use wasm_bindgen::JsCast;
 
+#[derive(Debug, Clone, PartialEq)]
+pub struct SwitchEvent {
+    pub mouse_event: MouseEvent,
+    state: UseStateHandle<SwitchState>,
+}
+
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub enum SwitchState {
     Active,
     Stale
 }
 
-#[derive(Debug)]
-pub struct SwitchInfo {
-    _state: UseStateHandle<SwitchState>,
-}
-
-impl SwitchInfo {
+impl SwitchEvent {
     pub fn get_state(&self) -> SwitchState {
-        let state = self._state.clone();
+        let state = self.state.clone();
         return (&*state).clone();
     }
 
     pub fn set_state(&mut self, state: SwitchState) {
-        self._state.set(state);
+        self.state.set(state);
     }
 }
 
@@ -37,7 +38,7 @@ pub struct SwitchProperties{
 
     /// The callback is a function called right before the state change is triggered.
     /// The input parameters is the mouse event and the state of the switch **after** the press
-    pub cb: Option<Callback<(MouseEvent, SwitchInfo), ()>>,
+    pub cb: Option<Callback<SwitchEvent, ()>>,
     pub children: Children,
 }
 
@@ -54,10 +55,11 @@ pub fn switch(props: &SwitchProperties) -> Html {
 
     html! {
         <button type={"button"} aria-label={"switch"} onclick={Callback::from(move |x| {
-            let info = SwitchInfo {
-                _state: state_construct.clone()
+            let info = SwitchEvent {
+                mouse_event: x,
+                state: state_construct.clone()
             };
-            cb.emit((x, info));
+            cb.emit(info);
         })}>
             {for props.children.iter()}
         </button>

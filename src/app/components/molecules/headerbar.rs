@@ -6,7 +6,7 @@ use stylist::css;
 use yew::prelude::*;
 use web_sys::HtmlElement;
 use wasm_bindgen::JsCast;
-use crate::app::{Button, ButtonType, ButtonInfo};
+use crate::app::{Button, ButtonType, ButtonEvent};
 
 #[derive(Clone, Copy, PartialEq, Debug)]
 pub enum HeaderBarButton {
@@ -19,10 +19,9 @@ pub enum HeaderBarButton {
 pub struct HeaderBarEvent {
     /// Header bar button is about the button that we pressed in the header bar
     pub button_type: HeaderBarButton,
-    pub event: MouseEvent,
 
-    /// Button info is some info about the underlying button
-    pub button_info: ButtonInfo,
+    /// Button info is the event emitted from the underlying button
+    pub event: ButtonEvent,
 }
 
 #[derive(Properties, PartialEq)]
@@ -43,15 +42,14 @@ const REDO_ICON: &'static str = include_str!("./headerbar/images/redo.svg");
 const UNDO_ICON: &'static str = include_str!("./headerbar/images/undo.svg");
 const HELP_ICON: &'static str = include_str!("./headerbar/images/help.svg");
 
-fn wrap_callback<T>(x: &Callback<HeaderBarEvent, T>, msg: HeaderBarButton) -> Callback<(MouseEvent, ButtonInfo), T> where
+fn wrap_callback<T>(x: &Callback<HeaderBarEvent, T>, msg: HeaderBarButton) -> Callback<ButtonEvent, T> where
 T: 'static {
     let button_signal_emitter = x.clone();
 
-    let on_button = Callback::from(move |(e, info): (MouseEvent, ButtonInfo)| {
-        let t = button_signal_emitter.emit(HeaderBarEvent{
+    let on_button = Callback::from(move |event: ButtonEvent| {
+        let t = button_signal_emitter.emit(HeaderBarEvent {
             button_type: msg,
-            event: e,
-            button_info: info
+            event
         });
         return t;
     });

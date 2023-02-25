@@ -1,22 +1,27 @@
 //! Implementation of the canvas sensor. This component does two things:
-//! - Sense and process all button clicks
+//! - Sense and interprets all button clicks
 //! - Renders the svg
-
 
 use gloo::console::log;
 use stylist::Style;
 use yew::prelude::*;
 use web_sys::HtmlElement;
 use wasm_bindgen::JsCast;
-use crate::app::{MouseSensor, MouseClickEvent, MouseClickType};
+use crate::app::{MouseSensor, MouseClickEvent, MouseClickInfo};
 use crate::figures::Figure;
+
+#[derive(PartialEq, Clone)]
+pub struct CanvasSensorEvent {
+    dragging: bool
+}
 
 #[derive(Properties, PartialEq)]
 pub struct CanvasSensorProps {
     pub top: usize,
     pub left: usize,
     pub debug: Option<bool>,
-    pub svg_content: AttrValue
+    pub svg_content: AttrValue,
+    pub cb: Callback<CanvasSensorEvent>
 }
 
 fn get_css(props: &CanvasSensorProps) -> String {
@@ -57,14 +62,19 @@ pub fn main_canvas(props: &CanvasSensorProps) -> Html {
     // Parse main canvas dimensions
     let class_id = get_css(props);
 
+    let cb = props.cb.clone();
+
     let dragging_state = use_state(|| false);
     let mouse_sensor_cb = Callback::from(move |event: MouseClickEvent| {
         match event.click_type {
-            MouseClickType::MouseDown => {dragging_state.set(true)},
-            MouseClickType::MouseUp => {dragging_state.set(false)},
+            MouseClickInfo::MouseDown => {dragging_state.set(true)},
+            MouseClickInfo::MouseUp => {dragging_state.set(false)},
             _ => ()
         }
 
+        cb.emit(CanvasSensorEvent {
+            dragging: *dragging_state
+        });
     });
 
     let svg_content = process_svg(props.svg_content.clone());

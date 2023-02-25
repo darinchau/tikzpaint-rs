@@ -1,7 +1,6 @@
 //! A figure object serves as a canvas to convert drawables into displayables into code and shapes
 
 use crate::figures::{Drawable, IsProjection, Plottable, DimensionError, DrawableWrapper};
-use std::rc::Rc;
 
 pub struct Figure {
     dims: usize,
@@ -24,11 +23,10 @@ impl Figure {
         }
     }
 
-    /// Adds 'obj' to the list of objects to be drawn. We use an RC because we don't want
-    /// to take ownership of your lovely drawable object, but we also need the drawable object
-    /// to live long enough and the easiest way is to take ownership of the object via an Rc
+    /// Adds 'obj' to the list of objects to be drawn.
     pub fn draw(&mut self, obj: DrawableWrapper) where {
         self.to_draw.push(obj);
+        self.hash += 1;
     }
 
     /// Load method takes a function object and a projection object. The method will feed
