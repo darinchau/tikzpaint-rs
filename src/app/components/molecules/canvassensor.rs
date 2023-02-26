@@ -42,8 +42,8 @@ pub fn main_canvas(props: &CanvasSensorProps) -> Html {
     });
 
     html! {
-        <div>
+        <>
             <MouseSensor cb={mouse_sensor_cb}/>
-        </div>
+        </>
     }
 }

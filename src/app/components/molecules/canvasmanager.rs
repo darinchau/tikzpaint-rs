@@ -32,7 +32,7 @@ fn get_css(props: &CanvasManagerProps) -> String {
 
     let button_css = format!(r#"
     {{
-        bottom: 0;
+        bottom: {th}px;
         right: 0;
         width: calc(100% - {w}px);
         height: calc(100% - {h}px - {th}px);

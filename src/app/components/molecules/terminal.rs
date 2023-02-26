@@ -116,11 +116,11 @@ fn text_box_css(props: &TerminalProps) -> String {
     let padding = 10;
 
     let css_text = format!(r#"
-        height: {th}px;
+        height: calc({th}px - {padding}px);
         width: calc(100% - {w}px - {padding}px - {padding}px);
         bottom: 0;
         right: 0;
-        padding: 0px {padding}px {padding}px {padding}px;
+        padding: {padding}px {padding}px {padding}px {padding}px;
     "#);
 
     let terminal_input_style = Style::new(css_text)

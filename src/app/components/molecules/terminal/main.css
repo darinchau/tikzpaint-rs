@@ -20,10 +20,30 @@
     /* overflow-y: scroll; */
     background: none;
     background-color: none;
-    color:greenyellow;
+    color: greenyellow;
     border: none;
     font-size: 14px;
     width: 100%;
     height: 100%;
     bottom: 0;
+}
+
+/* width */
+.terminal-text::-webkit-scrollbar {
+    width: 10px;
+}
+
+/* Track */
+.terminal-text::-webkit-scrollbar-track {
+    background: none;
+}
+
+/* Handle */
+.terminal-text::-webkit-scrollbar-thumb {
+    background: #888;
+}
+
+/* Handle on hover */
+.terminal-text::-webkit-scrollbar-thumb:hover {
+    background: #555;
 }
