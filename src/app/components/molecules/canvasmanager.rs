@@ -24,24 +24,19 @@ pub struct CanvasManagerProps {
     pub debug: Option<bool>
 }
 
-struct MainCanvasSize {
-    top: usize,
-    left: usize,
-    debug: Option<bool>
-}
-
-fn get_css(props: MainCanvasSize) -> String {
+fn get_css(props: &CanvasManagerProps) -> String {
     let debug_mode = is_true(props.debug);
-    let topbar_height_px = props.top.to_string();
-    let sidebar_width_px = props.left.to_string();
+    let h = props.header_height;
+    let w = props.side_bar_width;
+    let th = props.terminal_height;
 
     let button_css = format!(r#"
     {{
         bottom: 0;
         right: 0;
-        width: calc(100% - {}px);
-        height: calc(100% - {}px);
-    }}"#, sidebar_width_px, topbar_height_px);
+        width: calc(100% - {w}px);
+        height: calc(100% - {h}px - {th}px);
+    }}"#);
 
     let svg_css = button_css.clone();
 
@@ -95,7 +90,7 @@ pub fn canvas_manager(props: &CanvasManagerProps) -> Html {
     });
 
     // Process CSS
-    let class_id = get_css(MainCanvasSize { top: h, left: w, debug: props.debug });
+    let class_id = get_css(props);
 
     html!{
         <>
