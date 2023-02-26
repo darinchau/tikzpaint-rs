@@ -1,5 +1,7 @@
 //! Implementation of the top header bar of the app
 
+use std::error::Error;
+
 use gloo::console::log;
 use stylist::Style;
 use stylist::css;
@@ -14,6 +16,18 @@ pub enum SideBarType {
     Test,
     Test2,
     Test3,
+}
+
+impl SideBarType {
+    pub fn to_name(&self) -> &'static str {
+        match &self {
+            SideBarType::Point => "Point",
+            SideBarType::Test => "Test",
+            SideBarType::Test2 => "Test2",
+            SideBarType::Test3 => "Test3",
+            _ => "Unknown"
+        }
+    }
 }
 
 pub struct SideBarEvent {
@@ -46,6 +60,39 @@ fn wrap_callback(props: &SideBarProps, msg: SideBarType) -> Callback<ButtonEvent
     return on_button;
 }
 
+fn sidebar_css(props: &SideBarProps) -> String {
+    let h = props.header_height;
+    let w = props.width;
+
+    let padding = 10;
+
+    let style = Style::new(format!(r#"
+        top: {h}px;
+        height: calc(100% - {h}px);
+        width: calc({w}px - {padding}px - {padding}px);
+        padding: {padding}px;
+        "#))
+        .unwrap_or_else(|e| {
+            log!(format!("{}", e));
+            log!("Failed to load sidebar dimensions style");
+            Style::new("").unwrap()
+        });
+    let h_style_name = style.get_class_name().to_string();
+    return h_style_name;
+}
+
+fn wrap_button(props: &SideBarProps, button_type: SideBarType) -> Html {
+    let cb = wrap_callback(props, button_type);
+    let name = button_type.to_name();
+    html!{
+        <div class={"grid-item"}>
+            <Button name={name} button_type={ButtonType::Other} cb={cb}>
+                {name}
+            </Button>
+        </div>
+    }
+}
+
 #[function_component(SideBar)]
 pub fn side_bar(props: &SideBarProps) -> Html {
     //Load the callbacks
@@ -54,15 +101,8 @@ pub fn side_bar(props: &SideBarProps) -> Html {
     let on_test2 = wrap_callback(props, SideBarType::Test2);
     let on_test3 = wrap_callback(props, SideBarType::Test3);
 
-
     // Make the CSS
-    let style = Style::new(format!(r#"top: {}px; height: calc(100% - {}px); width: {}px;"#, props.header_height, props.header_height, props.width))
-        .unwrap_or_else(|e| {
-            log!(format!("{}", e));
-            log!("Failed to load sidebar dimensions style");
-            Style::new("").unwrap()
-        });
-    let h_style_name = style.get_class_name();
+    let h_style_name = sidebar_css(props);
 
     html! {
         <div class={format!("sidebar {}", h_style_name)}>
@@ -70,26 +110,10 @@ pub fn side_bar(props: &SideBarProps) -> Html {
                 {"Some label"}
             </div>
             <div class={"grid"}>
-                <div class={"grid-item"}>
-                    <Button name={"point"} button_type={ButtonType::Other} cb={on_point}>
-                        {"Point"}
-                    </Button>
-                </div>
-                <div class={"grid-item"}>
-                    <Button name={"Test 1"} button_type={ButtonType::Other} cb={on_test1}>
-                        {"Test 1"}
-                    </Button>
-                </div>
-                <div class={"grid-item"}>
-                    <Button name={"Test 2"} button_type={ButtonType::Other} cb={on_test2}>
-                        {"Test 2"}
-                    </Button>
-                </div>
-                <div class={"grid-item"}>
-                    <Button name={"Test 3"} button_type={ButtonType::Other} cb={on_test3}>
-                        {"Test 3"}
-                    </Button>
-                </div>
+                {wrap_button(props, SideBarType::Point)}
+                {wrap_button(props, SideBarType::Test)}
+                {wrap_button(props, SideBarType::Test2)}
+                {wrap_button(props, SideBarType::Test3)}
             </div>
         </div>
     }

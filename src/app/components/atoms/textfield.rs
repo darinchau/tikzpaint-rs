@@ -15,17 +15,7 @@ pub enum TextFieldEventType {
 #[derive(Clone, Debug)]
 pub struct TextFieldEvent {
     pub event: TextFieldEventType,
-    _state: UseStateHandle<String>
-}
-
-impl TextFieldEvent {
-    pub fn get_text(&self) -> String {
-        return (&*self._state).clone();
-    }
-
-    pub fn set_text(&mut self, text: String) {
-        self._state.set(text);
-    }
+    pub text: String
 }
 
 #[derive(PartialEq, Clone, Copy)]
@@ -89,48 +79,75 @@ pub struct TextFieldProps{
     pub label: AttrValue,
     pub field_type: TextFieldInputType,
     /// The callback is a function called after the state is triggered but before rerender
-    pub cb: Option<Callback<TextFieldEvent, ()>>,
+    /// The Option String return type is to reset the text box. If the option is none, then
+    /// leave the text box as is. But if it is something, then set the text box value to that
+    /// new string.
+    pub cb: Option<Callback<TextFieldEvent, Option<String>>>,
+}
+
+fn get_set_state(event: TextFieldEventType, state: UseStateHandle<String>, text: String, cb: Callback<TextFieldEvent, Option<String>>) {
+    let text_clone = text.clone();
+
+    let info = TextFieldEvent {
+        event,
+        text
+    };
+
+    if let Some(rt) = cb.emit(info) {
+        state.set(rt);
+    }
+    else {
+        state.set(text_clone);
+    }
+}
+
+// These state handles and callbacks are internally all Rc's so we can sprinkle clone() everywhere
+// without having to worry tooooo much.
+fn get_callback(props: &TextFieldProps, state: UseStateHandle<String>) -> (Callback<Event>, Callback<KeyboardEvent>) {
+    let cb = (props.cb).clone().unwrap_or(Callback::from(|_| None));
+
+    let cb1 = cb.clone();
+    let s1 = state.clone();
+
+    let on_change = Callback::from(move |x: Event| {
+        let input = x.target().and_then(|t| t.dyn_into::<HtmlInputElement>().ok());
+
+        if let Some(elem) = input {
+            get_set_state(TextFieldEventType::Change(x), s1.clone(), elem.value(), cb1.clone());
+        }
+    });
+
+    let cb2 = cb.clone();
+    let s2 = state.clone();
+
+    let on_keyboard = Callback::from(move |x: KeyboardEvent| {
+        let input = x.target().and_then(|t| t.dyn_into::<HtmlInputElement>().ok());
+        if let Some(elem) = input {
+            if x.key() == "Enter" {
+                get_set_state(TextFieldEventType::Enter(x), s2.clone(), elem.value(), cb2.clone());
+            }
+        }
+    });
+
+    return (on_change, on_keyboard);
 }
 
 #[function_component(TextField)]
 pub fn text_field(props: &TextFieldProps) -> Html {
-    let cb = props.cb.clone().unwrap_or(Callback::from(|_| ()));
-    let cb2 = cb.clone();
-
     let name = props.name.clone();
     let name2 = props.name.clone();
     let label = props.label.clone();
     let ftype = props.field_type.to_string();
 
     let state = use_state(|| String::new());
-    let state_1 = state.clone();
+    let (on_change, on_keyboard) = get_callback(props, state.clone());
 
     html! {
         <label for={name}>{label}
             <input type={ftype} name={name2}
-            onchange={Callback::from(move |x: Event| {
-                let input = x.target().and_then(|t| t.dyn_into::<HtmlInputElement>().ok());
-
-                if let Some(elem) = input {
-                    let info = TextFieldEvent {
-                        event: TextFieldEventType::Change(x),
-                        _state: state.clone(),
-                    };
-
-                    cb.emit(info);
-                }
-            })}
-
-            onkeydown={Callback::from(move |x: KeyboardEvent| {
-                if x.key() == "Enter" {
-                    let info = TextFieldEvent {
-                        event: TextFieldEventType::Enter(x),
-                        _state: state_1.clone(),
-                    };
-
-                    cb2.emit(info);
-                }
-            })}/>
+            value={format!("{}", *state)}
+            onchange={on_change}
+            onkeydown={on_keyboard}/>
         </label>
     }
 }

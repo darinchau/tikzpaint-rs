@@ -19,6 +19,7 @@ use crate::app::*;
 pub struct CanvasManagerProps {
     pub header_height: usize,
     pub side_bar_width: usize,
+    pub terminal_height: usize,
     pub figure_dims: usize,
     pub debug: Option<bool>
 }
@@ -67,8 +68,9 @@ pub fn canvas_manager(props: &CanvasManagerProps) -> Html {
     // Dimensions of the page
     let h = props.header_height;
     let w = props.side_bar_width;
+    let th = props.terminal_height;
 
-    // Process figure
+    // Process figure and callbacks
     let dims = props.figure_dims;
     let fig = Figure::new(dims);
     let fig_state = use_mut_ref(|| fig);
@@ -87,6 +89,11 @@ pub fn canvas_manager(props: &CanvasManagerProps) -> Html {
 
     });
 
+    let terminal_fig = fig_state.clone();
+    let terminal_cb = Callback::from(move |event: TerminalEvent| {
+
+    });
+
     // Process CSS
     let class_id = get_css(MainCanvasSize { top: h, left: w, debug: props.debug });
 
@@ -94,6 +101,7 @@ pub fn canvas_manager(props: &CanvasManagerProps) -> Html {
         <>
             <HeaderBar height={h} cb={header_cb}/>
             <SideBar header_height={h} width={w} cb={sidebar_cb}/>
+            <Terminal height={th} text_box_height={37} sidebar_width={w} cb={terminal_cb}/>
             <div class={class_id}>
                 <CanvasSensor top={h} left={w} cb={canvas_sensor_cb}/>
             </div>
