@@ -4,6 +4,7 @@
 //! 2. Plot - The figure will transform DIM coordinates into 2 dimensions - implement Plot to turn it into everything else to plot it on screen
 use crate::figures::*;
 use std::rc::Rc;
+use std::any::Any;
 
 /// A plottable object is the last step before output. This is like the final state of the object to say we are about to plot stuff
 pub trait Plottable {
@@ -142,10 +143,12 @@ pub trait Drawable: Serializable + 'static {
 
 pub trait WrappableAsDrawable {
     /// Consumes ownership of self and returns a drawable object wrapper (a reference counted pointer to the object)
-    fn wrap(self) -> DrawableObject where
-    Self: Sized + Drawable {
-        DrawableObject {
-            obj: Rc::new(self)
+    fn wrap(self) -> DrawableObject where Self: Sized + Drawable + Any + 'static {
+        if let Some(pro) = (&self as &dyn Any).downcast_ref::<DrawableObject>() {
+            pro.clone()
+        }
+        else {
+            DrawableObject { obj: Rc::new(self) }
         }
     }
 }

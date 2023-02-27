@@ -10,8 +10,8 @@ use app::CanvasManager;
 #[function_component(App)]
 pub fn app() -> Html {
     html! {
-        <div>
+        <>
             <CanvasManager header_height={60} side_bar_width={190} terminal_height={150} figure_dims={2}/>
-        </div>
+        </>
     }
 }

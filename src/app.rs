@@ -22,9 +22,9 @@ use components::molecules::headerbar::HeaderBar;
 use components::molecules::headerbar::HeaderBarType;
 use components::molecules::headerbar::HeaderBarEvent;
 
-use components::molecules::canvassensor::CanvasSensor;
-use components::molecules::canvassensor::CanvasSensorEvent;
-pub use components::molecules::canvasmanager::CanvasManager;
+use components::canvas::canvassensor::CanvasSensor;
+use components::canvas::canvassensor::CanvasSensorEvent;
+pub use components::canvas::canvasmanager::CanvasManager;
 
 use components::molecules::sidebar::SideBar;
 use components::molecules::sidebar::SideBarEvent;
