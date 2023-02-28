@@ -12,7 +12,6 @@ use crate::app::get_id;
 #[derive(PartialEq, Clone)]
 pub struct MouseClickEvent {
     pub click_type: MouseClickType,
-    pub client_pos: (i32, i32),
     pub screen_pos: (i32, i32),
     pub mouse_event: MouseEvent
 }
@@ -46,7 +45,7 @@ fn get_callback(props: &MouseSensorProps, t: MouseClickType) -> Callback<MouseEv
         let (sx, sy) = (event.screen_x(), event.screen_y());
         cb.emit(MouseClickEvent {
             click_type: t,
-            client_pos: (x, y),
+            // client_pos: (x, y),
             screen_pos: (sx, sy),
             mouse_event: event
         });

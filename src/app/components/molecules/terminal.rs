@@ -14,7 +14,7 @@ use crate::app::*;
 
 /// Use a wrapper for vec string because we want cheap cloning
 /// This is for displaying the terminal text
-struct TerminalText {
+pub struct TerminalText {
     ptr: Rc<RefCell<Vec<CheapString>>>,
 }
 
@@ -25,8 +25,8 @@ impl TerminalText {
         }
     }
 
-    pub fn push(&self, s: String) -> &Self {
-        self.ptr.borrow_mut().push(CheapString::new(s));
+    pub fn push<T: StringLike>(&self, s: T) -> &Self {
+        self.ptr.borrow_mut().push(s.wrap());
         return self;
     }
 
@@ -57,9 +57,9 @@ impl PartialEq for TerminalText {
 // ========================================== Implementation of a terminal ========================================== //
 // ================================================================================================================== //
 
-#[derive(Clone, Copy, PartialEq, Debug)]
+#[derive(Clone, PartialEq, Debug)]
 pub enum TerminalType {
-    GotText,
+    GotText(CheapString),
 }
 
 pub struct TerminalEvent {
@@ -72,7 +72,15 @@ pub struct TerminalProps {
     pub height: usize,
     pub text_box_height: usize,
     pub sidebar_width: usize,
-    pub cb: Callback<TerminalEvent, ()>,
+
+    /// This callback should take in a terminal event, return the terminal text that we should render.
+    pub cb: Callback<TerminalEvent>,
+
+    /// Allows us to pass in terminal text and render
+    /// We expect to process all terminal text in canvas manager
+    pub text: TerminalText,
+
+    /// Enables debug mode if set to true. Currently does nothing
     pub debug: Option<bool>
 }
 
@@ -127,7 +135,7 @@ fn terminal_css(props: &TerminalProps) -> String {
     return terminal_style;
 }
 
-fn get_callback(props: &TerminalProps, terminal_text: UseStateHandle<TerminalText>) -> Callback<TextFieldEvent, Option<String>> {
+fn get_callback(props: &TerminalProps) -> Callback<TextFieldEvent, Option<String>> {
     // Handle callback
     let parent_cb = props.cb.clone();
 
@@ -135,16 +143,13 @@ fn get_callback(props: &TerminalProps, terminal_text: UseStateHandle<TerminalTex
         match x.event {
             TextFieldEventType::Enter(_) => {
                 // Get the terminal text
-                let recieved_text = x.text;
-
-                // Process the terminal text
-                let tt = (*terminal_text).push(recieved_text);
-                terminal_text.set(tt.clone());
+                let recieved_text = CheapString::new(x.text);
 
                 // Emit the parent callback
                 let info = TerminalEvent {
-                    event_type: TerminalType::GotText
+                    event_type: TerminalType::GotText(recieved_text.clone())
                 };
+
                 parent_cb.emit(info);
 
                 // Set the terminal text back to nothing
@@ -176,15 +181,13 @@ pub fn terminal(props: &TerminalProps) -> Html {
     let textbox_css = text_box_css(props);
     let terminal_css = terminal_css(props);
 
-    let terminal_text = use_state(|| TerminalText::new());
-    let text_cb = get_callback(props, terminal_text.clone());
-
-    let terminal_texts_html = wrap_terminal_text((*terminal_text).clone());
+    let terminal_text = props.text.clone();
+    let text_cb = get_callback(props);
 
     html! {
         <>
             <div class={format!("terminal-text {terminal_css}")}>
-                {terminal_texts_html}
+                {wrap_terminal_text(terminal_text.clone())}
             </div>
             <div class={format!("terminal {textbox_css}")}>
                 <TextField id={"terminal"} name={"terminal"} label={""} field_type={TextFieldInputType::Search} cb={text_cb}/>

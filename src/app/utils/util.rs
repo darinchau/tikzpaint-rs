@@ -1,3 +1,4 @@
+use std::io::Chain;
 use std::sync::atomic::{AtomicUsize, Ordering};
 use std::rc::Rc;
 use std::fmt::Display;
@@ -47,6 +48,21 @@ impl CheapString {
 impl PartialEq for CheapString {
     fn eq(&self, other: &Self) -> bool {
         return *self.ptr == *other.ptr;
+    }
+}
+
+/// This means string and cheapstring
+pub trait StringLike: Debug + Display + Clone + PartialEq {
+    fn wrap(&self) -> CheapString {
+        CheapString::new(format!("{self}"))
+    }
+}
+
+impl StringLike for String {}
+impl StringLike for &str {}
+impl StringLike for CheapString {
+    fn wrap(&self) -> CheapString {
+        self.clone()
     }
 }
 

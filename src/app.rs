@@ -37,5 +37,6 @@ use components::molecules::sidebar::SideBarType;
 use components::molecules::terminal::Terminal;
 use components::molecules::terminal::TerminalEvent;
 use components::molecules::terminal::TerminalType;
+use components::molecules::terminal::TerminalText;
 
 use utils::util::*;
