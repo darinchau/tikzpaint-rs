@@ -4,86 +4,139 @@ use web_sys::HtmlElement;
 use yew::prelude::*;
 use gloo::console::log;
 use stylist::Style;
-use wasm_bindgen::{JsCast, prelude::Closure};
+use wasm_bindgen::prelude::*;
+use crate::app::*;
 
 #[derive(Debug, Clone)]
-pub struct Size {
+pub struct WindowSize {
     pub x: i32,
     pub y: i32
 }
 
+impl WindowSize {
+    fn new(x: i32, y: i32) -> Self {
+        return WindowSize {
+            x, y
+        };
+    }
+}
+
 #[derive(Debug, Clone)]
 pub struct WindowResizeEvent {
-    pub old_size: Size,
-    pub new_size: Size,
+    pub old_size: WindowSize,
+    pub new_size: WindowSize,
 }
 
 #[derive(PartialEq, Properties)]
 pub struct WindowResizeListenerProps {
-    pub id: AttrValue,
     pub cb: Option<Callback<WindowResizeEvent>>
 }
 
-const ASSUMPTION_X: i32 = 1920;
-const ASSUMPTION_Y: i32 = 1080;
 
-fn set_size(window_size: UseStateHandle<(i32, i32)>) {
-        if let Some(window) = web_sys::window() {
-        let width = match window.inner_width() {
-            Ok(w) => w.dyn_into::<HtmlElement>().ok(),
-            _ => None
+
+const ASSUMPTION: (i32, i32) = (1920, 1080);
+
+fn get_size() -> Result<(i32, i32), &'static str> {
+    if let Some(window) = web_sys::window() {
+        let width_ = window.inner_width()
+            .ok()
+            .and_then(|x| {
+                let y = jsvalue_to_string(x).unwrap_or_else(|x| x);
+                let res = y.parse::<i32>().ok();
+                return res;
+            });
+
+        if width_.is_none() {
+            return Err("Failed to parse width value - failed to get size");
         }
-        .map(|x| {
-                log!("Width inner text: ", x.inner_text());
-                x.inner_text()
-        })
-        .map(|y| y.parse::<i32>().unwrap_or(ASSUMPTION_X))
-        .unwrap_or(ASSUMPTION_X);
 
-        let height = match window.inner_height() {
-            Ok(h) => h.dyn_into::<HtmlElement>().ok(),
-            _ => None
+        let width = width_.unwrap();
+
+        let height_ = window.inner_height()
+            .ok()
+            .and_then(|x| {
+                let y = jsvalue_to_string(x).unwrap_or_else(|x| x);
+                let res = y.parse::<i32>().ok();
+                return res;
+            });
+
+        if height_.is_none() {
+            return Err("Failed to parse height value - failed to get size");
         }
-        .map(|x| {
-                log!("Height inner text: ", x.inner_text());
-                x.inner_text()
-        })
-        .map(|y| y.parse::<i32>().unwrap_or(ASSUMPTION_Y))
-        .unwrap_or(ASSUMPTION_Y);
 
-        window_size.set((width, height));
+        let height = height_.unwrap();
+
+        return Ok((width, height));
     }
-    else {
-        log!("Failed to get windows from DOM");
-    }
+
+    return Err("Failed to get windows from DOM - failed to get size");
 }
 
 /// A component that expands to nothing and bubbles a component size observer event on resize
 /// Assumes 1920 x 1080 if anything fails
-#[function_component(WindowResizeListener)]
-pub fn window_resize_listener(props: &WindowResizeListenerProps) -> Html {
-    let window_size = use_state(|| (ASSUMPTION_X, ASSUMPTION_Y));
+pub struct WindowResizeListener {
+    current_x: i32,
+    current_y: i32,
+}
 
-    if let Some(window) = web_sys::window() {
-        set_size(window_size);
+pub enum WindowResizeListenerMessage {
+    ResizeEvent,
+}
 
-        // Add a resize callback event to windows
-        let ws_clone = window_size.clone();
+impl Component for WindowResizeListener {
+    type Message = WindowResizeListenerMessage;
+    type Properties = WindowResizeListenerProps;
 
-        let onresize = Closure::new(|| {
-            log!("Resize event fired");
-        }).as_ref().unchecked_ref();
+    fn create(ctx: &Context<Self>) -> Self {
+        let link = ctx.link().clone();
+        let resize_listener = Closure::wrap(Box::new(move || {
+            link.send_message(WindowResizeListenerMessage::ResizeEvent);
+        }) as Box<dyn FnMut()>);
 
-        window.set_onresize(onresize);
+        web_sys::window()
+            .unwrap()
+            .add_event_listener_with_callback("resize", resize_listener.as_ref().unchecked_ref())
+            .unwrap();
+
+        resize_listener.forget();
+
+        let (x, y) = get_size().unwrap_or_else(|x| {
+            log!(x);
+            ASSUMPTION
+        });
+
+        WindowResizeListener{
+            current_x: x,
+            current_y: y
+        }
     }
-    else {
-        log!("Failed to get windows from DOM - failed to initialize resize event");
+
+    fn update(&mut self, ctx: &Context<Self>, msg: Self::Message) -> bool {
+        let cb = (&ctx.props().cb).clone().unwrap_or(Callback::from(|_| ()));
+        match msg {
+            WindowResizeListenerMessage::ResizeEvent => {
+                match get_size() {
+                    Ok((x, y)) => {
+                        let info = WindowResizeEvent{
+                            old_size: WindowSize::new(self.current_x, self.current_y),
+                            new_size: WindowSize::new(x, y)
+                        };
+                        cb.emit(info);
+                        self.current_x = x;
+                        self.current_y = y;
+                    },
+                    Err(e) => {
+                        log!(e);
+                    }
+                }
+
+            }
+        };
+
+        false
     }
 
-    let id = props.id.clone();
-
-    html!{
-        <div id={id}>
-        </div>
+    fn view(&self, ctx: &Context<Self>) -> Html {
+        html!{}
     }
 }

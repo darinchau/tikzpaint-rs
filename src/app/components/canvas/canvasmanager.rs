@@ -166,11 +166,12 @@ pub fn canvas_manager(props: &CanvasManagerProps) -> Html {
     });
 
     let resize_cb = Callback::from(move |event: WindowResizeEvent| {
-        let Size{ x, y } = event.new_size;
-        transform.set(Transform {
-            origin: (x, y),
-            basis: vec![(x + 30, y)]
-        });
+        // let WindowSize{ x, y } = event.new_size;
+        // transform.set(Transform {
+        //     origin: (x, y),
+        //     basis: vec![(x + 30, y)]
+        // });
+        log!(format!("New size: {} {}", event.new_size.x, event.new_size.y));
     });
 
     // Process CSS
@@ -181,7 +182,7 @@ pub fn canvas_manager(props: &CanvasManagerProps) -> Html {
             <HeaderBar height={h} cb={header_cb}/>
             <SideBar header_height={h} width={w} cb={sidebar_cb}/>
             <Terminal height={th} text_box_height={37} sidebar_width={w} cb={terminal_cb}/>
-            <WindowResizeListener id={"window-resize-listener"} cb={}/>
+            <WindowResizeListener cb={resize_cb}/>
             <div class={class_id}>
                 <CanvasSensor top={h} left={w} cb={canvas_sensor_cb} id={canvas_sensor_id}/>
             </div>
