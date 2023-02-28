@@ -12,37 +12,12 @@
 //!  3. If the result contains a FOC, draw it
 //!  4. The canvas manager triggers a rerender on the canvas renderer and the terminal
 
+use yew::Html;
+
 use crate::figures::*;
 use crate::app::*;
 use std::rc::Rc;
 use std::cell::RefCell;
-
-pub struct TerminalTextRenderer {
-    v: Vec<Rc<RefCell<CheapString>>>
-}
-
-impl TerminalTextRenderer {
-    pub fn new() -> Self {
-        TerminalTextRenderer { v: vec![] }
-    }
-
-    pub fn push(&mut self, r: Rc<RefCell<CheapString>>) {
-        self.v.push(r);
-    }
-}
-
-pub enum FactoryParseError {
-    EmptyObject,
-    CommandNotFound(&'static str),
-}
-
-// ========================================================================================================
-// =============================== Implement parser for code ==============================================
-// ========================================================================================================
-
-fn parse<T: StringLike>(s: T) -> Result<FigureObjectComplex, &'static str> {
-    todo!();
-}
 
 
 // ================================================================================================================
@@ -52,9 +27,18 @@ fn parse<T: StringLike>(s: T) -> Result<FigureObjectComplex, &'static str> {
 /// A figure object complex is a Interior mutable string, interior mutable drawable object, along with the world coordinates of this object
 /// We can look up a figure object complex by nearest points.
 pub struct FigureObjectComplex {
-    coordinate_repr: (i32, i32),
     st: Rc<RefCell<CheapString>>,
     fo: Rc<RefCell<DrawableObject>>
+}
+
+impl FigureObjectComplex {
+    pub fn new(x: DrawableObject, s: String) -> Self {
+        let st = Rc::new(RefCell::new(CheapString::new(s)));
+        let fo = Rc::new(RefCell::new(x));
+        return Self {
+            st, fo
+        }
+    }
 }
 
 /// A figure-terminal complex is a proxy for the figure but houses figureobject complexes
@@ -83,5 +67,9 @@ impl FigureComplex {
         self.ttext.push(text_copy);
 
         return Ok(());
+    }
+
+    pub fn unpack_html(&self) -> Html {
+        self.ttext.unpack_html()
     }
 }

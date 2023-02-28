@@ -10,6 +10,7 @@ use wasm_bindgen::JsCast;
 use crate::app::{MouseSensor, MouseClickEvent, MouseClickType, is_true};
 use crate::figures::Figure;
 
+/// A struct about whether the mouse is currently down, and the underlying mouse click event
 #[derive(PartialEq, Clone)]
 pub struct CanvasSensorEvent {
     pub dragging: bool,

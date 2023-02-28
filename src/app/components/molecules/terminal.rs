@@ -13,47 +13,6 @@ use wasm_bindgen::JsCast;
 use crate::app::*;
 use crate::figures::{CheapString, StringLike};
 
-/// Use a wrapper for vec string because we want cheap cloning
-/// This is for displaying the terminal text
-pub struct TerminalText {
-    ptr: Rc<RefCell<Vec<CheapString>>>,
-}
-
-impl TerminalText {
-    pub fn new() -> Self {
-        TerminalText {
-            ptr: Rc::new(RefCell::new(vec![])),
-        }
-    }
-
-    pub fn push<T: StringLike>(&self, s: T) -> &Self {
-        self.ptr.borrow_mut().push(s.wrap());
-        return self;
-    }
-
-    pub fn unpack(&self) -> Vec<CheapString> {
-        let mut v = vec![];
-        for st in (*self.ptr.borrow()).iter() {
-            v.push(st.clone())
-        }
-        v
-    }
-}
-
-impl Clone for TerminalText {
-    fn clone(&self) -> Self {
-        TerminalText {
-            ptr: Rc::clone(&self.ptr),
-        }
-    }
-}
-
-impl PartialEq for TerminalText {
-    fn eq(&self, other: &Self) -> bool {
-        return *self.ptr.borrow() == *other.ptr.borrow();
-    }
-}
-
 // ================================================================================================================== //
 // ========================================== Implementation of a terminal ========================================== //
 // ================================================================================================================== //
@@ -77,9 +36,10 @@ pub struct TerminalProps {
     /// This callback should take in a terminal event, return the terminal text that we should render.
     pub cb: Callback<TerminalEvent>,
 
+    /// The children will be rendered as terminal text
     /// Allows us to pass in terminal text and render
     /// We expect to process all terminal text in canvas manager
-    pub text: TerminalText,
+    pub children: Children,
 
     /// Enables debug mode if set to true. Currently does nothing
     pub debug: Option<bool>
@@ -165,30 +125,18 @@ fn get_callback(props: &TerminalProps) -> Callback<TextFieldEvent, Option<String
     })
 }
 
-fn wrap_terminal_text(v: TerminalText) -> Html {
-    v.unpack().into_iter().map(|x| {
-        html!{
-            <>
-                {x}
-                <br/>
-            </>
-        }
-    }).collect::<Html>()
-}
-
 #[function_component(Terminal)]
 pub fn terminal(props: &TerminalProps) -> Html {
 
     let textbox_css = text_box_css(props);
     let terminal_css = terminal_css(props);
 
-    let terminal_text = props.text.clone();
     let text_cb = get_callback(props);
 
     html! {
         <>
             <div class={format!("terminal-text {terminal_css}")}>
-                {wrap_terminal_text(terminal_text.clone())}
+                {for props.children.iter()}
             </div>
             <div class={format!("terminal {textbox_css}")}>
                 <TextField id={"terminal"} name={"terminal"} label={""} field_type={TextFieldInputType::Search} cb={text_cb}/>
