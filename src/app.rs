@@ -39,4 +39,6 @@ use components::molecules::terminal::TerminalEvent;
 use components::molecules::terminal::TerminalType;
 use components::molecules::terminal::TerminalText;
 
+use components::canvas::figureobjectcomplex::*;
+
 use utils::util::*;

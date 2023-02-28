@@ -4,8 +4,8 @@ use std::ops::{Add, Sub, Mul, Div, Index};
 use std::f64::EPSILON;
 use std::rc::Rc;
 
+use crate::figures::DimensionError;
 use crate::figures::Serializable;
-use crate::figures::{Hashable, DimensionError};
 
 pub struct Coordinates {
     values: Rc<Vec<f64>>,
@@ -314,14 +314,6 @@ impl Serializable for Coordinates {
             values: Rc::new(v),
             dims: num_dims
         })
-    }
-}
-
-impl Hashable for Coordinates {
-    fn hash(&self) -> i64 {
-        return self.values.iter().enumerate().map(|(i, x)| {
-            i as i64 | x.hash()
-        }).sum();
     }
 }
 

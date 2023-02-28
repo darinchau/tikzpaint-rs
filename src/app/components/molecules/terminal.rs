@@ -11,6 +11,7 @@ use yew::prelude::*;
 use web_sys::HtmlElement;
 use wasm_bindgen::JsCast;
 use crate::app::*;
+use crate::figures::{CheapString, StringLike};
 
 /// Use a wrapper for vec string because we want cheap cloning
 /// This is for displaying the terminal text

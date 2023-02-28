@@ -38,24 +38,3 @@ impl Drawable for Point {
         return self.p.dims();
     }
 }
-
-// Blanket implementation for now
-impl Serializable for Point {
-    fn from_str(s: &str) -> Option<Self> {
-        if !s.starts_with("pt") {
-            return None;
-        }
-
-        if let Some(x) = FOPoint::from_str(&s[2..]) {
-            return Some(Self {
-                p: x.wrap(),
-            });
-        }
-
-        return None;
-    }
-
-    fn into_str(&self) -> String {
-        format!("pt{}", self.p.coordinates()[0].into_str())
-    }
-}

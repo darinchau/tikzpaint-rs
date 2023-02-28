@@ -25,10 +25,17 @@ impl Figure {
         }
     }
 
-    /// Adds 'obj' to the list of objects to be drawn. This forces the
-    pub fn draw<T: Drawable + WrappableAsDrawable>(&mut self, obj: T) where {
+    /// Adds 'obj' to the list of objects to be drawn. Returns an error if the dimension of the obj does not match that of the figure
+    pub fn draw<T: Drawable + WrappableAsDrawable>(&mut self, obj: T) -> Result<(), DimensionError> where {
+        if obj.dims() != self.dims {
+            return Err(DimensionError {
+                msg: format!("Expect dimensions of the object ({}) to be the same as the dimensions of the figure ({})", obj.dims(), self.dims),
+                source: "draw() from figure"
+            });
+        }
         self.to_draw.push(obj.wrap());
         self.hash += 1;
+        return Ok(());
     }
 
     /// Load method takes a function object and a projection object. The method will feed

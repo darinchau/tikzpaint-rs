@@ -6,7 +6,6 @@ use yew::prelude::*;
 use web_sys::HtmlElement;
 use wasm_bindgen::JsCast;
 
-use crate::app::CheapString;
 use crate::app::get_id;
 
 #[derive(PartialEq, Clone)]

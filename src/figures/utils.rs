@@ -1,3 +1,3 @@
 pub mod serializable;
-pub mod hashable;
 pub mod dimensionerror;
+pub mod cheapstring;

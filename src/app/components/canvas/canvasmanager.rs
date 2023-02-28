@@ -128,6 +128,11 @@ impl Transform {
     }
 }
 
+
+// ================================================================================================================
+// =============================== Implement Canvas manager and props =============================================
+// ================================================================================================================
+
 /// Dictates the height of the header and the maximum width of the side bar
 #[derive(PartialEq, Properties)]
 pub struct CanvasManagerProps {

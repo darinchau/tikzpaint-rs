@@ -35,5 +35,6 @@ pub use figureobjects::point::FOPoint;
 pub use drawables::point::Point;
 
 pub use utils::serializable::Serializable;
-pub use utils::hashable::Hashable;
 pub use utils::dimensionerror::DimensionError;
+pub use utils::cheapstring::CheapString;
+pub use utils::cheapstring::StringLike;
