@@ -40,6 +40,7 @@ pub struct CanvasManagerProps {
     pub debug: Option<bool>
 }
 
+/// Gets css properties of main canvas
 fn get_css(props: &CanvasManagerProps) -> String {
     let debug_mode = is_true(props.debug);
     let h = props.header_height;
@@ -70,6 +71,36 @@ fn get_css(props: &CanvasManagerProps) -> String {
     }
 }
 
+/// Gets main canvas sensor to calculate dimensions of stuff
+fn get_canvas_sensor(canvas_sensor_id: &'static str) -> Result<HtmlElement, &'static str> {
+    let window = web_sys::window();
+    if window.is_none() {
+        return Err("Failed to get windows");
+    }
+
+    let document = window.unwrap().document();
+    if document.is_none() {
+        return Err("Failed to get document");
+    }
+
+    let elem = document.unwrap().get_element_by_id(canvas_sensor_id);
+    if elem.is_none() {
+        return Err("Failed to get canvas sensor on initialization");
+    }
+
+    let html_elem = elem.unwrap().dyn_into::<HtmlElement>().ok();
+    if html_elem.is_none() {
+        return Err("Failed to get canvas sensor as Html element on initialization");
+    }
+
+    let canvas_sensor = Ok(html_elem.unwrap()).or_else(|x| {
+        log!(format!("{x}"));
+        Err(x)
+    });
+
+    return canvas_sensor;
+}
+
 /// The main app is a coordinator component that coordinates all three main components
 /// i.e. the header bar, the side bar, and the canvas
 #[function_component(CanvasManager)]
@@ -91,7 +122,17 @@ pub fn canvas_manager(props: &CanvasManagerProps) -> Html {
     // the position of (0, 0), (0, 1) and (1, 0)
 
     // Pass a unique ID down to the mouse sensor and use get_element_by_ID
+    let canvas_sensor_id = "canvas-sensor";
 
+    // Load the transform - i.e. basis axis. If we can get the sensor element then use that as reference
+    // Otherwise we fall back to calculating the midpoint using the window size
+    // Make a blanket initialization first due to where use_state can be called
+    /// This calculation is made assuming 1920 x 1080 - that if getting the doms failed
+    let (tx, ty) = ((w + (1920 - w)/2) as i32, (h + (1080 - h - th)/2) as i32);
+    let transform = use_state(|| Transform{
+        origin: (tx as i32, ty as i32),
+        basis: vec![(tx + 30, ty), (tx, ty + 30)],
+    });
 
     // Handles header bar events
     let header_fig = fig_state.clone();
@@ -124,6 +165,14 @@ pub fn canvas_manager(props: &CanvasManagerProps) -> Html {
 
     });
 
+    let resize_cb = Callback::from(move |event: WindowResizeEvent| {
+        let Size{ x, y } = event.new_size;
+        transform.set(Transform {
+            origin: (x, y),
+            basis: vec![(x + 30, y)]
+        });
+    });
+
     // Process CSS
     let class_id = get_css(props);
 
@@ -132,8 +181,9 @@ pub fn canvas_manager(props: &CanvasManagerProps) -> Html {
             <HeaderBar height={h} cb={header_cb}/>
             <SideBar header_height={h} width={w} cb={sidebar_cb}/>
             <Terminal height={th} text_box_height={37} sidebar_width={w} cb={terminal_cb}/>
+            <WindowResizeListener id={"window-resize-listener"} cb={}/>
             <div class={class_id}>
-                <CanvasSensor top={h} left={w} cb={canvas_sensor_cb} id={"canvas-sensor"}/>
+                <CanvasSensor top={h} left={w} cb={canvas_sensor_cb} id={canvas_sensor_id}/>
             </div>
         </>
     }

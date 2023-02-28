@@ -18,6 +18,10 @@ use components::atoms::mousesensor::MouseSensor;
 use components::atoms::mousesensor::MouseClickType;
 use components::atoms::mousesensor::MouseClickEvent;
 
+use components::atoms::sizeobserver::Size;
+use components::atoms::sizeobserver::WindowResizeListener;
+use components::atoms::sizeobserver::WindowResizeEvent;
+
 use components::molecules::headerbar::HeaderBar;
 use components::molecules::headerbar::HeaderBarType;
 use components::molecules::headerbar::HeaderBarEvent;
