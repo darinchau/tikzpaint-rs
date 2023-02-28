@@ -133,7 +133,7 @@ impl Clone for FigureObject {
 /// Drawables are high-level implementations of Figure objects. They contain methods and stuff to implement
 /// drawing multiple figure objects in a particular way.
 /// If we look at the requirements for a Drawable object, we see we need the draw method, sized, clone, and no lifetime parameters
-pub trait Drawable: Serializable + 'static {
+pub trait Drawable: 'static {
     /// Returns a vector of FigureObject that we will pass to the figure to draw.
     fn draw(&self) -> Vec<FigureObject>;
 
@@ -144,8 +144,8 @@ pub trait Drawable: Serializable + 'static {
 pub trait WrappableAsDrawable {
     /// Consumes ownership of self and returns a drawable object wrapper (a reference counted pointer to the object)
     fn wrap(self) -> DrawableObject where Self: Sized + Drawable + Any + 'static {
-        if let Some(pro) = (&self as &dyn Any).downcast_ref::<DrawableObject>() {
-            pro.clone()
+        if let Some(s) = (&self as &dyn Any).downcast_ref::<DrawableObject>() {
+            s.clone()
         }
         else {
             DrawableObject { obj: Rc::new(self) }
@@ -160,17 +160,12 @@ pub struct DrawableObject {
     obj: Rc<dyn Drawable>
 }
 
-impl DrawableObject {
-    /// This method is identical to obj.wrap() (as Drawable)
-    pub fn new<T: Drawable>(obj: T) -> Self {
-        obj.wrap()
-    }
-
-    pub fn draw(&self) -> Vec<FigureObject> {
+impl Drawable for DrawableObject {
+    fn draw(&self) -> Vec<FigureObject> {
         return self.obj.draw();
     }
 
-    pub fn dims(&self) -> usize {
+    fn dims(&self) -> usize {
         return self.obj.dims();
     }
 }

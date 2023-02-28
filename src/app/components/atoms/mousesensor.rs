@@ -6,11 +6,15 @@ use yew::prelude::*;
 use web_sys::HtmlElement;
 use wasm_bindgen::JsCast;
 
+use crate::app::CheapString;
+use crate::app::get_id;
+
 #[derive(PartialEq, Clone)]
 pub struct MouseClickEvent {
     pub click_type: MouseClickType,
     pub client_pos: (i32, i32),
-    pub screen_pos: (i32, i32)
+    pub screen_pos: (i32, i32),
+    pub mouse_event: MouseEvent
 }
 
 #[derive(PartialEq, Clone, Copy)]
@@ -30,6 +34,7 @@ pub enum MouseClickType {
 
 #[derive(PartialEq, Properties)]
 pub struct MouseSensorProps {
+    pub id: AttrValue,
     pub cb: Callback<MouseClickEvent>
 }
 
@@ -42,15 +47,17 @@ fn get_callback(props: &MouseSensorProps, t: MouseClickType) -> Callback<MouseEv
         cb.emit(MouseClickEvent {
             click_type: t,
             client_pos: (x, y),
-            screen_pos: (sx, sy)
+            screen_pos: (sx, sy),
+            mouse_event: event
         });
     })
 }
 
 #[function_component(MouseSensor)]
 pub fn mouse_sensor(props: &MouseSensorProps) -> Html {
+    let id = props.id.clone();
     html! {
-        <button aria-label={"mouse sensor"} type={"button"}
+        <button aria-label={"mouse sensor"} type={"button"} id={id}
             onauxclick={get_callback(props, MouseClickType::AuxilaryClick)}
             onclick={get_callback(props, MouseClickType::LeftClick)}
             oncontextmenu={get_callback(props, MouseClickType::RightClick)}

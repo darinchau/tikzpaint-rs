@@ -74,16 +74,16 @@ pub fn header_bar(props: &HeaderBarProps) -> Html {
 
     html! {
         <div class={format!("topnav {}", h_style_name)}>
-            <Button name={"about"} button_type={ButtonType::Other} cb={on_about}>
+            <Button id={"header-about-button"} name={"about"} button_type={ButtonType::Other} cb={on_about}>
                 {about}
             </Button>
-            <Button name={"help"} button_type={ButtonType::Other} cb={on_help}>
+            <Button id={"header-help-button"} name={"help"} button_type={ButtonType::Other} cb={on_help}>
                 {help}
             </Button>
-            <Button name={"redo"} button_type={ButtonType::Other} cb={on_redo}>
+            <Button id={"header-redo-button"} name={"redo"} button_type={ButtonType::Other} cb={on_redo}>
                 {redo}
             </Button>
-            <Button name={"undo"} button_type={ButtonType::Other} cb={on_undo}>
+            <Button id={"header-undo-button"} name={"undo"} button_type={ButtonType::Other} cb={on_undo}>
                 {undo}
             </Button>
         </div>

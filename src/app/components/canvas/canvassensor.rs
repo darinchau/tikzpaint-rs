@@ -12,11 +12,13 @@ use crate::figures::Figure;
 
 #[derive(PartialEq, Clone)]
 pub struct CanvasSensorEvent {
-    dragging: bool
+    pub dragging: bool,
+    pub mouse_click_event: MouseClickEvent
 }
 
 #[derive(Properties, PartialEq)]
 pub struct CanvasSensorProps {
+    pub id: AttrValue,
     pub top: usize,
     pub left: usize,
     pub debug: Option<bool>,
@@ -37,13 +39,16 @@ pub fn main_canvas(props: &CanvasSensorProps) -> Html {
         }
 
         cb.emit(CanvasSensorEvent {
-            dragging: *dragging_state
+            dragging: *dragging_state,
+            mouse_click_event: event,
         });
     });
 
+    let id = props.id.clone();
+
     html! {
         <>
-            <MouseSensor cb={mouse_sensor_cb}/>
+            <MouseSensor cb={mouse_sensor_cb} id={id}/>
         </>
     }
 }

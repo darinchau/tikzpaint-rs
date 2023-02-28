@@ -12,35 +12,6 @@ use web_sys::HtmlElement;
 use wasm_bindgen::JsCast;
 use crate::app::*;
 
-/// An Rc wrapped over a string
-struct CheapString {
-    ptr: Rc<String>,
-}
-
-impl Display for CheapString {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, "{}", *self.ptr)
-    }
-}
-
-impl Clone for CheapString {
-    fn clone(&self) -> Self {
-        CheapString { ptr: Rc::clone(&self.ptr) }
-    }
-}
-
-impl CheapString {
-    fn new(s: String) -> Self {
-        CheapString { ptr: Rc::new(s) }
-    }
-}
-
-impl PartialEq for CheapString {
-    fn eq(&self, other: &Self) -> bool {
-        return *self.ptr == *other.ptr;
-    }
-}
-
 /// Use a wrapper for vec string because we want cheap cloning
 /// This is for displaying the terminal text
 struct TerminalText {
@@ -59,7 +30,7 @@ impl TerminalText {
         return self;
     }
 
-    pub fn unpack_to(&self) -> Vec<CheapString> {
+    pub fn unpack(&self) -> Vec<CheapString> {
         let mut v = vec![];
         for st in (*self.ptr.borrow()).iter() {
             v.push(st.clone())
@@ -189,7 +160,7 @@ fn get_callback(props: &TerminalProps, terminal_text: UseStateHandle<TerminalTex
 }
 
 fn wrap_terminal_text(v: TerminalText) -> Html {
-    v.unpack_to().into_iter().map(|x| {
+    v.unpack().into_iter().map(|x| {
         html!{
             <>
                 {x}
@@ -206,8 +177,7 @@ pub fn terminal(props: &TerminalProps) -> Html {
     let terminal_css = terminal_css(props);
 
     let terminal_text = use_state(|| TerminalText::new());
-    let terminal_txt1 = terminal_text.clone();
-    let text_cb = get_callback(props, terminal_txt1);
+    let text_cb = get_callback(props, terminal_text.clone());
 
     let terminal_texts_html = wrap_terminal_text((*terminal_text).clone());
 
@@ -217,7 +187,7 @@ pub fn terminal(props: &TerminalProps) -> Html {
                 {terminal_texts_html}
             </div>
             <div class={format!("terminal {textbox_css}")}>
-                <TextField name={"terminal"} label={""} field_type={TextFieldInputType::Search} cb={text_cb}/>
+                <TextField id={"terminal"} name={"terminal"} label={""} field_type={TextFieldInputType::Search} cb={text_cb}/>
             </div>
         </>
     }

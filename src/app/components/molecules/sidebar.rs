@@ -84,9 +84,10 @@ fn sidebar_css(props: &SideBarProps) -> String {
 fn wrap_button(props: &SideBarProps, button_type: SideBarType) -> Html {
     let cb = wrap_callback(props, button_type);
     let name = button_type.to_name();
+    let id = format!("sidebar-button-{}", button_type.to_name().to_lowercase());
     html!{
         <div class={"grid-item"}>
-            <Button name={name} button_type={ButtonType::Other} cb={cb}>
+            <Button id={id} name={name} button_type={ButtonType::Other} cb={cb}>
                 {name}
             </Button>
         </div>

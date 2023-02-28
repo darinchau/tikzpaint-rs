@@ -22,6 +22,7 @@ pub struct ButtonEvent {
 
 #[derive(Properties, PartialEq)]
 pub struct ButtonProperties{
+    pub id: AttrValue,
     /// The callback is a function called right before the state change is triggered.
     /// It passes a mouse event and the number of times a button is pressed + 1 (i.e. what it would be after the press)
     pub cb: Option<Callback<ButtonEvent>>,
@@ -46,8 +47,10 @@ pub fn button(props: &ButtonProperties) -> Html {
 
     let name = props.name.clone();
 
+    let id = props.id.clone();
+
     html! {
-        <button aria-label={name} type={button_type} onclick={Callback::from(move |x: MouseEvent| {
+        <button id={id} aria-label={name} type={button_type} onclick={Callback::from(move |x: MouseEvent| {
             let before_press_num_times = &*ntp;
             ntp.set(before_press_num_times + 1);
             let info = ButtonEvent {

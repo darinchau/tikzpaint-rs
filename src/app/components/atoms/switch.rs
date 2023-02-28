@@ -31,6 +31,10 @@ impl SwitchEvent {
 
 #[derive(Properties, PartialEq)]
 pub struct SwitchProperties{
+    /// ID Field of the switch
+    pub id: AttrValue,
+
+    /// Name of the switch
     pub name: AttrValue,
 
     /// We will change the active state for you if you want to set it manually somewhere else
@@ -53,8 +57,10 @@ pub fn switch(props: &SwitchProperties) -> Html {
 
     let state_construct = state.clone();
 
+    let id = props.id.clone();
+
     html! {
-        <button type={"button"} aria-label={"switch"} onclick={Callback::from(move |x| {
+        <button id={id} type={"button"} aria-label={"switch"} onclick={Callback::from(move |x| {
             let info = SwitchEvent {
                 mouse_event: x,
                 state: state_construct.clone()

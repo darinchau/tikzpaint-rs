@@ -2,7 +2,7 @@
 use gloo::console::log;
 use stylist::Style;
 use yew::prelude::*;
-use web_sys::{HtmlElement, Text};
+use web_sys::HtmlElement;
 use wasm_bindgen::JsCast;
 use web_sys::HtmlInputElement;
 
@@ -75,6 +75,9 @@ impl TextFieldInputType {
 
 #[derive(Properties, PartialEq)]
 pub struct TextFieldProps{
+    /// ID field of the Text field
+    pub id: AttrValue,
+
     pub name: AttrValue,
     pub label: AttrValue,
     pub field_type: TextFieldInputType,
@@ -142,9 +145,11 @@ pub fn text_field(props: &TextFieldProps) -> Html {
     let state = use_state(|| String::new());
     let (on_change, on_keyboard) = get_callback(props, state.clone());
 
+    let id = props.id.clone();
+
     html! {
         <label for={name}>{label}
-            <input type={ftype} name={name2}
+            <input id={id} type={ftype} name={name2}
             value={format!("{}", *state)}
             onchange={on_change}
             onkeydown={on_keyboard}/>
