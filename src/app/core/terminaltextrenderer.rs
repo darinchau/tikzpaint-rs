@@ -10,10 +10,6 @@ pub struct TerminalTextRenderer {
     v: Vec<Rc<RefCell<CheapString>>>
 }
 
-fn deref_get(x: &Rc<RefCell<CheapString>>) -> CheapString {
-    (*(**x).borrow()).clone()
-}
-
 impl TerminalTextRenderer {
     pub fn new() -> Self {
         TerminalTextRenderer { v: vec![] }
@@ -25,7 +21,7 @@ impl TerminalTextRenderer {
 
     pub fn unpack(&self) -> Vec<CheapString> {
         self.v.iter().map(|x| {
-            deref_get(x)
+            deref_get(x.clone())
         }).collect::<Vec<CheapString>>()
     }
 
@@ -33,7 +29,7 @@ impl TerminalTextRenderer {
         self.v.iter().map(|x| {
             html!{
                 <>
-                    {deref_get(x)}
+                    {deref_get(x.clone())}
                     <br/>
                 </>
             }

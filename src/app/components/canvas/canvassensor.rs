@@ -1,6 +1,4 @@
-//! Implementation of the canvas sensor. This component does two things:
-//! - Sense and interprets all button clicks
-//! - Renders the svg
+//! Implementation of the canvas sensor. This component sense and interprets all button clicks
 
 use gloo::console::log;
 use stylist::Style;

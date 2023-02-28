@@ -283,21 +283,23 @@ impl Coordinates {
 
 impl Serializable for Coordinates {
     fn into_str(&self) -> String {
-        let mut s = format!("cd{},", self.dims);
-        for v in &*self.values {
+        let mut s = String::new();
+        for (i, v) in self.values.iter().enumerate() {
             s.push_str(&v.into_str());
-            s.push_str(",");
+            if i != self.dims - 1 {
+                s.push_str(", ");
+            }
         }
 
-        s
+        format!("({})", s)
     }
 
     fn from_str(s: &str) -> Option<Self> {
-        if !s.starts_with("cd") {
+        if !s.starts_with("(") {
             return None;
         }
 
-        let mut split = (&s[2..]).split(",");
+        let mut split = (&s[1..s.len()-1]).split(",");
 
         let num_dims = split
             .next()?

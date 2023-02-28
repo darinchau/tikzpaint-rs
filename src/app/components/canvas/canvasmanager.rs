@@ -176,136 +176,179 @@ fn get_css(props: &CanvasManagerProps) -> String {
     }
 }
 
-#[derive(Clone)]
-struct Handles {
-    fig: Rc<RefCell<FigureComplex>>,
-    transform: UseStateHandle<Transform>,
+pub enum CanvasManagerMessage {
+    ChangedFigure,
+    ChangedWindowSize,
 }
 
-fn get_canvas_sensor_cb(props: &CanvasManagerProps, h: Handles, canvas_sensor_id: &'static str) -> Callback<CanvasSensorEvent> {
-    // Handles main canvas sensor events
-    let canvas_sensor_cb = Callback::from(move |event: CanvasSensorEvent| {
-        let mut fig = h.fig.borrow_mut();
-
-        // Suppose we need to spawn a point. We need do perform the following:
-        // 1. Get the coordinates of the click. Transform that into the canvas coordinates
-        // 2. Spawn a point at the canvas coordinates
-        // 3. Pass the figure to the renderer and perform the rendering of the svg
-        match event.mouse_click_event.click_type {
-            MouseClickType::LeftClick => {
-                let (x, y) = event.mouse_click_event.screen_pos;
-                log!(format!("Recieved mouse click at ({x}, {y})"));
-
-
-                let (local_x, local_y) = h.transform.world_to_local(x, y);
-
-                let p = Point::new(Coordinates::new(vec![local_x, local_y]));
-                let repr = p.into_str();
-                let pt = FigureObjectComplex::new(p.wrap(), repr);
-                fig.draw(pt);
-
-                log!(format!("Drawing a point at ({local_x}, {local_y})"));
-            },
-
-            _ => ()
-        }
-    });
-
-    return canvas_sensor_cb;
+macro_rules! mborrow {
+    ($x: ident) => {
+        (*(*$x.clone()).borrow_mut())
+    };
 }
 
-fn get_header_cb(props: &CanvasManagerProps, h: Handles) -> Callback<HeaderBarEvent> {
-    // Handles header bar events
-    let header_cb = Callback::from(move |event: HeaderBarEvent| {
-
-    });
-
-    return header_cb;
-}
-
-fn get_sidebar_cb(props: &CanvasManagerProps, h: Handles) -> Callback<SideBarEvent> {
-    let sidebar_cb = Callback::from(move |event: SideBarEvent| {
-
-    });
-
-    return sidebar_cb;
-}
-
-fn get_terminal_cb(props: &CanvasManagerProps, h: Handles) -> Callback<TerminalEvent> {
-    let terminal_cb = Callback::from(move |event: TerminalEvent| {
-
-    });
-
-    return terminal_cb;
-}
-
-fn get_resize_cb(props: &CanvasManagerProps, h: Handles) -> Callback<WindowResizeEvent> {
-    let resize_cb = Callback::from(move |event: WindowResizeEvent| {
-        let (x, y) = (event.new_size.x, event.new_size.y);
-        let mut orig = *h.transform;
-        orig.set_screen_size(x, y);
-        h.transform.set(orig);
-    });
-
-    return resize_cb;
+macro_rules! rerender {
+    ($x: ident) => {
+        ctx.link().send_message($x)
+    };
 }
 
 /// The main app is a coordinator component that coordinates all three main components
 /// i.e. the header bar, the side bar, and the canvas
-#[function_component(CanvasManager)]
-pub fn canvas_manager(props: &CanvasManagerProps) -> Html {
-    let debug_mode = is_true(props.debug);
+pub struct CanvasManager {
+    fig: Rc<RefCell<FigureComplex>>,
+    tf: Rc<RefCell<Transform>>,
+}
 
-    // Dimensions of the page
-    let h = props.header_height;
-    let w = props.side_bar_width;
-    let th = props.terminal_height;
+impl CanvasManager {
+    fn get_canvas_sensor_cb(&self, props: &CanvasManagerProps, ctx: &Context<Self>) -> Callback<CanvasSensorEvent> {
+        let f = self.fig.clone();
+        let tf = self.tf.clone();
+        let link = ctx.link().clone();
 
-    // Process figure and callbacks
-    let dims = props.figure_dims;
-    let fig_state = use_mut_ref(|| FigureComplex::new(dims));
-
-    // We need to keep track of the world coordinates and figure coordinates conversion.
-    // so we basically need to keep track of the transforms of this world. We need to keep track of
-    // the position of (0, 0), (0, 1) and (1, 0)
-
-    // Pass a unique ID down to the mouse sensor and use get_element_by_ID
-    let canvas_sensor_id = "canvas-sensor";
-
-    // Load the transform - i.e. basis axis. If we can get the sensor element then use that as reference
-    // Otherwise we fall back to calculating the midpoint using the window size
-    // Make a blanket initialization first due to where use_state can be called
-    let transform = use_state(|| Transform::new(h, w, th));
-
-    let handles = Handles {
-        fig: fig_state.clone(),
-        transform: transform.clone(),
-    };
+        // Handles main canvas sensor events
+        let canvas_sensor_cb = Callback::from(move |event: CanvasSensorEvent| {
+            // Suppose we need to spawn a point. We need do perform the following:
+            // 1. Get the coordinates of the click. Transform that into the canvas coordinates
+            // 2. Spawn a point at the canvas coordinates
+            // 3. Pass the figure to the renderer and perform the rendering of the svg
+            match event.mouse_click_event.click_type {
+                MouseClickType::LeftClick => {
+                    let (x, y) = event.mouse_click_event.screen_pos;
+                    log!(format!("Recieved mouse click at ({x}, {y})"));
 
 
-    // Get all callbacks
-    let canvas_sensor_cb = get_canvas_sensor_cb(props, handles.clone(), canvas_sensor_id);
-    let header_cb = get_header_cb(props, handles.clone());
-    let sidebar_cb = get_sidebar_cb(props, handles.clone());
-    let terminal_cb = get_terminal_cb(props, handles.clone());
-    let resize_cb = get_resize_cb(props, handles.clone());
+                    let (local_x, local_y) = deref_get(tf.clone()).world_to_local(x, y);
 
-    // Process CSS
-    let class_id = get_css(props);
+                    let p = Point::new(Coordinates::new(vec![local_x, local_y]));
+                    let repr = p.into_str();
+                    let pt = FigureObjectComplex::new(p.wrap(), repr);
+                    mborrow!(f).draw(pt);
 
-    let y = (&*(*fig_state).borrow()).unpack_html();
+                    log!(format!("Drawing a point at ({local_x}, {local_y})"));
+                },
 
-    html!{
-        <>
-            <HeaderBar height={h} cb={header_cb}/>
-            <SideBar header_height={h} width={w} cb={sidebar_cb}/>
-            <Terminal height={th} text_box_height={37} sidebar_width={w} cb={terminal_cb}>
-                {y}
-            </Terminal>
-            <WindowResizeListener cb={resize_cb}/>
-            <div class={class_id}>
-                <CanvasSensor top={h} left={w} cb={canvas_sensor_cb} id={canvas_sensor_id}/>
-            </div>
-        </>
+                _ => ()
+            }
+
+            link.send_message(CanvasManagerMessage::ChangedFigure);
+        });
+
+        return canvas_sensor_cb;
+    }
+
+    fn get_header_cb(&self, props: &CanvasManagerProps, ctx: &Context<Self>) -> Callback<HeaderBarEvent> {
+        // Handles header bar events
+        let header_cb = Callback::from(move |event: HeaderBarEvent| {
+
+        });
+
+        return header_cb;
+    }
+
+    fn get_sidebar_cb(&self, props: &CanvasManagerProps, ctx: &Context<Self>) -> Callback<SideBarEvent> {
+        let sidebar_cb = Callback::from(move |event: SideBarEvent| {
+
+        });
+
+        return sidebar_cb;
+    }
+
+    fn get_terminal_cb(&self, props: &CanvasManagerProps, ctx: &Context<Self>) -> Callback<TerminalEvent> {
+        let terminal_cb = Callback::from(move |event: TerminalEvent| {
+
+        });
+
+        return terminal_cb;
+    }
+
+    fn get_resize_cb(&self, props: &CanvasManagerProps, ctx: &Context<Self>) -> Callback<WindowResizeEvent> {
+        let tf = self.tf.clone();
+        let link = ctx.link().clone();
+
+        let resize_cb = Callback::from(move |event: WindowResizeEvent| {
+            let (x, y) = (event.new_size.x, event.new_size.y);
+            mborrow!(tf).set_screen_size(x, y);
+
+            // Trigger rerender
+            link.send_message(CanvasManagerMessage::ChangedWindowSize);
+        });
+
+        return resize_cb;
+    }
+}
+
+impl Component for CanvasManager {
+    type Message = CanvasManagerMessage;
+    type Properties = CanvasManagerProps;
+
+    fn create(ctx: &Context<Self>) -> Self {
+        let props = ctx.props();
+
+        let debug_mode = is_true(props.debug);
+
+        // Dimensions of the page
+        let h = props.header_height;
+        let w = props.side_bar_width;
+        let th = props.terminal_height;
+
+        // Process figure and callbacks
+        let dims = props.figure_dims;
+        let fig_state = FigureComplex::new(dims);
+
+        // Pass a unique ID down to the mouse sensor and use get_element_by_ID
+        let canvas_sensor_id = "canvas-sensor";
+
+        // We need to keep track of the world coordinates and figure coordinates conversion.
+        // so we basically need to keep track of the transforms of this world. We need to keep track of
+        // the position of (0, 0), (0, 1) and (1, 0)
+
+        // Load the transform - i.e. basis axis. If we can get the sensor element then use that as reference
+        // Otherwise we fall back to calculating the midpoint using the window size
+        // Make a blanket initialization first due to where use_state can be called
+        let tf = Transform::new(h, w, th);
+
+        CanvasManager {
+            fig: Rc::new(RefCell::new(fig_state)),
+            tf: Rc::new(RefCell::new(tf))
+        }
+    }
+
+    fn view(&self, ctx: &Context<Self>) -> Html {
+        let props = ctx.props();
+
+        let debug_mode = is_true(props.debug);
+
+        // Dimensions of the page
+        let h = props.header_height;
+        let w = props.side_bar_width;
+        let th = props.terminal_height;
+
+        // Get all callbacks
+        let canvas_sensor_cb = self.get_canvas_sensor_cb(props, ctx);
+        let header_cb = self.get_header_cb(props, ctx);
+        let sidebar_cb = self.get_sidebar_cb(props, ctx);
+        let terminal_cb = self.get_terminal_cb(props, ctx);
+        let resize_cb = self.get_resize_cb(props, ctx);
+
+        // Process CSS
+        let class_id = get_css(props);
+
+        let fg = &*(*self.fig).borrow();
+        let y = fg.unpack_html();
+
+        html!{
+            <>
+                <HeaderBar height={h} cb={header_cb}/>
+                <SideBar header_height={h} width={w} cb={sidebar_cb}/>
+                <Terminal height={th} text_box_height={37} sidebar_width={w} cb={terminal_cb}>
+                    {y}
+                </Terminal>
+                <WindowResizeListener cb={resize_cb}/>
+                <div class={class_id}>
+                    <CanvasSensor top={h} left={w} cb={canvas_sensor_cb} id={"canvas-sensor"}/>
+                </div>
+            </>
+        }
     }
 }

@@ -82,15 +82,11 @@ macro_rules! seriz {
         $ (
             impl Serializable for $t {
                 fn from_str(s: &str) -> Option<Self> {
-                    if let Some(x) = decode_from_hex($id, s) {
-                        return Some(<$t>::from_be_bytes(x));
-                    }
-                    return None;
+                    s.parse::<$t>().ok()
                 }
 
                 fn into_str(&self) -> String {
-                    let y = self.to_be_bytes();
-                    encode_to_hex($id, y)
+                    format!("{}", self)
                 }
             }
         )*
