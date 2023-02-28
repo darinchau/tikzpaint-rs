@@ -1,3 +1,3 @@
-pub mod canvasmanager;
-pub mod canvasrenderer;
-pub mod canvassensor;
+pub mod canvas_manager;
+pub mod canvas_renderer;
+pub mod canvas_sensor;

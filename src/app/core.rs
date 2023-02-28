@@ -1,3 +1,3 @@
-pub mod figureobjectcomplex;
+pub mod figure_object_complex;
 pub mod parser;
-pub mod terminaltextrenderer;
+pub mod terminal_text_renderer;

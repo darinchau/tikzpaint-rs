@@ -1,5 +1,5 @@
 pub mod switch;
-pub mod textfield;
+pub mod text_field;
 pub mod button;
-pub mod mousesensor;
-pub mod sizeobserver;
+pub mod mouse_sensor;
+pub mod size_observer;
