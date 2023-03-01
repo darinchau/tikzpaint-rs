@@ -15,7 +15,6 @@ pub struct CanvasRendererProps {
 pub fn main_canvas(props: &CanvasRendererProps) -> Html {
     html! {
         <>
-            <MouseSensor cb={mouse_sensor_cb} id={id}/>
         </>
     }
 }

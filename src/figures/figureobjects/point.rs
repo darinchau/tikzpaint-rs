@@ -5,7 +5,6 @@ use crate::figures::*;
 
 pub struct FOPoint {
     point: Coordinates,
-    option: PlotOptions,
     content: String,
 }
 
@@ -13,7 +12,6 @@ impl FOPoint {
     pub fn new(x: Coordinates) -> Self {
         Self {
             point: x,
-            option: PlotOptions::new(),
             content: String::from("")
         }
     }
@@ -21,11 +19,7 @@ impl FOPoint {
 
 impl FOPoint {
     fn tikz_options(&self) -> String {
-        let mut s = String::new();
-        let opt = &self.option;
-        tikzify_field(&mut s, &opt.fill_color, "fill=");
-        tikzify_field(&mut s, &opt.thickness, "width=");
-        return s;
+        return String::new();
     }
 }
 
@@ -48,7 +42,6 @@ impl IsFigureObject for FOPoint {
         let new_p = p.project(&self.point).unwrap();
         let new_self = Self {
             point: new_p,
-            option: self.option.clone(),
             content: self.content.clone()
         };
 

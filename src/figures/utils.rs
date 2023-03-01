@@ -1,3 +1,4 @@
 pub mod serializable;
-pub mod dimensionerror;
-pub mod cheapstring;
+pub mod dimension_error;
+pub mod cheap_string;
+pub mod svg_renderer;
