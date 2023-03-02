@@ -100,8 +100,9 @@ impl Figure {
         for s in self.load(|x| {
             return x.tikzify();
         }, proj)? {
+            let res = s.output();
             st.push_str("\t");
-            st.push_str(&s);
+            st.push_str(&res);
             st.push_str("\n");
         }
         st.push_str("\\end{tikzpicture}");

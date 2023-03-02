@@ -18,8 +18,10 @@ impl FOPoint {
 }
 
 impl Plottable for FOPoint {
-    fn tikzify(&self) -> String {
-        format!("\\node[{}] at {} {{}}", self.tikz_options(), self.point)
+    fn tikzify(&self) -> TikzFigure {
+        let (x, y) = (self.point[0], self.point[1]);
+        TikzFigure::new()
+            .draw(TikzCircle::new(x, y, 0.1, None))
     }
 
     fn get_svg(&self) -> SVG {

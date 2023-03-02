@@ -1,19 +1,10 @@
+//! Rust bindings to some basic SVG stuff
+
 use std::rc::Rc;
+use std::cell::RefCell;
 use std::fmt::Display;
 use paste::paste;
-use yew::Html;
-
-use crate::figures::{CheapString, StringLike};
-
-#[derive(Clone, Copy, PartialEq)]
-pub struct Color(pub u8, pub u8, pub u8);
-
-impl Color {
-    pub fn to_string(&self) -> String {
-        let Color(r, g, b) = self;
-        return format!("rgb({r},{g},{b})");
-    }
-}
+use crate::figures::*;
 
 macro_rules! svg_properties {
     {$($name:ident : $t:ty, $id:expr),*} => {
@@ -48,8 +39,10 @@ macro_rules! svg_properties {
 
                 $ (
                     if let Some(c) = self.$name {
+                        /// This line exists only for type check
+                        let y = Box::new(c) as Box<dyn IsSVGPropertyField>;
                         s.push_str($id);
-                        s.push_str(&format!(":{};", c.to_string()));
+                        s.push_str(&format!(":{};", c.to_svg()));
                     }
                 )*
 
@@ -193,6 +186,10 @@ impl SVGShape for SVGPath {
         self.to_string()
     }
 }
+
+// ================================================================================================================
+// ==================================== Implementation of SVG figure ==============================================
+// ================================================================================================================
 
 pub struct SVG {
     data: Vec<Rc<dyn SVGShape>>

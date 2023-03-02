@@ -10,7 +10,7 @@ use std::any::Any;
 /// At this point we guarantee that we only have x coordinates and y coordinates
 pub trait Plottable {
     /// Define the construction of Tikz code from an object
-    fn tikzify(&self) -> String;
+    fn tikzify(&self) -> TikzFigure;
 
     /// Defines the construction of SVG from an object
     fn get_svg(&self) -> SVG;
@@ -24,7 +24,7 @@ pub struct PlottableObject {
 }
 
 impl PlottableObject {
-    pub fn tikzify(&self) -> String {
+    pub fn tikzify(&self) -> TikzFigure {
         return self.ptr.tikzify();
     }
 
@@ -66,7 +66,9 @@ pub trait IsFigureObject: Plottable {
     fn project(&self, p: Projection) -> FigureObject;
 }
 
-/// A figure object is the base object (Layer 0 interface) between Tikz/SVG code and our code.
+/// A figure object is the base object (Layer 1 interface) between Tikz/SVG code and our code.
+/// We have an additional layer of rust bindings to SVGs and Tikz because they are hard af to draw and manipulate
+/// But Figure objects are the first layer that creates objects and is able to translate into both SVG and Tikz
 pub struct FigureObject {
     ptr: Rc<dyn IsFigureObject>,
     pub name: &'static str,
@@ -85,12 +87,12 @@ pub trait WrappableAsFigureObject {
 impl<T: IsFigureObject + Sized + 'static> WrappableAsFigureObject for T {}
 
 impl Plottable for FigureObject {
-    fn tikzify(&self) -> String {
+    fn tikzify(&self) -> TikzFigure {
         self.ptr.tikzify()
     }
 
     fn get_svg(&self) -> SVG {
-        todo!()
+        self.ptr.get_svg()
     }
 }
 
