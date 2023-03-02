@@ -25,9 +25,18 @@ macro_rules! svg_properties {
         }
 
         impl SVGProperty {
+            /// Makes a new SVG Properties field. Initialize all fields to none
+            pub fn new() -> Self {
+                Self{
+                    $(
+                        $name: None,
+                    )*
+                }
+            }
+
             $ (
                 paste::item! {
-                    fn [< set_$name >] (&mut self, c: $t) -> &mut Self {
+                    pub fn [< set_$name >] (&mut self, c: $t) -> &mut Self {
                         self.$name = Some(c);
                         return self;
                     }
@@ -77,6 +86,19 @@ macro_rules! svg_shape {
                         $x: f64,
                     )*
                     props: SVGProperty
+                }
+
+                impl [< SVG $name >] {
+                    pub fn new($(
+                        $x: f64,
+                    )*) -> Self {
+                        Self {
+                            $(
+                                $x,
+                            )*
+                            props: SVGProperty::new()
+                        }
+                    }
                 }
 
 
@@ -183,16 +205,19 @@ impl SVG {
         }
     }
 
-    pub fn add<T: SVGShape + 'static>(&mut self, s: T) {
+    /// Adds an element to the svg
+    pub fn draw<T: SVGShape + 'static>(mut self, s: T) -> Self {
         self.data.push(Rc::new(s) as Rc<dyn SVGShape>);
+        return self;
     }
 
-    pub fn add_from(&mut self, s: Rc<dyn SVGShape>) {
+    pub fn add_from(mut self, s: Rc<dyn SVGShape>) -> Self {
         self.data.push(s);
+        return self;
     }
 
     /// Draws the svg figure. We allow height and width to be Strings be
-    pub fn draw<S1: StringLike, S2: StringLike>(&self, height: S1, width: S2) -> String {
+    pub fn output<S1: StringLike, S2: StringLike>(&self, height: S1, width: S2) -> String {
         let h = self.data.iter().map(|x| x.draw()).collect::<Vec<String>>().join("\n");
         format!("<svg width=\"{width}\" height=\"{height}\">{h}</svg>")
     }

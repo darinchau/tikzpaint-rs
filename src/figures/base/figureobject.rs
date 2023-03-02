@@ -7,6 +7,7 @@ use std::rc::Rc;
 use std::any::Any;
 
 /// A plottable object is the last step before output. This is like the final state of the object to say we are about to plot stuff
+/// At this point we guarantee that we only have x coordinates and y coordinates
 pub trait Plottable {
     /// Define the construction of Tikz code from an object
     fn tikzify(&self) -> String;
@@ -15,9 +16,11 @@ pub trait Plottable {
     fn get_svg(&self) -> SVG;
 }
 
+#[derive(Clone)]
 /// Plottable object is like a universal wrapper around a Plottable
 pub struct PlottableObject {
-    ptr: Rc<dyn Plottable>
+    ptr: Rc<dyn Plottable>,
+    coords: Vec<(f64, f64)>
 }
 
 impl PlottableObject {
@@ -28,7 +31,19 @@ impl PlottableObject {
     pub fn get_svg(&self) -> SVG {
         return self.ptr.get_svg();
     }
+
+    /// Gets and returns the coordinates as an array
+    /// This is like extra promise that we only have x and y coordinates
+    /// For the default implementation, this function will panic if the resulting coordinates are not all in 2 dimensions
+    pub fn coordinates(&self) -> &Vec<(f64, f64)> {
+        return &self.coords;
+    }
 }
+
+
+// ===============================================================================================================================
+// ===============================================================================================================================
+// ===============================================================================================================================
 
 /// A figure object is the base object (Layer 0 interface) between Tikz/SVG code and our code.
 pub trait IsFigureObject: Plottable {
@@ -108,6 +123,7 @@ impl FigureObject {
         Ok(self.ptr.project(p))
     }
 
+    /// Project this figure object to a 2-dimensional Plottable object
     pub fn project_to_plot(&self, p: Projection) -> Result<PlottableObject, DimensionError> {
         if p.input() != self.dims() {
             return Err(DimensionError {
@@ -125,7 +141,16 @@ impl FigureObject {
 
         let res = self.project(p)?;
         let ptr = Rc::new(res) as Rc<dyn Plottable>;
-        Ok(PlottableObject { ptr })
+
+        let coords = self.coordinates().iter().map(|x| {
+            if x.dims != 2 {
+                panic!("Expected two dimensional points in Plottable::coords(), found {}", x.dims);
+            }
+
+            (x[0], x[1])
+        }).collect();
+
+        Ok(PlottableObject { ptr, coords })
     }
 }
 

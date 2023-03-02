@@ -83,7 +83,7 @@ impl FigureComplex {
         let w = width.wrap();
 
         let y = self.fig.load(|x| {
-            let y = x.get_svg().draw(h.clone(), w.clone());
+            let y = x.get_svg().output(h.clone(), w.clone());
             return Html::from_html_unchecked(y.into());
         }, proj)?;
 

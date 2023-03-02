@@ -29,7 +29,9 @@ impl Plottable for FOPoint {
     }
 
     fn get_svg(&self) -> SVG {
-        todo!()
+        let (x, y) = (self.point[0], self.point[1]);
+        SVG::new()
+            .draw(SVGCircle::new(x, y, 0.1))
     }
 }
 
