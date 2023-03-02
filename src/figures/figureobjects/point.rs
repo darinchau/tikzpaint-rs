@@ -17,12 +17,6 @@ impl FOPoint {
     }
 }
 
-impl FOPoint {
-    fn tikz_options(&self) -> String {
-        return String::new();
-    }
-}
-
 impl Plottable for FOPoint {
     fn tikzify(&self) -> String {
         format!("\\node[{}] at {} {{}}", self.tikz_options(), self.point)
