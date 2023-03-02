@@ -27,6 +27,10 @@ impl Plottable for FOPoint {
     fn tikzify(&self) -> String {
         format!("\\node[{}] at {} {{}}", self.tikz_options(), self.point)
     }
+
+    fn get_svg(&self) -> SVG {
+        todo!()
+    }
 }
 
 impl IsFigureObject for FOPoint {

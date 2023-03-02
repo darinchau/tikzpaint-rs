@@ -10,8 +10,12 @@ use std::any::Any;
 pub trait Plottable {
     /// Define the construction of Tikz code from an object
     fn tikzify(&self) -> String;
+
+    /// Defines the construction of SVG from an object
+    fn get_svg(&self) -> SVG;
 }
 
+/// Plottable object is like a universal wrapper around a Plottable
 pub struct PlottableObject {
     ptr: Rc<dyn Plottable>
 }
@@ -19,6 +23,10 @@ pub struct PlottableObject {
 impl PlottableObject {
     pub fn tikzify(&self) -> String {
         return self.ptr.tikzify();
+    }
+
+    pub fn get_svg(&self) -> SVG {
+        return self.ptr.get_svg();
     }
 }
 
@@ -64,6 +72,10 @@ impl<T: IsFigureObject + Sized + 'static> WrappableAsFigureObject for T {}
 impl Plottable for FigureObject {
     fn tikzify(&self) -> String {
         self.ptr.tikzify()
+    }
+
+    fn get_svg(&self) -> SVG {
+        todo!()
     }
 }
 

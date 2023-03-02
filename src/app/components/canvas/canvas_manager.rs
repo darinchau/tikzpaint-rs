@@ -18,7 +18,7 @@ use std::cell::RefCell;
 use std::rc::Rc;
 
 #[derive(PartialEq, Clone, Copy)]
-struct Transform {
+pub struct Transform {
     /// Screen size according to inner_width and inner_height
     screen_size: (i32, i32),
 
@@ -145,19 +145,33 @@ pub struct CanvasManagerProps {
     pub debug: Option<bool>
 }
 
+fn get_width(props: &CanvasManagerProps) -> String {
+    let w = props.side_bar_width;
+    format!("calc(100% - {w}px)")
+}
+
+fn get_height(props: &CanvasManagerProps) -> String {
+    let h = props.header_height;
+    let th = props.terminal_height;
+    format!("calc(100% - {h}px - {th}px)")
+}
+
 /// Gets css properties of main canvas
 fn get_css(props: &CanvasManagerProps) -> String {
     let debug_mode = is_true(props.debug);
     let h = props.header_height;
-    let w = props.side_bar_width;
     let th = props.terminal_height;
+    let w = props.side_bar_width;
+
+    let ww = get_width(props);
+    let hh = get_height(props);
 
     let button_css = format!(r#"
     {{
         bottom: {th}px;
         right: 0;
-        width: calc(100% - {w}px);
-        height: calc(100% - {h}px - {th}px);
+        width: {ww};
+        height: {hh};
     }}"#);
 
     let svg_css = button_css.clone();
@@ -334,19 +348,25 @@ impl Component for CanvasManager {
         // Process CSS
         let class_id = get_css(props);
 
+        // Make copies of stuff to pass into html
         let fg = &*(*self.fig).borrow();
-        let y = fg.unpack_html();
+        let terminal_text = fg.unpack_html();
+        let renderer_svg: Html = fg.unpack_svg(get_height(props), get_width(props), Identity{dims: 2}).unwrap();
+        let tf = self.tf.clone();
 
         html!{
             <>
                 <HeaderBar height={h} cb={header_cb}/>
                 <SideBar header_height={h} width={w} cb={sidebar_cb}/>
                 <Terminal height={th} text_box_height={37} sidebar_width={w} cb={terminal_cb}>
-                    {y}
+                    {terminal_text}
                 </Terminal>
                 <WindowResizeListener cb={resize_cb}/>
                 <div class={class_id}>
                     <CanvasSensor top={h} left={w} cb={canvas_sensor_cb} id={"canvas-sensor"}/>
+                    <CanvasRenderer transform={tf}>
+                        {renderer_svg}
+                    </CanvasRenderer>
                 </div>
             </>
         }

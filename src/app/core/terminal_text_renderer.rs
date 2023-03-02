@@ -29,7 +29,8 @@ impl TerminalTextRenderer {
         self.v.iter().map(|x| {
             html!{
                 <>
-                    {deref_get(x.clone())}
+                    // Unwrap the cheap string from x and then clone
+                    {(*(**x).borrow()).clone()}
                     <br/>
                 </>
             }

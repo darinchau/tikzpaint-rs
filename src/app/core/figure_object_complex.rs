@@ -57,6 +57,7 @@ impl FigureComplex {
         }
     }
 
+    /// Draws a figure object complex on self. Returns nothing if it is successful, and bubbles an error if the dimension is wrong.
     pub fn draw(&mut self, d: FigureObjectComplex) -> Result<(), DimensionError> {
         let obj = self.fig.draw(d.fo.borrow().clone());
         if let Err(x) = obj {
@@ -69,7 +70,23 @@ impl FigureComplex {
         return Ok(());
     }
 
+    /// This unpacks the figure complex into a bunch of terminal commands.
+    /// Main method used to render terminal text
     pub fn unpack_html(&self) -> Html {
         self.ttext.unpack_html()
+    }
+
+    /// This unpacks the figure complex into an svg figure.
+    /// We allow string like types (CheapString, &str, String) because we prinarily pass in calc expressions from html.
+    pub fn unpack_svg<S1: StringLike, S2: StringLike, P: IsProjection>(&self, height: S1, width: S2, proj: P) -> Result<Html, DimensionError> {
+        let h = height.wrap();
+        let w = width.wrap();
+
+        let y = self.fig.load(|x| {
+            let y = x.get_svg().draw(h.clone(), w.clone());
+            return Html::from_html_unchecked(y.into());
+        }, proj)?;
+
+        return Ok(y.iter().map(|x| x.clone()).collect::<Html>());
     }
 }

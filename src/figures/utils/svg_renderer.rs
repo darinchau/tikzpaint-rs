@@ -1,6 +1,9 @@
 use std::rc::Rc;
 use std::fmt::Display;
 use paste::paste;
+use yew::Html;
+
+use crate::figures::{CheapString, StringLike};
 
 #[derive(Clone, Copy, PartialEq)]
 pub struct Color(pub u8, pub u8, pub u8);
@@ -85,7 +88,7 @@ macro_rules! svg_shape {
                             s.push_str(stringify!($x));
                             s.push_str(&format!("=\"{}\" ", self.$x));
                         )*
-                        s.push_str(&format!("style=\"{}\"", self.props.to_string()));
+                        s.push_str(&format!("style=\"{}\"/>", self.props.to_string()));
                         return s;
                     }
                 }
@@ -127,8 +130,9 @@ impl SVGPath {
         SVGPath { v }
     }
 
-    pub fn add(&mut self, svg_element: SVGPathElements) {
+    pub fn add(mut self, svg_element: SVGPathElements) -> Self {
         self.v.push(svg_element);
+        return self;
     }
 
     pub fn to_string(&self) -> String {
@@ -170,4 +174,30 @@ impl SVGShape for SVGPath {
 
 pub struct SVG {
     data: Vec<Rc<dyn SVGShape>>
+}
+
+impl SVG {
+    pub fn new() -> Self {
+        Self {
+            data: vec![]
+        }
+    }
+
+    pub fn add<T: SVGShape + 'static>(&mut self, s: T) {
+        self.data.push(Rc::new(s) as Rc<dyn SVGShape>);
+    }
+
+    pub fn add_from(&mut self, s: Rc<dyn SVGShape>) {
+        self.data.push(s);
+    }
+
+    /// Draws the svg figure. We allow height and width to be Strings be
+    pub fn draw<S1: StringLike, S2: StringLike>(&self, height: S1, width: S2) -> String {
+        let h = self.data.iter().map(|x| x.draw()).collect::<Vec<String>>().join("\n");
+        format!("<svg width=\"{width}\" height=\"{height}\">{h}</svg>")
+    }
+
+    pub fn get_components(&self) -> Vec<Rc<dyn SVGShape>> {
+        return self.data.iter().map(|x| x.clone()).collect();
+    }
 }
