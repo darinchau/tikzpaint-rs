@@ -12,7 +12,7 @@
 //!  3. If the result contains a FOC, draw it
 //!  4. The canvas manager triggers a rerender on the canvas renderer and the terminal
 
-use yew::Html;
+use yew::prelude::*;
 use gloo::console::log;
 
 use crate::figures::*;
@@ -88,7 +88,9 @@ impl FigureComplex {
 
         let loaded = self.fig.load(|x| {
             x.get_canvas_svg(CoordTransform::new(f)).output()
-        }, proj)?.into_iter().collect::<Html>();
+        }, proj)?
+        .into_iter()
+        .collect::<Html>();
 
         return Ok(loaded);
     }

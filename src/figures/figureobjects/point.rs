@@ -22,13 +22,13 @@ impl Plottable for FOPoint {
     fn tikzify(&self) -> TikzFigure {
         let (x, y) = (self.point[0], self.point[1]);
         TikzFigure::new()
-            .draw(TikzCircle::new(x, y, 0.1, None))
+            .draw(TikzCircle::new(x, y, 10., None))
     }
 
     fn get_canvas_svg(&self, tr: CoordTransform) -> SVG {
         let (x, y) = tr.call((self.point[0], self.point[1]));
         SVG::new()
-            .draw(SVGCircle::new(x, y, 0.1))
+            .draw(SVGCircle::new(x, y, 10.))
     }
 }
 

@@ -224,7 +224,7 @@ impl SVG {
     /// Draws the svg figure. There is no svg tag
     pub fn output(&self) -> Html {
         return self.data.iter().map(|x| {
-            return x.draw();
+            return Html::from_html_unchecked(x.draw().into());
         }).collect::<Html>()
     }
 }

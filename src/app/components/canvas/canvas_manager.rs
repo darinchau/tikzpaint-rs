@@ -245,7 +245,7 @@ impl Component for CanvasManager {
 
         let other_t = *(*self.tf.clone()).borrow();
         let renderer_svg: Html = fg.unpack_svg(other_t, Identity{dims: 2}).unwrap();
-        let tf = self.tf.clone();
+        let tf = *(*self.tf.clone()).borrow();
 
         html!{
             <>

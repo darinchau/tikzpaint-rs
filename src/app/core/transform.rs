@@ -38,11 +38,12 @@ impl Transform {
         }
     }
 
+    /// Returns size of main canvas, in width and height
     pub fn get_self_size(&self) -> (i32, i32) {
         let (x, y) = self.screen_size;
         let (top, right, bottom, left) = self.margins;
         let w = (x - left - right);
-        let h = (y - right - top);
+        let h = (y - bottom - top);
         (w, h)
     }
 
