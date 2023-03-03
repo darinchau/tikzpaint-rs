@@ -242,7 +242,9 @@ impl Component for CanvasManager {
         // Make copies of stuff to pass into html
         let fg = &*(*self.fig).borrow();
         let terminal_text = fg.unpack_html();
-        let renderer_svg: Html = fg.unpack_svg(Identity{dims: 2}).unwrap();
+
+        let other_t = *(*self.tf.clone()).borrow();
+        let renderer_svg: Html = fg.unpack_svg(other_t, Identity{dims: 2}).unwrap();
         let tf = self.tf.clone();
 
         html!{

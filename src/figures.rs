@@ -2,7 +2,6 @@ mod base;
 mod figureobjects;
 mod drawables;
 mod utils;
-mod renderer;
 
 pub use base::coordinates::Coordinates;
 
@@ -34,7 +33,4 @@ pub use utils::serializable::Serializable;
 pub use utils::dimension_error::DimensionError;
 pub use utils::cheap_string::CheapString;
 pub use utils::cheap_string::StringLike;
-
-pub use renderer::svg_renderer::*;
-pub use renderer::tikz_renderer::*;
-pub use renderer::util::*;
+pub use utils::coord_transform::CoordTransform;

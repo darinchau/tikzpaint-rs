@@ -2,6 +2,7 @@
 //! with the prefix FO-
 
 use crate::figures::*;
+use crate::renderer::*;
 
 pub struct FOPoint {
     point: Coordinates,
@@ -24,8 +25,8 @@ impl Plottable for FOPoint {
             .draw(TikzCircle::new(x, y, 0.1, None))
     }
 
-    fn get_svg(&self) -> SVG {
-        let (x, y) = (self.point[0], self.point[1]);
+    fn get_canvas_svg(&self, tr: CoordTransform) -> SVG {
+        let (x, y) = tr.call((self.point[0], self.point[1]));
         SVG::new()
             .draw(SVGCircle::new(x, y, 0.1))
     }
@@ -40,7 +41,7 @@ impl IsFigureObject for FOPoint {
         1
     }
 
-    fn project(&self, p: Projection) -> FigureObject {
+    fn project_and_wrap(&self, p: Projection) -> FigureObject {
         let new_p = p.project(&self.point).unwrap();
         let new_self = Self {
             point: new_p,

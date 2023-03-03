@@ -4,6 +4,7 @@
 
 pub mod figures;
 pub mod app;
+pub mod renderer;
 use yew::prelude::*;
 use app::CanvasManager;
 

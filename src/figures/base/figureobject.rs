@@ -3,6 +3,7 @@
 //! 1. FigureObject - an object that holds coordinates in DIMS dimension
 //! 2. Plot - The figure will transform DIM coordinates into 2 dimensions - implement Plot to turn it into everything else to plot it on screen
 use crate::figures::*;
+use crate::renderer::*;
 use std::rc::Rc;
 use std::any::Any;
 
@@ -13,7 +14,7 @@ pub trait Plottable {
     fn tikzify(&self) -> TikzFigure;
 
     /// Defines the construction of SVG from an object
-    fn get_svg(&self) -> SVG;
+    fn get_canvas_svg(&self, tr: CoordTransform) -> SVG;
 }
 
 #[derive(Clone)]
@@ -24,19 +25,21 @@ pub struct PlottableObject {
 }
 
 impl PlottableObject {
-    pub fn tikzify(&self) -> TikzFigure {
-        return self.ptr.tikzify();
-    }
-
-    pub fn get_svg(&self) -> SVG {
-        return self.ptr.get_svg();
-    }
-
     /// Gets and returns the coordinates as an array
     /// This is like extra promise that we only have x and y coordinates
     /// For the default implementation, this function will panic if the resulting coordinates are not all in 2 dimensions
     pub fn coordinates(&self) -> &Vec<(f64, f64)> {
         return &self.coords;
+    }
+}
+
+impl Plottable for PlottableObject {
+    fn tikzify(&self) -> TikzFigure {
+        return self.ptr.tikzify();
+    }
+
+    fn get_canvas_svg(&self, tr: CoordTransform) -> SVG {
+        return self.ptr.get_canvas_svg(tr);
     }
 }
 
@@ -63,7 +66,7 @@ pub trait IsFigureObject: Plottable {
 
     /// Project every coordinate in self according to the projection p
     /// We guarantee the projection object passed to you has dimensions (self.dims() -> _)
-    fn project(&self, p: Projection) -> FigureObject;
+    fn project_and_wrap(&self, p: Projection) -> FigureObject;
 }
 
 /// A figure object is the base object (Layer 1 interface) between Tikz/SVG code and our code.
@@ -91,8 +94,8 @@ impl Plottable for FigureObject {
         self.ptr.tikzify()
     }
 
-    fn get_svg(&self) -> SVG {
-        self.ptr.get_svg()
+    fn get_canvas_svg(&self, tr: CoordTransform) -> SVG {
+        self.ptr.get_canvas_svg(tr)
     }
 }
 
@@ -122,7 +125,7 @@ impl FigureObject {
             });
         }
 
-        Ok(self.ptr.project(p))
+        Ok(self.ptr.project_and_wrap(p))
     }
 
     /// Project this figure object to a 2-dimensional Plottable object

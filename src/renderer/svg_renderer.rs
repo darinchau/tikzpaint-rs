@@ -5,7 +5,7 @@ use std::cell::RefCell;
 use std::fmt::Display;
 use gloo::console::log;
 use paste::paste;
-use crate::figures::*;
+use crate::renderer::*;
 use yew::prelude::*;
 
 macro_rules! svg_properties {
@@ -221,20 +221,10 @@ impl SVG {
         return self;
     }
 
-    /// Draws the svg figure.
+    /// Draws the svg figure. There is no svg tag
     pub fn output(&self) -> Html {
-        let body_html = self.data.iter().map(|x| {
+        return self.data.iter().map(|x| {
             return x.draw();
-        }).collect::<Html>();
-
-        html!{
-            <svg>
-                {body_html}
-            </svg>
-        }
-    }
-
-    pub fn get_components(&self) -> Vec<Rc<dyn SVGShape>> {
-        return self.data.iter().map(|x| x.clone()).collect();
+        }).collect::<Html>()
     }
 }

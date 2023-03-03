@@ -79,14 +79,17 @@ impl FigureComplex {
 
     /// This unpacks the figure complex into an svg figure.
     /// We allow string like types (CheapString, &str, String) because we prinarily pass in calc expressions from html.
-    pub fn unpack_svg<P: IsProjection>(&self, proj: P) -> Result<Html, DimensionError> {
+    pub fn unpack_svg<P: IsProjection>(&self, t: Transform, proj: P) -> Result<Html, DimensionError> {
         log!("Rerendering SVG");
-        let y = self.fig.load(|x| {
-            x.get_svg().output()
-        }, proj)?
-            .into_iter()
-            .collect::<Html>();
 
-        return Ok(y);
+        let f  = move |(x, y): (f64, f64)| {
+            t.local_to_client(x, y)
+        };
+
+        let loaded = self.fig.load(|x| {
+            x.get_canvas_svg(CoordTransform::new(f)).output()
+        }, proj)?.into_iter().collect::<Html>();
+
+        return Ok(loaded);
     }
 }
