@@ -24,11 +24,9 @@ pub fn main_canvas(props: &CanvasRendererProps) -> Html {
     let id = props.id;
 
     html! {
-        <div id={id}>
-            <svg width={w} height={h}>
-                {for props.children.iter()}
-                {""}
-            </svg>
-        </div>
+        <svg viewBox={format!("0 0 892.4 535.6")} xmlns="http://www.w3.org/2000/svg">
+            {for props.children.iter()}
+            {""}
+        </svg>
     }
 }
