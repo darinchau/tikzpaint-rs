@@ -3,8 +3,10 @@
 use std::rc::Rc;
 use std::cell::RefCell;
 use std::fmt::Display;
+use gloo::console::log;
 use paste::paste;
 use crate::figures::*;
+use yew::prelude::*;
 
 macro_rules! svg_properties {
     {$($name:ident : $t:ty, $id:expr),*} => {
@@ -98,12 +100,18 @@ macro_rules! svg_shape {
                 impl SVGShape for [< SVG $name >] {
                     fn draw(&self) -> String {
                         let mut s = String::from("<");
-                        s.push_str(stringify!($fmt));
+                        let x = stringify!($fmt);
+
+                        s.push_str(&x[1..x.len()-1]);
+                        s.push_str(" ");
                         $(
                             s.push_str(stringify!($x));
                             s.push_str(&format!("=\"{}\" ", self.$x));
                         )*
-                        s.push_str(&format!("style=\"{}\"/>", self.props.to_string()));
+                        if self.props.to_string() != String::new() {
+                            s.push_str(&format!("style=\"{}\"", self.props.to_string()));
+                        }
+                        s.push_str("/>");
                         return s;
                     }
                 }
@@ -213,10 +221,17 @@ impl SVG {
         return self;
     }
 
-    /// Draws the svg figure. We allow height and width to be Strings be
-    pub fn output<S1: StringLike, S2: StringLike>(&self, height: S1, width: S2) -> String {
-        let h = self.data.iter().map(|x| x.draw()).collect::<Vec<String>>().join("\n");
-        format!("<svg width=\"{width}\" height=\"{height}\">{h}</svg>")
+    /// Draws the svg figure.
+    pub fn output(&self) -> Html {
+        let body_html = self.data.iter().map(|x| {
+            return x.draw();
+        }).collect::<Html>();
+
+        html!{
+            <svg>
+                {body_html}
+            </svg>
+        }
     }
 
     pub fn get_components(&self) -> Vec<Rc<dyn SVGShape>> {

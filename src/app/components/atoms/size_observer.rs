@@ -34,9 +34,9 @@ pub struct WindowResizeListenerProps {
 
 
 
-const ASSUMPTION: (i32, i32) = (1920, 1080);
+pub const ASSUMPTION: (i32, i32) = (1920, 1080);
 
-fn get_size() -> Result<(i32, i32), &'static str> {
+pub fn get_size() -> Result<(i32, i32), &'static str> {
     if let Some(window) = web_sys::window() {
         let width_ = window.inner_width()
             .ok()

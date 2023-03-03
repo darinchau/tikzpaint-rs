@@ -13,6 +13,7 @@
 //!  4. The canvas manager triggers a rerender on the canvas renderer and the terminal
 
 use yew::Html;
+use gloo::console::log;
 
 use crate::figures::*;
 use crate::app::*;
@@ -78,15 +79,14 @@ impl FigureComplex {
 
     /// This unpacks the figure complex into an svg figure.
     /// We allow string like types (CheapString, &str, String) because we prinarily pass in calc expressions from html.
-    pub fn unpack_svg<S1: StringLike, S2: StringLike, P: IsProjection>(&self, height: S1, width: S2, proj: P) -> Result<Html, DimensionError> {
-        let h = height.wrap();
-        let w = width.wrap();
-
+    pub fn unpack_svg<P: IsProjection>(&self, proj: P) -> Result<Html, DimensionError> {
+        log!("Rerendering SVG");
         let y = self.fig.load(|x| {
-            let y = x.get_svg().output(h.clone(), w.clone());
-            return Html::from_html_unchecked(y.into());
-        }, proj)?;
+            x.get_svg().output()
+        }, proj)?
+            .into_iter()
+            .collect::<Html>();
 
-        return Ok(y.iter().map(|x| x.clone()).collect::<Html>());
+        return Ok(y);
     }
 }

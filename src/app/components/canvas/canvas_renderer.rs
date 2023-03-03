@@ -18,7 +18,8 @@ pub struct CanvasRendererProps {
 #[function_component(CanvasRenderer)]
 pub fn main_canvas(props: &CanvasRendererProps) -> Html {
     html! {
-        <>
-        </>
+        <div id={"canvas-renderer"}>
+            {for props.children.iter()}
+        </div>
     }
 }
