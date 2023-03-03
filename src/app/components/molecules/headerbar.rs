@@ -26,6 +26,7 @@ pub struct HeaderBarEvent {
 
 #[derive(Properties, PartialEq)]
 pub struct HeaderBarProps {
+    pub id: &'static str,
     pub height: usize,
     pub cb: Callback<HeaderBarEvent, ()>,
     pub debug: Option<bool>
@@ -72,8 +73,10 @@ pub fn header_bar(props: &HeaderBarProps) -> Html {
         });
     let h_style_name = height_style.get_class_name();
 
+    let id = props.id;
+
     html! {
-        <div class={format!("topnav {}", h_style_name)}>
+        <div id={id} class={format!("topnav {}", h_style_name)}>
             <Button id={"header-about-button"} name={"about"} button_type={ButtonType::Other} cb={on_about}>
                 {about}
             </Button>

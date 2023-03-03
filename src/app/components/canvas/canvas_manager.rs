@@ -30,17 +30,6 @@ pub struct CanvasManagerProps {
     pub debug: Option<bool>
 }
 
-fn get_width(props: &CanvasManagerProps) -> String {
-    let w = props.side_bar_width;
-    format!("calc(100% - {w}px)")
-}
-
-fn get_height(props: &CanvasManagerProps) -> String {
-    let h = props.header_height;
-    let th = props.terminal_height;
-    format!("calc(100% - {h}px - {th}px)")
-}
-
 /// Gets css properties of main canvas
 fn get_css(props: &CanvasManagerProps) -> String {
     let debug_mode = is_true(props.debug);
@@ -48,20 +37,22 @@ fn get_css(props: &CanvasManagerProps) -> String {
     let th = props.terminal_height;
     let w = props.side_bar_width;
 
-    let ww = get_width(props);
-    let hh = get_height(props);
-
     let button_css = format!(r#"
     {{
         bottom: {th}px;
         right: 0;
-        width: {ww};
-        height: {hh};
+        width: calc(100% - {w}px);
+        height: calc(100% - {h}px - {th}px);
     }}"#);
 
-    let svg_css = button_css.clone();
+    let svg_css = format!(r#"
+    {{
+        top: {h}px;
+        left: {w}px;
+    }}
+    "#);
 
-    let main_canvas_pos = Style::new(format!("& button {} & svg {}", button_css, svg_css))
+    let main_canvas_pos = Style::new(format!("& button {button_css} & svg {svg_css}"))
         .unwrap_or_else(|_| {
             log!("Failed to load main canvas position style");
             Style::new("").unwrap()
@@ -195,9 +186,6 @@ impl Component for CanvasManager {
         let dims = props.figure_dims;
         let fig_state = FigureComplex::new(dims);
 
-        // Pass a unique ID down to the mouse sensor and use get_element_by_ID
-        let canvas_sensor_id = "canvas-sensor";
-
         // We need to keep track of the world coordinates and figure coordinates conversion.
         // so we basically need to keep track of the transforms of this world. We need to keep track of
         // the position of (0, 0), (0, 1) and (1, 0)
@@ -245,19 +233,20 @@ impl Component for CanvasManager {
 
         let other_t = *(*self.tf.clone()).borrow();
         let renderer_svg: Html = fg.unpack_svg(other_t, Identity{dims: 2}).unwrap();
+
         let tf = *(*self.tf.clone()).borrow();
 
         html!{
             <>
-                <HeaderBar height={h} cb={header_cb}/>
-                <SideBar header_height={h} width={w} cb={sidebar_cb}/>
-                <Terminal height={th} text_box_height={37} sidebar_width={w} cb={terminal_cb}>
+                <HeaderBar id={"header-bar"} height={h} cb={header_cb}/>
+                <SideBar id={"side-bar"} header_height={h} width={w} cb={sidebar_cb}/>
+                <Terminal id={"terminal"} height={th} text_box_height={37} sidebar_width={w} cb={terminal_cb}>
                     {terminal_text}
                 </Terminal>
                 <WindowResizeListener cb={resize_cb}/>
                 <div class={class_id}>
-                    <CanvasSensor top={h} left={w} cb={canvas_sensor_cb} id={"canvas-sensor"}/>
-                    <CanvasRenderer transform={tf}>
+                    <CanvasSensor id={"canvas-sensor"} top={h} left={w} cb={canvas_sensor_cb}/>
+                    <CanvasRenderer id={"canvas-renderer"} transform={tf}>
                         {renderer_svg}
                     </CanvasRenderer>
                 </div>

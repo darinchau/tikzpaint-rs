@@ -5,20 +5,20 @@ use gloo::console::log;
 #[derive(PartialEq, Clone, Copy)]
 pub struct Transform {
     /// Screen size according to inner_width and inner_height
-    screen_size: (i32, i32),
+    pub screen_size: (i32, i32),
 
     /// scale x is the number such that 1 unit in the coordinate system horizontally = scale_x pixels
-    scale_x: f64,
+    pub scale_x: f64,
 
     /// scale y is the number such that 1 unit in the coordinate system vertically = scale_y pixels
-    scale_y: f64,
+    pub scale_y: f64,
 
     /// Where the origin ought to be in world coordinates. Coordinates can be very big or negative - means the origin is out of sight
-    origin: (i32, i32),
+    pub origin: (i32, i32),
 
-    margins: (i32, i32, i32, i32),
+    pub margins: (i32, i32, i32, i32),
 
-    initialized: bool,
+    pub initialized: bool,
 }
 
 impl Transform {
@@ -30,8 +30,8 @@ impl Transform {
 
         Self {
             screen_size: (1920, 1080),
-            scale_x: 30.,
-            scale_y: 30.,
+            scale_x: 25.,
+            scale_y: 25.,
             origin: (0, 0),
             margins: (h, 0, th, w),
             initialized: false,

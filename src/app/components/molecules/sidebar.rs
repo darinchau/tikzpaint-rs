@@ -41,6 +41,7 @@ pub struct SideBarEvent {
 
 #[derive(Properties, PartialEq)]
 pub struct SideBarProps {
+    pub id: &'static str,
     pub header_height: usize,
     pub width: usize,
     pub cb: Callback<SideBarEvent, ()>,
@@ -105,8 +106,10 @@ pub fn side_bar(props: &SideBarProps) -> Html {
     // Make the CSS
     let h_style_name = sidebar_css(props);
 
+    let id = props.id;
+
     html! {
-        <div class={format!("sidebar {}", h_style_name)}>
+        <div id={props.id} class={format!("sidebar {}", h_style_name)}>
             <div class={"sidebar-label"}>
                 {"Some label"}
             </div>

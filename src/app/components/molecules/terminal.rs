@@ -29,6 +29,7 @@ pub struct TerminalEvent {
 
 #[derive(Properties, PartialEq)]
 pub struct TerminalProps {
+    pub id: &'static str,
     pub height: usize,
     pub text_box_height: usize,
     pub sidebar_width: usize,
@@ -133,13 +134,15 @@ pub fn terminal(props: &TerminalProps) -> Html {
 
     let text_cb = get_callback(props);
 
+    let id = props.id;
+
     html! {
         <>
-            <div class={format!("terminal-text {terminal_css}")}>
+            <div id={id} class={format!("terminal-text {terminal_css}")}>
                 {for props.children.iter()}
             </div>
-            <div class={format!("terminal {textbox_css}")}>
-                <TextField id={"terminal"} name={"terminal"} label={""} field_type={TextFieldInputType::Search} cb={text_cb}/>
+            <div id={"terminal-text-box"} class={format!("terminal {textbox_css}")}>
+                <TextField id={"terminal-input"} name={"terminal"} label={""} field_type={TextFieldInputType::Search} cb={text_cb}/>
             </div>
         </>
     }

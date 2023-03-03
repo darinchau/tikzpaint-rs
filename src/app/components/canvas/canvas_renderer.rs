@@ -11,17 +11,23 @@ use std::cell::RefCell;
 
 #[derive(Properties, PartialEq)]
 pub struct CanvasRendererProps {
+    pub id: &'static str,
     pub transform: Transform,
     pub children: Children
 }
 
 #[function_component(CanvasRenderer)]
 pub fn main_canvas(props: &CanvasRendererProps) -> Html {
-    let (w, h) = props.transform.get_self_size();
+    let (t, r, b, l) = props.transform.margins;
+    let w = format!("calc(100% - {r}px - {l}px)");
+    let h = format!("calc(100% - {t}px - {b}px)");
+    let id = props.id;
+
     html! {
-        <div id={"canvas-renderer"}>
-            <svg width={format!("{w}")} height={format!("{h}")}>
+        <div id={id}>
+            <svg width={w} height={h}>
                 {for props.children.iter()}
+                {""}
             </svg>
         </div>
     }
