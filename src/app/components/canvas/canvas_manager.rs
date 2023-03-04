@@ -13,6 +13,7 @@ use web_sys::HtmlElement;
 use wasm_bindgen::JsCast;
 use crate::figures::*;
 use crate::app::*;
+use crate::renderer::*;
 use std::cell::RefCell;
 use std::rc::Rc;
 
