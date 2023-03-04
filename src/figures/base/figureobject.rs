@@ -12,9 +12,6 @@ use std::any::Any;
 pub trait Plottable {
     /// Define the construction of Tikz code from an object
     fn tikzify(&self) -> TikzFigure;
-
-    /// Defines the construction of SVG from an object
-    fn get_canvas_svg(&self, tr: CoordTransform) -> SVG;
 }
 
 #[derive(Clone)]
@@ -36,10 +33,6 @@ impl PlottableObject {
 impl Plottable for PlottableObject {
     fn tikzify(&self) -> TikzFigure {
         return self.ptr.tikzify();
-    }
-
-    fn get_canvas_svg(&self, tr: CoordTransform) -> SVG {
-        return self.ptr.get_canvas_svg(tr);
     }
 }
 
@@ -92,10 +85,6 @@ impl<T: IsFigureObject + Sized + 'static> WrappableAsFigureObject for T {}
 impl Plottable for FigureObject {
     fn tikzify(&self) -> TikzFigure {
         self.ptr.tikzify()
-    }
-
-    fn get_canvas_svg(&self, tr: CoordTransform) -> SVG {
-        self.ptr.get_canvas_svg(tr)
     }
 }
 

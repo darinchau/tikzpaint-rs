@@ -12,7 +12,7 @@ use app::CanvasManager;
 pub fn app() -> Html {
     html! {
         <>
-            <CanvasManager header_height={60} side_bar_width={190} terminal_height={150} figure_dims={2}/>
+            <CanvasManager header_height={60} side_bar_width={190} terminal_height={150} figure_dims={2} debug={true}/>
         </>
     }
 }

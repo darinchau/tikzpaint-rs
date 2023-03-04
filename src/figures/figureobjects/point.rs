@@ -24,12 +24,6 @@ impl Plottable for FOPoint {
         TikzFigure::new()
             .draw(TikzCircle::new(x, y, 10., None))
     }
-
-    fn get_canvas_svg(&self, tr: CoordTransform) -> SVG {
-        let (x, y) = tr.call((self.point[0], self.point[1]));
-        SVG::new()
-            .draw(SVGCircle::new(x, y, 10.))
-    }
 }
 
 impl IsFigureObject for FOPoint {

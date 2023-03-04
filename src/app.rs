@@ -10,7 +10,7 @@ use components::atoms::size_observer::{WindowSize, WindowResizeListener, WindowR
 
 use components::canvas::canvas_sensor::{CanvasSensor, CanvasSensorEvent};
 pub use components::canvas::canvas_manager::CanvasManager;
-use components::canvas::canvas_renderer::CanvasRenderer;
+use components::canvas::canvas_renderer::{CanvasRenderer, CanvasStateHandle};
 
 use components::molecules::headerbar::{HeaderBar, HeaderBarType, HeaderBarEvent};
 use components::molecules::sidebar::{SideBar, SideBarEvent, SideBarType};

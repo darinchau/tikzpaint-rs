@@ -45,14 +45,14 @@ fn get_css(props: &CanvasManagerProps) -> String {
         height: calc(100% - {h}px - {th}px);
     }}"#);
 
-    let svg_css = format!(r#"
+    let canvas_css = format!(r#"
     {{
         top: {h}px;
         left: {w}px;
     }}
     "#);
 
-    let main_canvas_pos = Style::new(format!("& button {button_css} & svg {svg_css}"))
+    let main_canvas_pos = Style::new(format!("& button {button_css} & canvas {canvas_css}"))
         .unwrap_or_else(|_| {
             log!("Failed to load main canvas position style");
             Style::new("").unwrap()
@@ -88,6 +88,7 @@ macro_rules! rerender {
 pub struct CanvasManager {
     fig: Rc<RefCell<FigureComplex>>,
     tf: Rc<RefCell<Transform>>,
+    csh: CanvasStateHandle,
 }
 
 impl CanvasManager {
@@ -153,10 +154,15 @@ impl CanvasManager {
     }
 
     fn get_resize_cb(&self, props: &CanvasManagerProps, ctx: &Context<Self>) -> Callback<WindowResizeEvent> {
+        let debug_mode = is_true(props.debug);
+
         let tf = self.tf.clone();
         let link = ctx.link().clone();
 
         let resize_cb = Callback::from(move |event: WindowResizeEvent| {
+            if debug_mode {
+                log!(format!("Windows resized to ({}, {})", event.new_size.x, event.new_size.y));
+            }
             let (x, y) = (event.new_size.x, event.new_size.y);
             mborrow!(tf).set_screen_size(x, y);
 
@@ -203,7 +209,8 @@ impl Component for CanvasManager {
 
         CanvasManager {
             fig: Rc::new(RefCell::new(fig_state)),
-            tf: Rc::new(RefCell::new(tf))
+            tf: Rc::new(RefCell::new(tf)),
+            csh: CanvasStateHandle::new()
         }
     }
 
@@ -232,9 +239,10 @@ impl Component for CanvasManager {
         let terminal_text = fg.unpack_html();
 
         let other_t = *(*self.tf.clone()).borrow();
-        let renderer_svg: Html = fg.unpack_svg(other_t, Identity{dims: 2}).unwrap();
 
         let tf = *(*self.tf.clone()).borrow();
+
+        let csh = self.csh.clone();
 
         html!{
             <>
@@ -246,9 +254,7 @@ impl Component for CanvasManager {
                 <WindowResizeListener cb={resize_cb}/>
                 <div class={class_id}>
                     <CanvasSensor id={"canvas-sensor"} top={h} left={w} cb={canvas_sensor_cb}/>
-                    <CanvasRenderer id={"canvas-renderer"} transform={tf}>
-                        {renderer_svg}
-                    </CanvasRenderer>
+                    <CanvasRenderer id={"canvas-renderer"} tf={tf} canvas={csh}/>
                 </div>
             </>
         }

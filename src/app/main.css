@@ -10,9 +10,9 @@ body {
     position: fixed;
 }
 
-.main-canvas svg {
+.main-canvas canvas {
     position: fixed;
-    border: none;
+    border: 1px solid black;
     background: none;
     z-index: 0;
 }
@@ -45,4 +45,11 @@ body {
     font-size: 17px;
     background-color: transparent;
     z-index: 1;
+}
+
+.main-canvas-debug canvas {
+    position: fixed;
+    border: 1px solid black;
+    background: none;
+    z-index: 0;
 }
