@@ -1,6 +1,11 @@
+//! This module serves as means to translate between coordinate systems.
+//! There are currently 3 in total:
+//! - screen coordinates (e.g. mouse click)
+//! - local coordinates (e.g. figure)
+//! - client coordiantes (e.g. canvas)
+
 use std::cell::RefCell;
 use std::rc::Rc;
-use gloo::console::log;
 
 #[derive(PartialEq, Clone, Copy)]
 pub struct Transform {
@@ -54,8 +59,6 @@ impl Transform {
         let ox = left + x/2;
         let oy = top + y/2;
         self.origin = (ox, oy);
-
-        log!(format!("Setting origin at ({ox}, {oy})"))
     }
 
     pub fn set_screen_size(&mut self, x: i32, y: i32) {

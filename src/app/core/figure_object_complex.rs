@@ -17,6 +17,8 @@ use gloo::console::log;
 
 use crate::figures::*;
 use crate::app::*;
+use crate::renderer::CanvasStateHandle;
+use crate::renderer::DrawError;
 use std::rc::Rc;
 use std::cell::RefCell;
 
@@ -47,6 +49,7 @@ pub struct FigureComplex {
     basis: Vec<FigureObjectComplex>,
     fig: Figure,
     ttext: TerminalTextRenderer,
+    newly_drawn: Vec<FigureObjectComplex>,
 }
 
 impl FigureComplex {
@@ -54,7 +57,8 @@ impl FigureComplex {
         FigureComplex {
             basis: vec![],
             fig: Figure::new(dims),
-            ttext: TerminalTextRenderer::new()
+            ttext: TerminalTextRenderer::new(),
+            newly_drawn: vec![]
         }
     }
 
@@ -75,5 +79,31 @@ impl FigureComplex {
     /// Main method used to render terminal text
     pub fn unpack_html(&self) -> Html {
         self.ttext.unpack_html()
+    }
+
+    /// Renders the canvas
+    pub fn render(&self, canvas: CanvasStateHandle) -> Result<(), DrawError> {
+        let y = self.fig.render(|x| {
+            x.draw_on_canvas(canvas.clone())
+        }, Identity{dims: 2}).unwrap();
+
+        for x in y {
+            x?;
+        }
+
+        Ok(())
+    }
+
+    /// Rerenders the canvas
+    pub fn rerender(&self, canvas: CanvasStateHandle) -> Result<(), DrawError> {
+        let y = self.fig.load_all(|x| {
+            x.draw_on_canvas(canvas.clone())
+        }, Identity{dims: 2}).unwrap();
+
+        for x in y {
+            x?;
+        }
+
+        Ok(())
     }
 }

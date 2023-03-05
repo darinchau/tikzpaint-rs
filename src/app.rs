@@ -19,6 +19,5 @@ use components::molecules::terminal::{Terminal, TerminalEvent, TerminalType};
 use crate::app::core::figure_object_complex::{FigureComplex, FigureObjectComplex};
 use crate::app::core::parser::{parse, FactoryParseError};
 use crate::app::core::terminal_text_renderer::{TerminalTextRenderer};
-use crate::app::core::transform::Transform;
 
 use utils::util::*;

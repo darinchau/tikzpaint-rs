@@ -18,20 +18,20 @@ use crate::figures::*;
 /// ```
 
 pub struct Point {
-    p: FigureObject,
+    p: FOPoint,
 }
 
 impl Point {
     pub fn new(x: Coordinates) -> Self {
         Point {
-            p: FOPoint::new(x).wrap(),
+            p: FOPoint::new(x),
         }
     }
 }
 
 impl Drawable for Point {
     fn draw(&self) -> Vec<FigureObject> {
-        return vec![self.p.clone()];
+        return vec![self.p.clone().wrap()];
     }
 
     fn dims(&self) -> usize {

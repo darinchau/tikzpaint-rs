@@ -68,7 +68,10 @@ fn get_css(props: &CanvasManagerProps) -> String {
 }
 
 pub enum CanvasManagerMessage {
+    /// Means something changed in the figure. In this case we only need to load the newly drawn objects
     ChangedFigure,
+
+    /// Means we probably have to redraw everything since the dimensions are different
     ChangedWindowSize,
 }
 
@@ -208,11 +211,23 @@ impl Component for CanvasManager {
         let mut tf = Transform::new(h, w, th);
         tf.set_screen_size(x, y);
 
+        let t_ptr = Rc::new(RefCell::new(tf));
+
         CanvasManager {
             fig: Rc::new(RefCell::new(fig_state)),
-            tf: Rc::new(RefCell::new(tf)),
-            csh: CanvasStateHandle::new()
+            tf: t_ptr.clone(),
+            csh: CanvasStateHandle::new(t_ptr.clone())
         }
+    }
+
+    fn update(&mut self, ctx: &Context<Self>, msg: Self::Message) -> bool {
+        let fig = &*self.fig.borrow_mut();
+
+        match msg {
+            CanvasManagerMessage::ChangedFigure => {fig.render(self.csh.clone());}
+            CanvasManagerMessage::ChangedWindowSize => {fig.rerender(self.csh.clone());}
+        }
+        false
     }
 
     fn view(&self, ctx: &Context<Self>) -> Html {

@@ -1,12 +1,14 @@
 //! A figure object serves as a canvas to convert drawables into displayables into code and shapes
 
 use std::any::{TypeId, Any};
+use std::cell::RefCell;
 use crate::figures::*;
 
 // Rerender every time we draw/project/do anything basically
 pub struct Figure {
     dims: usize,
     to_draw: Vec<DrawableObject>,
+    newly_drawn: RefCell<Vec<DrawableObject>>,
     hash: usize
 }
 
@@ -21,6 +23,7 @@ impl Figure {
         Figure {
             dims,
             to_draw: vec![],
+            newly_drawn: RefCell::new(vec![]),
             hash: 0
         }
     }
@@ -33,7 +36,9 @@ impl Figure {
                 source: "draw() from figure"
             });
         }
-        self.to_draw.push(obj.wrap());
+        let a = obj.wrap();
+        self.to_draw.push(a.clone());
+        self.newly_drawn.borrow_mut().push(a);
         self.hash += 1;
         return Ok(());
     }
@@ -41,7 +46,26 @@ impl Figure {
     /// Load method takes a function object and a projection object. The method will feed
     /// every coordinate in every drawable object through the function f that you provide.
     /// The projection will be fed through the project method defined on the function object.
-    pub fn load<T, S, P>(&self, f: T, proj: P) -> Result<Vec<S>, DimensionError> where
+    pub fn load_all<T, S, P>(&self, f: T, proj: P) -> Result<Vec<S>, DimensionError> where
+        T: Fn(PlottableObject) -> S,
+        P: IsProjection + Any + 'static
+    {
+        let x = self.load(f, proj, &self.newly_drawn.borrow());
+        *self.newly_drawn.borrow_mut() = vec![];
+        return x;
+    }
+
+    /// Render method only loads the newly drawns since last render. The method will feed
+    /// every coordinate in every drawable object through the function f that you provide.
+    /// The projection will be fed through the project method defined on the function object.
+    pub fn render<T, S, P>(&self, f: T, proj: P) -> Result<Vec<S>, DimensionError> where
+    T: Fn(PlottableObject) -> S,
+    P: IsProjection + Any + 'static
+    {
+        return self.load(f, proj, &self.to_draw);
+    }
+
+    fn load<T, S, P>(&self, f: T, proj: P, vecd: &Vec<DrawableObject>) -> Result<Vec<S>, DimensionError> where
         T: Fn(PlottableObject) -> S,
         P: IsProjection + Any + 'static
     {
@@ -54,7 +78,7 @@ impl Figure {
         }
 
         let mut v: Vec<S> = Vec::new();
-        for x in &self.to_draw {
+        for x in vecd {
             for obj in x.draw() {
                 let new_p = fig_proj.clone();
                 let new_obj = (&obj).project_to_plot(new_p)?;
@@ -97,7 +121,7 @@ impl Figure {
         }
 
         let mut st = String::from("\\begin{tikzpicture}\n");
-        for s in self.load(|x| {
+        for s in self.load_all(|x| {
             return x.tikzify();
         }, proj)? {
             let res = s.output();

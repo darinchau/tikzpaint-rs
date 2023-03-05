@@ -12,6 +12,9 @@ use std::any::Any;
 pub trait Plottable {
     /// Define the construction of Tikz code from an object
     fn tikzify(&self) -> TikzFigure;
+
+    /// Define the logic for which we draw the object on an Html Canvas
+    fn draw_on_canvas(&self, c: CanvasStateHandle) -> Result<(), DrawError>;
 }
 
 #[derive(Clone)]
@@ -34,6 +37,10 @@ impl Plottable for PlottableObject {
     fn tikzify(&self) -> TikzFigure {
         return self.ptr.tikzify();
     }
+
+    fn draw_on_canvas(&self, c: CanvasStateHandle) -> Result<(), DrawError> {
+        return self.ptr.draw_on_canvas(c);
+    }
 }
 
 
@@ -41,7 +48,7 @@ impl Plottable for PlottableObject {
 // ===============================================================================================================================
 // ===============================================================================================================================
 
-/// A figure object is the base object (Layer 0 interface) between Tikz/SVG code and our code.
+/// A figure object is the first layer that unifies the different methods of drawing
 pub trait IsFigureObject: Plottable {
     /// Returns a name of this figure object. This is useful for error checking
     fn name(&self) -> &'static str;
@@ -59,14 +66,27 @@ pub trait IsFigureObject: Plottable {
 
     /// Project every coordinate in self according to the projection p
     /// We guarantee the projection object passed to you has dimensions (self.dims() -> _)
+    fn project(&self, p: Projection) -> Self where Self: Sized;
+}
+
+/// First layer of wrapper around a FO because idk why Rust doesn't allow self sized on trait objects
+/// This implementation allows us to only call project on FO; other methods will defer to the implementation in IsFigureObject
+trait FO where Self: IsFigureObject {
     fn project_and_wrap(&self, p: Projection) -> FigureObject;
 }
+
+impl<T: IsFigureObject + Sized + 'static> FO for T {
+    fn project_and_wrap(&self, p: Projection) -> FigureObject {
+        return self.project(p).wrap();
+    }
+}
+
 
 /// A figure object is the base object (Layer 1 interface) between Tikz/SVG code and our code.
 /// We have an additional layer of rust bindings to SVGs and Tikz because they are hard af to draw and manipulate
 /// But Figure objects are the first layer that creates objects and is able to translate into both SVG and Tikz
 pub struct FigureObject {
-    ptr: Rc<dyn IsFigureObject>,
+    ptr: Rc<dyn FO>,
     pub name: &'static str,
 }
 
@@ -85,6 +105,10 @@ impl<T: IsFigureObject + Sized + 'static> WrappableAsFigureObject for T {}
 impl Plottable for FigureObject {
     fn tikzify(&self) -> TikzFigure {
         self.ptr.tikzify()
+    }
+
+    fn draw_on_canvas(&self, c: CanvasStateHandle)  -> Result<(), DrawError> {
+        self.ptr.draw_on_canvas(c)
     }
 }
 

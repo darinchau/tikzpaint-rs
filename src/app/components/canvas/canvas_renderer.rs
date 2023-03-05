@@ -7,7 +7,7 @@ use std::rc::Rc;
 
 use wasm_bindgen::prelude::*;
 use wasm_bindgen::JsCast;
-use web_sys::{window, HtmlCanvasElement, WebGlRenderingContext as GL, WebGlRenderingContext};
+use web_sys::{window, HtmlCanvasElement, CanvasRenderingContext2d};
 use yew::prelude::*;
 use gloo::console::log;
 
