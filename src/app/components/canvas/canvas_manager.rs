@@ -81,12 +81,6 @@ macro_rules! mborrow {
     };
 }
 
-macro_rules! rerender {
-    ($x: ident) => {
-        ctx.link().send_message($x)
-    };
-}
-
 /// The main app is a coordinator component that coordinates all three main components
 /// i.e. the header bar, the side bar, and the canvas
 pub struct CanvasManager {
@@ -100,6 +94,7 @@ impl CanvasManager {
         let f = self.fig.clone();
         let tf = self.tf.clone();
         let link = ctx.link().clone();
+        let debug_mode = is_true(props.debug);
 
         // Handles main canvas sensor events
         let canvas_sensor_cb = Callback::from(move |event: CanvasSensorEvent| {
@@ -110,8 +105,10 @@ impl CanvasManager {
             match event.mouse_click_event.click_type {
                 MouseClickType::LeftClick => {
                     let (x, y) = event.mouse_click_event.screen_pos;
-                    log!(format!("Recieved mouse click at ({x}, {y})"));
 
+                    if debug_mode {
+                        log!(format!("Recieved mouse click at ({x}, {y})"));
+                    }
 
                     let (local_x, local_y) = deref_get(tf.clone()).world_to_local(x, y);
 
@@ -119,8 +116,6 @@ impl CanvasManager {
                     let repr = p.into_str();
                     let pt = FigureObjectComplex::new(p.wrap(), repr);
                     mborrow!(f).draw(pt);
-
-                    log!(format!("Drawing a point at ({local_x}, {local_y})"));
 
                     link.send_message(CanvasManagerMessage::ChangedFigure);
                 },
@@ -167,6 +162,7 @@ impl CanvasManager {
             if debug_mode {
                 log!(format!("Windows resized to ({}, {})", event.new_size.x, event.new_size.y));
             }
+
             let (x, y) = (event.new_size.x, event.new_size.y);
             mborrow!(tf).set_screen_size(x, y);
 
@@ -175,6 +171,32 @@ impl CanvasManager {
         });
 
         return resize_cb;
+    }
+
+    fn get_renderer_cb(&self, props: &CanvasManagerProps, ctx: &Context<Self>) -> Callback<CanvasRendererEvent> {
+        let f = self.fig.clone();
+        let tf = self.tf.clone();
+        let link = ctx.link().clone();
+        let debug_mode = is_true(props.debug);
+
+        let csh = self.csh.clone();
+
+        // Handles main canvas sensor events
+        let canvas_sensor_cb = Callback::from(move |event: CanvasRendererEvent| {
+            match event {
+                CanvasRendererEvent::SetUpDimensions { w, h } => {
+                    let action = mborrow!(f).rerender(csh.clone());
+
+                    if let Err(e) = action {
+                        log!(format!("Failed to redraw canvas. Reason: {:?}", e));
+                    }
+                },
+
+                _ => ()
+            }
+        });
+
+        return canvas_sensor_cb;
     }
 }
 
@@ -221,13 +243,25 @@ impl Component for CanvasManager {
     }
 
     fn update(&mut self, ctx: &Context<Self>, msg: Self::Message) -> bool {
-        let fig = &*self.fig.borrow_mut();
+        let fig = &*self.fig.borrow();
 
         match msg {
-            CanvasManagerMessage::ChangedFigure => {fig.render(self.csh.clone());}
-            CanvasManagerMessage::ChangedWindowSize => {fig.rerender(self.csh.clone());}
-        }
-        false
+            CanvasManagerMessage::ChangedFigure => {
+                let action = fig.render(self.csh.clone());
+
+                if let Err(e) = action {
+                    log!(format!("Failed to redraw canvas. Reason: {:?}", e));
+                    return false;
+                }
+            }
+
+            CanvasManagerMessage::ChangedWindowSize => {
+                // We will defer the rerender until the resize of canvas element,
+                // which will be handled in th canvas renderer callback
+            }
+        };
+
+        true
     }
 
     fn view(&self, ctx: &Context<Self>) -> Html {
@@ -246,6 +280,7 @@ impl Component for CanvasManager {
         let sidebar_cb = self.get_sidebar_cb(props, ctx);
         let terminal_cb = self.get_terminal_cb(props, ctx);
         let resize_cb = self.get_resize_cb(props, ctx);
+        let canvas_renderer_cb = self.get_renderer_cb(props, ctx);
 
         // Process CSS
         let class_id = get_css(props);
@@ -270,7 +305,7 @@ impl Component for CanvasManager {
                 <WindowResizeListener cb={resize_cb}/>
                 <div class={class_id}>
                     <CanvasSensor id={"canvas-sensor"} top={h} left={w} cb={canvas_sensor_cb}/>
-                    <CanvasRenderer id={"canvas-renderer"} tf={tf} canvas={csh}/>
+                    <CanvasRenderer id={"canvas-renderer"} tf={tf} canvas={csh} cb={canvas_renderer_cb}/>
                 </div>
             </>
         }

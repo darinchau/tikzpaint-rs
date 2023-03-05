@@ -1,8 +1,6 @@
 //! Implementation of a node. Our convention is to begin the name of every direct implementation of figure object
 //! with the prefix FO-
 
-use gloo::console::log;
-
 use crate::figures::*;
 use crate::renderer::*;
 

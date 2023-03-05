@@ -14,11 +14,18 @@ use gloo::console::log;
 use crate::app::*;
 use crate::renderer::*;
 
+#[derive(Clone, Copy)]
+pub enum CanvasRendererEvent {
+    SetUpDimensions{w: i32, h: i32},
+
+}
+
 #[derive(Properties, PartialEq)]
 pub struct CanvasRendererProps {
     pub tf: Transform,
     pub id: AttrValue,
     pub canvas: CanvasStateHandle,
+    pub cb: Callback<CanvasRendererEvent>
 }
 
 pub struct CanvasRenderer {
@@ -47,6 +54,7 @@ impl Component for CanvasRenderer {
             self.set_canvas_dims(ctx);
             return true;
         }
+
         false
     }
 
@@ -65,6 +73,8 @@ impl Component for CanvasRenderer {
 impl CanvasRenderer {
     fn set_canvas_dims(&self, ctx: &Context<Self>) {
         // Get the canvas
+        log!("Setting canvas dimensions");
+
         if let Some(canvas) = self.node_ref.cast::<HtmlCanvasElement>() {
             // Set the margins of the canvas
             let (t, r, b, l) = ctx.props().tf.margins;
@@ -75,6 +85,10 @@ impl CanvasRenderer {
 
             canvas.set_height(h as u32);
             canvas.set_width(w as u32);
+
+            let info = CanvasRendererEvent::SetUpDimensions{w, h};
+
+            ctx.props().cb.emit(info);
         }
     }
 }

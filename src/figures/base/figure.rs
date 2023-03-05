@@ -3,6 +3,7 @@
 use std::any::{TypeId, Any};
 use std::cell::RefCell;
 use crate::figures::*;
+use gloo::console::log;
 
 // Rerender every time we draw/project/do anything basically
 pub struct Figure {
@@ -46,7 +47,7 @@ impl Figure {
     /// Load method takes a function object and a projection object. The method will feed
     /// every coordinate in every drawable object through the function f that you provide.
     /// The projection will be fed through the project method defined on the function object.
-    pub fn load_all<T, S, P>(&self, f: T, proj: P) -> Result<Vec<S>, DimensionError> where
+    pub fn render<T, S, P>(&self, f: T, proj: P) -> Result<Vec<S>, DimensionError> where
         T: Fn(PlottableObject) -> S,
         P: IsProjection + Any + 'static
     {
@@ -58,7 +59,7 @@ impl Figure {
     /// Render method only loads the newly drawns since last render. The method will feed
     /// every coordinate in every drawable object through the function f that you provide.
     /// The projection will be fed through the project method defined on the function object.
-    pub fn render<T, S, P>(&self, f: T, proj: P) -> Result<Vec<S>, DimensionError> where
+    pub fn load_all<T, S, P>(&self, f: T, proj: P) -> Result<Vec<S>, DimensionError> where
     T: Fn(PlottableObject) -> S,
     P: IsProjection + Any + 'static
     {

@@ -66,6 +66,7 @@ impl CanvasStateHandle {
     }
 
     pub fn set_canvas(&self, nr: NodeRef) {
+        log!("Setting canvas");
         fm!(self) = nr;
     }
 
@@ -96,7 +97,6 @@ impl CanvasStateHandle {
     /// For all the draw methods, returns () if the result is successfully drawn,
     /// otherwise returns an Err
     pub fn draw_circle(&self, local_coords: (f64, f64), radius: f64) -> Result<(), DrawError> {
-        log!("Hi");
         let (a, b) = local_coords;
         let (x, y) = self.tf.borrow().local_to_client(a, b);
         let c = self.context()?;
@@ -127,5 +127,16 @@ impl CanvasStateHandle {
         self.context()?.fill_rect(t, l, b - t, r - l);
 
         Ok(())
+    }
+
+    pub fn reset(&self) -> Result<(), DrawError> {
+        let ctx = self.context()?;
+
+        let a = fig!(self).cast::<HtmlCanvasElement>();
+        if let Some(canvas) = a {
+            ctx.clear_rect(0., 0., canvas.width() as f64, canvas.height() as f64);
+        }
+
+        return Err(DrawError { msg: String::from("Failed to get canvas element") });
     }
 }

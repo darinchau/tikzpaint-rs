@@ -13,17 +13,12 @@ pub struct Transform {
     pub screen_size: (i32, i32),
 
     /// scale x is the number such that 1 unit in the coordinate system horizontally = scale_x pixels
-    pub scale_x: f64,
-
-    /// scale y is the number such that 1 unit in the coordinate system vertically = scale_y pixels
-    pub scale_y: f64,
+    pub scale: f64,
 
     /// Where the origin ought to be in world coordinates. Coordinates can be very big or negative - means the origin is out of sight
     pub origin: (i32, i32),
 
     pub margins: (i32, i32, i32, i32),
-
-    pub initialized: bool,
 }
 
 impl Transform {
@@ -35,11 +30,9 @@ impl Transform {
 
         Self {
             screen_size: (1920, 1080),
-            scale_x: 25.,
-            scale_y: 25.,
+            scale: 100.,
             origin: (0, 0),
             margins: (h, 0, th, w),
-            initialized: false,
         }
     }
 
@@ -63,10 +56,8 @@ impl Transform {
 
     pub fn set_screen_size(&mut self, x: i32, y: i32) {
         self.screen_size = (x, y);
-        if !self.initialized {
-            self.initialized = true;
-            self.reset_origin();
-        }
+        self.reset_origin();
+
     }
 
     pub fn set_margin_top(&mut self, m: i32) {
@@ -85,36 +76,107 @@ impl Transform {
         self.margins.3 = m;
     }
 
-    pub fn set_scale_x(&mut self, m: f64) {
-        self.scale_x = m;
-    }
-
-    pub fn set_scale_y(&mut self, m: f64) {
-        self.scale_y = m;
+    pub fn set_scale(&mut self, m: f64) {
+        self.scale = m;
     }
 
     /// Transforms screen_x and screen_y into local_coordinates
     pub fn world_to_local(&self, x: i32, y: i32) -> (f64, f64) {
         // Satisfies x = origin + a * scale_x;
-        let a = (x - self.origin.0) as f64/self.scale_x;
-        let b = (y - self.origin.1) as f64/self.scale_y;
+        let a = (x - self.origin.0) as f64/self.scale;
+        let b = (self.origin.1 - y) as f64/self.scale;
         (a, b)
+    }
+
+    #[inline(always)]
+    fn ltw(&self, a: f64, b: f64) -> (f64, f64) {
+        let x = self.origin.0 as f64 + a * self.scale;
+        let y = self.origin.1 as f64 - b * self.scale;
+        (x, y)
     }
 
     /// Transforms local x and y to screen_x, screen_y
     pub fn local_to_world(&self, a: f64, b: f64) -> (i32, i32) {
-        let x = self.origin.0 as f64 + a * self.scale_x;
-        let y = self.origin.1 as f64 + a * self.scale_y;
-
+        let (x, y) = self.ltw(a, b);
         (x.round() as i32, y.round() as i32)
     }
 
     /// Transforms local x and y to client coordinates (render coordinates)
     pub fn local_to_client(&self, a: f64, b: f64) -> (f64, f64) {
-        let (top, right, bottom, left) = self.margins;
-        let x = self.origin.0 as f64 + a * self.scale_x - top as f64;
-        let y = self.origin.1 as f64 + a * self.scale_y - left as f64;
+        let (x, y) = self.ltw(a, b);
 
-        (x, y)
+        // Subtract the margins
+        let (top, _, bottom, left) = self.margins;
+        (x - left as f64, y - top as f64 - bottom as f64 / 2.)
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_origin_1() {
+        let mut tf = Transform::new(60, 190, 150);
+        tf.set_screen_size(1016, 746);
+
+        // ------- 60 ---------
+        //  |                 |
+        // 190                |
+        //  |                 |
+        //  | ---- 150 --------
+
+        // x: 1016 - 190 = 826
+        // y: 746 - 60 - 150 = 536
+
+        // origin position on screen:
+        // x: 190 + 826/2
+        // y: 60 + 536/2
+
+        assert_eq!(tf.origin, (603, 328));
+        assert_eq!(tf.local_to_world(0., 0.), (603, 328));
+    }
+
+    #[test]
+    fn test_coord_1() {
+        let mut tf = Transform::new(60, 190, 150);
+        tf.set_screen_size(1016, 746);
+        tf.set_scale(100.);
+
+        // ------- 60 ---------
+        //  |                 |
+        // 190                |
+        //  |                 |
+        //  | ---- 150 --------
+
+        // x: 1016 - 190 = 826
+        // y: 746 - 60 - 150 = 536
+
+        // Position of (0, 1) on screen: origin + 1 * scale * (0, 1)
+
+        assert_eq!(tf.local_to_world(0., 1.), (603, 228));
+        assert_eq!(tf.world_to_local(603, 228), (0., 1.));
+
+        assert_eq!(tf.local_to_world(0., 2.), (603, 128));
+        assert_eq!(tf.world_to_local(603, 128), (0., 2.));
+
+        assert_eq!(tf.local_to_world(0., -1.), (603, 428));
+        assert_eq!(tf.world_to_local(603, 428), (0., -1.));
+    }
+
+    #[test]
+    fn test_coord_2() {
+        let mut tf = Transform::new(60, 190, 150);
+        tf.set_screen_size(1016, 746);
+        tf.set_scale(100.);
+
+        assert_eq!(tf.local_to_world(1., 0.), (703, 328));
+        assert_eq!(tf.world_to_local(703, 328), (1., 0.));
+
+        assert_eq!(tf.local_to_world(2., 0.), (803, 328));
+        assert_eq!(tf.world_to_local(803, 328), (2., 0.));
+
+        assert_eq!(tf.local_to_world(-1., 0.), (503, 328));
+        assert_eq!(tf.world_to_local(503, 328), (-1., 0.));
     }
 }

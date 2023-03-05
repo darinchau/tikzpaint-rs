@@ -96,6 +96,7 @@ impl FigureComplex {
 
     /// Rerenders the canvas
     pub fn rerender(&self, canvas: CanvasStateHandle) -> Result<(), DrawError> {
+        log!("Redrawing canvas");
         let y = self.fig.load_all(|x| {
             x.draw_on_canvas(canvas.clone())
         }, Identity{dims: 2}).unwrap();
@@ -103,6 +104,8 @@ impl FigureComplex {
         for x in y {
             x?;
         }
+
+        log!("Successfully redrawn canvas");
 
         Ok(())
     }
