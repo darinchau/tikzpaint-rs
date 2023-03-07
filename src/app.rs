@@ -14,10 +14,10 @@ use components::canvas::canvas_renderer::{CanvasRenderer, CanvasRendererEvent};
 
 use components::molecules::headerbar::{HeaderBar, HeaderBarType, HeaderBarEvent};
 use components::molecules::sidebar::{SideBar, SideBarEvent, SideBarType};
-use components::molecules::terminal::{Terminal, TerminalEvent, TerminalType};
+use components::molecules::terminal::{Terminal, TerminalEvent, TerminalEventType, TerminalResetType, TerminalResetEvent};
 
 use crate::app::core::figure_object_complex::{FigureComplex, FigureObjectComplex};
-use crate::app::core::parser::{parse, FactoryParseError};
+use crate::app::core::parser::{parse, ParserError};
 use crate::app::core::terminal_text_renderer::{TerminalTextRenderer};
 
 use utils::util::*;

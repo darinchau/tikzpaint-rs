@@ -18,13 +18,30 @@ use crate::figures::{CheapString, StringLike};
 // ================================================================================================================== //
 
 #[derive(Clone, PartialEq, Debug)]
-pub enum TerminalType {
+pub enum TerminalEventType {
     GotText(CheapString),
 }
 
 pub struct TerminalEvent {
     /// Header bar button is about the button that we pressed in the header bar
-    pub event_type: TerminalType,
+    pub event_type: TerminalEventType,
+}
+
+pub struct TerminalResetEvent {
+    pub event_type: TerminalResetType,
+    pub error_msg: Option<CheapString>
+}
+
+#[derive(PartialEq, Debug)]
+pub enum TerminalResetType {
+    /// Reset the text to an empty string
+    Reset,
+
+    /// Make the text stay the same
+    StaySame,
+
+    /// Set the text to some other options
+    Other(String)
 }
 
 #[derive(Properties, PartialEq)]
@@ -35,7 +52,7 @@ pub struct TerminalProps {
     pub sidebar_width: usize,
 
     /// This callback should take in a terminal event, return the terminal text that we should render.
-    pub cb: Callback<TerminalEvent>,
+    pub cb: Callback<TerminalEvent, TerminalResetEvent>,
 
     /// The children will be rendered as terminal text
     /// Allows us to pass in terminal text and render
@@ -109,7 +126,7 @@ fn get_callback(props: &TerminalProps) -> Callback<TextFieldEvent, Option<String
 
                 // Emit the parent callback
                 let info = TerminalEvent {
-                    event_type: TerminalType::GotText(recieved_text.clone())
+                    event_type: TerminalEventType::GotText(recieved_text.clone())
                 };
 
                 parent_cb.emit(info);

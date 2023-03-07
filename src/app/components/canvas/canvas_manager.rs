@@ -144,9 +144,50 @@ impl CanvasManager {
         return sidebar_cb;
     }
 
-    fn get_terminal_cb(&self, props: &CanvasManagerProps, ctx: &Context<Self>) -> Callback<TerminalEvent> {
-        let terminal_cb = Callback::from(move |event: TerminalEvent| {
+    fn get_terminal_cb(&self, props: &CanvasManagerProps, ctx: &Context<Self>) -> Callback<TerminalEvent, TerminalResetEvent> {
+        let f = self.fig.clone();
+        let tf = self.tf.clone();
+        let link = ctx.link().clone();
+        let debug_mode = is_true(props.debug);
 
+        let terminal_cb = Callback::from(move |event: TerminalEvent| {
+            // 1. Retreive the text recieved from the callback
+            // 2. Pass the text to figure complex where we shall perform the parsing and insert
+            // 3. Depend on the figure response type, tell the terminal to reset the text to different things
+            let text = match event.event_type {
+                TerminalEventType::GotText(x) => x
+            };
+
+            if let Err(e) = mborrow!(f).draw_with_text(text) {
+                match e {
+                    ParserError::CommandNotFound{msg} =>  {
+                        return TerminalResetEvent {
+                            event_type: TerminalResetType::StaySame,
+                            error_msg: Some(msg)
+                        }
+                    },
+
+                    ParserError::DimensionError { err, src } => {
+                        let er_msg = format!("Dimension error: {err}\n- from: {src}").wrap();
+                        return TerminalResetEvent {
+                            event_type: TerminalResetType::StaySame,
+                            error_msg: Some(er_msg)
+                        }
+                    },
+
+                    ParserError::EmptyObject => {
+                        return TerminalResetEvent {
+                            event_type: TerminalResetType::Reset,
+                            error_msg: None
+                        }
+                    }
+                }
+            }
+
+            return TerminalResetEvent {
+                event_type: TerminalResetType::Reset,
+                error_msg: None
+            }
         });
 
         return terminal_cb;

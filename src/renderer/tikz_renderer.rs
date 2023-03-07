@@ -2,7 +2,6 @@
 
 use std::rc::Rc;
 use std::fmt::Display;
-use paste::paste;
 use crate::figures::*;
 
 pub trait TikzShape {
@@ -94,11 +93,6 @@ impl TikzFigure {
         return self;
     }
 
-    pub fn add_from(mut self, s: Rc<dyn TikzShape>) -> Self {
-        self.data.push(s);
-        return self;
-    }
-
     /// Draws the svg figure. We allow height and width to be Strings be
     pub fn output(&self) -> String {
         let mut body = vec![];
@@ -133,9 +127,5 @@ impl TikzFigure {
         }
 
         return body_text;
-    }
-
-    pub fn get_components(&self) -> Vec<Rc<dyn TikzShape>> {
-        return self.data.iter().map(|x| Rc::clone(x)).collect();
     }
 }

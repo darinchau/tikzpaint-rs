@@ -7,7 +7,7 @@ use std::cell::RefCell;
 use yew::prelude::*;
 
 pub struct TerminalTextRenderer {
-    v: Vec<Rc<RefCell<CheapString>>>
+    v: Vec<CheapString>
 }
 
 impl TerminalTextRenderer {
@@ -15,13 +15,13 @@ impl TerminalTextRenderer {
         TerminalTextRenderer { v: vec![] }
     }
 
-    pub fn push(&mut self, r: Rc<RefCell<CheapString>>) {
+    pub fn push(&mut self, r: CheapString) {
         self.v.push(r);
     }
 
     pub fn unpack(&self) -> Vec<CheapString> {
         self.v.iter().map(|x| {
-            deref_get(x.clone())
+            x.clone()
         }).collect::<Vec<CheapString>>()
     }
 
@@ -30,7 +30,7 @@ impl TerminalTextRenderer {
             html!{
                 <>
                     // Unwrap the cheap string from x and then clone
-                    {(*(**x).borrow()).clone()}
+                    {x.clone()}
                     <br/>
                 </>
             }
@@ -41,7 +41,7 @@ impl TerminalTextRenderer {
 impl PartialEq for TerminalTextRenderer {
     fn eq(&self, other: &Self) -> bool {
         for (x, y) in self.v.iter().zip(other.v.iter()) {
-            if *(**x).borrow() != *(**y).borrow() {
+            if x != y {
                 return false;
             }
         }

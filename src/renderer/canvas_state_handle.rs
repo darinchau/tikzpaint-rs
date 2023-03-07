@@ -66,7 +66,7 @@ impl CanvasStateHandle {
     }
 
     pub fn set_canvas(&self, nr: NodeRef) {
-        log!("Setting canvas");
+        log!("Initializing canvas");
         fm!(self) = nr;
     }
 
@@ -129,6 +129,7 @@ impl CanvasStateHandle {
         Ok(())
     }
 
+    /// Resets all the contents on the canvas
     pub fn reset(&self) -> Result<(), DrawError> {
         let ctx = self.context()?;
 

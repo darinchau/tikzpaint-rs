@@ -30,13 +30,13 @@ use std::cell::RefCell;
 /// A figure object complex is a Interior mutable string, interior mutable drawable object, along with the world coordinates of this object
 /// We can look up a figure object complex by nearest points.
 pub struct FigureObjectComplex {
-    st: Rc<RefCell<CheapString>>,
+    st: CheapString,
     fo: Rc<RefCell<DrawableObject>>
 }
 
 impl FigureObjectComplex {
     pub fn new(x: DrawableObject, s: String) -> Self {
-        let st = Rc::new(RefCell::new(CheapString::new(s)));
+        let st = s.wrap();
         let fo = Rc::new(RefCell::new(x));
         return Self {
             st, fo
@@ -73,6 +73,20 @@ impl FigureComplex {
         self.ttext.push(text_copy);
 
         return Ok(());
+    }
+
+    /// Draws a figure with the text prompt. Offloads the text to the parser
+    pub fn draw_with_text<S1: StringLike>(&mut self, s: S1) -> Result<(), ParserError> {
+        let wrapped_text = s.wrap();
+        let result = parse(wrapped_text.clone())?;
+
+        // Draw on the figure
+        if let Err(e) = self.fig.draw(result.fo.borrow().clone()) {
+            return Err(ParserError::DimensionError { err: e.msg.wrap(), src: e.source });
+        }
+
+        self.ttext.push(wrapped_text);
+        Ok(())
     }
 
     /// This unpacks the figure complex into a bunch of terminal commands.

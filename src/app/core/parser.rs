@@ -5,11 +5,17 @@ use crate::app::*;
 use std::rc::Rc;
 use std::cell::RefCell;
 
-pub enum FactoryParseError {
+pub enum ParserError {
+    /// Not an error per se, but just a signal that we dont need to render anything
     EmptyObject,
-    CommandNotFound(&'static str),
+
+    /// The submitted string contains one or more invalid commands
+    CommandNotFound{msg: CheapString},
+
+    /// The user tries to draw stuff that is in the wrong dimension
+    DimensionError{err: CheapString, src: &'static str}
 }
 
-pub fn parse<T: StringLike + 'static>(s: T) -> Result<FigureObjectComplex, FactoryParseError> {
+pub fn parse(s: CheapString) -> Result<FigureObjectComplex, ParserError> {
     todo!()
 }
