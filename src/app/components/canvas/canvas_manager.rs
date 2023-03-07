@@ -180,7 +180,9 @@ impl CanvasManager {
                             event_type: TerminalResetType::Reset,
                             error_msg: None
                         }
-                    }
+                    },
+
+                    _ => { todo!() }
                 }
             }
 

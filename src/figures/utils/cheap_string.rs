@@ -1,6 +1,7 @@
 use std::rc::Rc;
 use std::fmt::Display;
 use std::fmt::Debug;
+use std::ops::Deref;
 
 
 /// An Rc wrapped over a string
@@ -35,6 +36,13 @@ impl CheapString {
 impl PartialEq for CheapString {
     fn eq(&self, other: &Self) -> bool {
         return *self.ptr == *other.ptr;
+    }
+}
+
+impl Deref for CheapString {
+    type Target = String;
+    fn deref(&self) -> &Self::Target {
+        return &*self.ptr;
     }
 }
 
