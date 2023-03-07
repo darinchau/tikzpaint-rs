@@ -168,7 +168,7 @@ impl CanvasManager {
                     },
 
                     ParserError::DimensionError { err, src } => {
-                        let er_msg = format!("Dimension error: {err}\n- from: {src}").wrap();
+                        let er_msg = format!("Dimension error: {err}\n- from: {src}");
                         return TerminalResetEvent {
                             event_type: TerminalResetType::StaySame,
                             error_msg: Some(er_msg)

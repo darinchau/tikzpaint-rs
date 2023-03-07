@@ -82,7 +82,7 @@ impl FigureComplex {
 
         // Draw on the figure
         if let Err(e) = self.fig.draw(result.fo.borrow().clone()) {
-            return Err(ParserError::DimensionError { err: e.msg.wrap(), src: e.source });
+            return Err(ParserError::DimensionError { err: e.msg, src: e.source });
         }
 
         self.ttext.push(wrapped_text);

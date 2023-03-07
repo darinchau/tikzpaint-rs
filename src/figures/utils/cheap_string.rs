@@ -51,12 +51,34 @@ pub trait StringLike: Debug + Display + Clone + PartialEq {
     fn wrap(&self) -> CheapString {
         CheapString::new(format!("{self}"))
     }
+
+    fn deref_str(&self) -> &str;
 }
 
-impl StringLike for String {}
-impl StringLike for &str {}
+impl StringLike for String {
+    fn deref_str(&self) -> &str {
+        return self;
+    }
+}
+
+impl StringLike for &str {
+    fn deref_str(&self) -> &str {
+        return self;
+    }
+}
+
+impl From<CheapString> for String {
+    fn from(value: CheapString) -> Self {
+        (&*value.ptr).clone()
+    }
+}
+
 impl StringLike for CheapString {
     fn wrap(&self) -> CheapString {
         self.clone()
+    }
+
+    fn deref_str(&self) -> &str {
+        return self;
     }
 }

@@ -29,7 +29,7 @@ pub struct TerminalEvent {
 
 pub struct TerminalResetEvent {
     pub event_type: TerminalResetType,
-    pub error_msg: Option<CheapString>
+    pub error_msg: Option<String>
 }
 
 #[derive(PartialEq, Debug)]
