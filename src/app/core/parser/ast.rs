@@ -3,21 +3,37 @@
 use crate::figures::*;
 use lazy_static::lazy_static;
 use regex::Regex;
+use std::fmt::Debug;
 
 /// Implementation of AST.
 pub struct AST {
     root: ASTNode,
 }
 
-#[derive(Debug)]
-enum ASTNode {
+#[derive(PartialEq)]
+pub enum ASTNode {
     Number(f64),
     Identifier(CheapString),
     Expression(Vec<ASTNode>),
-    Function(CheapString, Vec<ASTNode>)
+    Function(CheapString, Vec<ASTNode>),
+
+    /// A variable purely exists for unformatting expressions using AST
+    Variable
 }
 
-#[derive(Debug)]
+impl Debug for ASTNode {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            ASTNode::Number(x) => write!(f, "Number({})", x),
+            ASTNode::Expression(x) => write!(f, "Expression({})", x.iter().map(|y| format!("{:?}", y)).collect::<Vec<String>>().join(", ")),
+            ASTNode::Function(name, x) => write!(f, "Function:{}({})", name, x.iter().map(|y| format!("{:?}", y)).collect::<Vec<String>>().join(", ")),
+            ASTNode::Identifier(x) => write!(f, "Identifier({})", x),
+            ASTNode::Variable => write!(f, "Variable")
+        }
+    }
+}
+
+#[derive(Debug, PartialEq)]
 pub enum ASTErrorType {
     /// The usize denotes the position which we found the unclosed left bracket
     BracketNotClosed,
@@ -47,7 +63,7 @@ pub struct ASTError {
 
 impl AST {
     pub fn new(s: &str) -> Result<AST, ASTError> {
-        let root = from_str(s, 0)?;
+        let root = ASTNode::from_str(s, 0)?;
         Ok(Self {
             root
         })
@@ -59,40 +75,56 @@ lazy_static! {
     static ref IS_IDENT: Regex = Regex::new(r"^[A-Za-z_][A-Za-z_0-9]*$").unwrap();
 }
 
-/// Creates an ASTNode from a string
-/// Offset is purely for error displaying purpopses
-/// This does one of the following few things:
-/// - If this is a pure string, then this is an identifier
-/// - If this contains at least one left or right bracket, then commence the bracket search
-/// etc. etc. Returns the ASTNode, or returns an error if the parser failed to parse the code
-fn from_str(st: &str, offset: usize) -> Result<ASTNode, ASTError> {
-    let s = st.trim();
+impl ASTNode {
+    /// Creates an ASTNode from a string
+    /// Offset is purely for error displaying purpopses
+    /// This does one of the following few things:
+    /// - If this is a pure string, then this is an identifier
+    /// - If this contains at least one left or right bracket, then commence the bracket search
+    /// etc. etc. Returns the ASTNode, or returns an error if the parser failed to parse the code
+    fn from_str(st: &str, offset: usize) -> Result<ASTNode, ASTError> {
+        let s = st.trim();
 
-    // - Is it a number?
-    if IS_NUMBER.is_match(s) {
-        let num = parse_number(s, offset)?;
-        return Ok(ASTNode::Number(num));
+        // - Is it a variable?
+        if s == "{}" {
+            return Ok(ASTNode::Variable)
+        }
+
+        // - Is it a number?
+        if IS_NUMBER.is_match(s) {
+            let num = parse_number(s, offset)?;
+            return Ok(ASTNode::Number(num));
+        }
+
+        // - Is it a pure string (i.e. valid variable name in rust)
+        if IS_IDENT.is_match(s) {
+            let ident = parse_ident(s, offset)?.wrap();
+            return Ok(ASTNode::Identifier(ident));
+        }
+
+        // Extract all brackets and commas and perform recursion magic
+        if s.contains('(') || s.contains(',') {
+            return Ok(splice_string(s, offset)?);
+        }
+
+        // This means s has an unclosed right bracket
+        if s.contains(')') {
+            return Err(ASTError {
+                error_type: ASTErrorType::ExtraRightBracket,
+                position: offset + s.find(')').unwrap(),
+                message: None,
+                source: "AST::from_str()"
+            });
+        }
+
+        return Err(ASTError {
+            error_type: ASTErrorType::InvalidSyntax,
+            position: offset,
+            message: Some(format!("Failed to match any known patterns - got ({})", s)),
+            source: "AST::from_str()"
+        });
     }
-
-    // - Is it a pure string (i.e. valid variable name in rust)
-    if IS_IDENT.is_match(s) {
-        let ident = parse_ident(s, offset)?.wrap();
-        return Ok(ASTNode::Identifier(ident));
-    }
-
-    // Extract all brackets and commas and perform recursion magic
-    if s.contains('(') || s.contains(',') {
-        return Ok(splice_string(s, offset)?);
-    }
-
-    return Err(ASTError {
-        error_type: ASTErrorType::InvalidSyntax,
-        position: offset,
-        message: Some(format!("Failed to match any known patterns - got ({})", s)),
-        source: "AST::from_str()"
-    });
 }
-
 
 /// It is known that s is a number. Make that into an AST node
 fn parse_number(s: &str, offset: usize) -> Result<f64, ASTError> {
@@ -136,7 +168,7 @@ fn splice_string(s: &str, offset: usize) -> Result<ASTNode, ASTError> {
             if brackets_count < 0 {
                 return Err(ASTError {
                     error_type: ASTErrorType::ExtraRightBracket,
-                    position: i,
+                    position: offset + i,
                     message: None,
                     source: "AST::splice_string()"
                 });
@@ -158,10 +190,22 @@ fn splice_string(s: &str, offset: usize) -> Result<ASTNode, ASTError> {
         substrs.push((&s[first_substr_pos..], first_substr_pos));
 
         for (substr, idx) in substrs.into_iter() {
-            root.push(from_str(substr.trim(), offset + idx)?);
+            root.push(ASTNode::from_str(substr.trim(), offset + idx)?);
         }
 
         return Ok(ASTNode::Expression(root));
+    }
+
+    // Catch a left bracket thing if we found
+    if let Some(i) = left_bracket_pos {
+        if brackets_count > 0 {
+            return Err(ASTError {
+                error_type: ASTErrorType::BracketNotClosed,
+                position: offset + i,
+                message: None,
+                source: "AST::splice_str()"
+            });
+        }
     }
 
     // Second pass
@@ -174,13 +218,14 @@ fn splice_fn_like_args(s: &str, offset: usize) -> Result<ASTNode, ASTError> {
     // So an expression must be of the form identifier(node)(node)...(node)
     let mut parts = s.split('(');
 
-    // Unwrap should be safe here because we checked the top level contains a string.
+    // Get the text before the first left bracket. At every point we must trim the string first. Refer to test 3 below
     let fn_ident = parts
         .next()
+        .and_then(|x| Some(x.trim()))
         .ok_or(ASTError{
             error_type: ASTErrorType::InvalidSyntax,
             position: offset,
-            message: Some(String::from("Invalid function identifier")),
+            message: Some(format!("Invalid function identifier, got {}", s)),
             source: "AST::splice_fn_like_args()"
         })?
         .wrap();
@@ -191,21 +236,113 @@ fn splice_fn_like_args(s: &str, offset: usize) -> Result<ASTNode, ASTError> {
     let mut subnodes = vec![];
 
     for part in parts {
-        let substr = part.strip_suffix(')')
+        let substr = part
+            .trim()
+            .strip_suffix(')')
             .map(|s| s.to_string())
             .ok_or_else(|| ASTError{
                 error_type: ASTErrorType::InvalidSyntax,
                 position: offset,
-                message: Some(String::from("Invalid bracketed expression")),
+                message: Some(format!("Invalid bracketed expression, got {}", part)),
                 source: "AST::splice_fn_like_args()"
             })?;
 
-        subnodes.push(from_str(&substr, cum_str_len)?);
+        subnodes.push(ASTNode::from_str(&substr, cum_str_len)?);
 
         cum_str_len += part.len() + 1;
     }
 
     return Ok(ASTNode::Function(fn_ident, subnodes))
+}
+
+#[derive(Debug, PartialEq)]
+pub enum ASTParseError {
+    VarCannotMatchExpr,
+    VarCannotMatchFn,
+    VarOnLeftExpr,
+    NumberMismatch(f64, f64),
+    IdentMismatch(CheapString, CheapString),
+    NumChildrenMismatch(usize, usize),
+    FnTypeMismatch(usize, usize),
+    FnNameMismatch(CheapString, CheapString),
+    TypeMismatch(CheapString, CheapString)
+}
+
+/// Gets the list of variables if the structure of the two strings matched, otherwise return an error
+pub fn copy_args(s: &str, mat: &str) -> Result<Vec<f64>, ASTError> {
+    let ast2 = ASTNode::from_str(mat, 0)?;
+    return copy_args_with_mat(s, ast2);
+}
+
+/// Gets the list of variables if the structure of the two strings matched, otherwise return an error
+/// This works for precompiled ASTNodes
+pub fn copy_args_with_mat(s: &str, ast2: ASTNode) -> Result<Vec<f64>, ASTError> {
+    let mut v = vec![];
+    let ast1 = ASTNode::from_str(s, 0)?;
+
+    copy_args_recursive(&ast1, &ast2, &mut v).map_err(|x| {
+        match x {
+            _ => todo!()
+        }
+    });
+
+    return Ok(v);
+}
+
+fn copy_args_recursive(s: &ASTNode, mat: &ASTNode, result: &mut Vec<f64>) -> Result<(), ASTParseError> {
+    match (s, mat) {
+        (ASTNode::Number(x), ASTNode::Variable) => {result.push(x.clone())},
+
+        // If we were to write variables and identifiers this is the line we would have to change
+        (ASTNode::Identifier(x), ASTNode::Variable) => { todo!() },
+
+        (ASTNode::Expression(_), ASTNode::Variable) => { return Err(ASTParseError::VarCannotMatchExpr) },
+        (ASTNode::Function(_, _), ASTNode::Variable) => { return Err(ASTParseError::VarCannotMatchFn) },
+        (ASTNode::Variable, _) => { return Err(ASTParseError::VarOnLeftExpr)},
+
+        // If the right hand side is anything but a variable, the types and values have to match up
+        (ASTNode::Number(x), ASTNode::Number(y)) => {
+            if x != y {
+                return Err(ASTParseError::NumberMismatch(*x, *y))
+            }
+        },
+
+        (ASTNode::Identifier(x), ASTNode::Identifier(y)) => {
+            if x != y {
+                return Err(ASTParseError::IdentMismatch(x.clone(), y.clone()))
+            }
+        },
+
+        (ASTNode::Expression(x), ASTNode::Expression(y)) => {
+            if x.len() != y.len() {
+                return Err(ASTParseError::NumChildrenMismatch(x.len(), y.len()))
+            }
+
+            let n = x.len();
+            for i in 0..n {
+                copy_args_recursive(&x[i], &y[i], result)?;
+            }
+        }
+
+        (ASTNode::Function(name_x, x), ASTNode::Function(name_y, y)) => {
+            if x.len() != y.len() {
+                return Err(ASTParseError::FnTypeMismatch(x.len(), y.len()))
+            }
+
+            if name_x != name_y {
+                return Err(ASTParseError::FnNameMismatch(name_x.clone(), name_y.clone()))
+            }
+
+            let n = x.len();
+            for i in 0..n {
+                copy_args_recursive(&x[i], &y[i], result)?;
+            }
+        }
+
+        (x, y) => { return Err(ASTParseError::TypeMismatch(format!("{:?}", x).wrap(), format!("{:?}", y).wrap())) }
+    }
+
+    Ok(())
 }
 
 #[cfg(test)]
@@ -240,8 +377,100 @@ mod test {
     }
 
     #[test]
-    fn test_1() {
-        let result = splice_string("123, point(4, 5, 6), 78, 9", 0).unwrap();
-        println!("{:?}", result);
+    fn test_compile_ast1() {
+        let result = ASTNode::from_str("123, point(4, 5, 6), 78, 9", 0).unwrap();
+        let expected = ASTNode::Expression(vec![
+            ASTNode::Number(123.),
+            ASTNode::Function("point".wrap(), vec![
+                ASTNode::Expression(vec![
+                    ASTNode::Number(4.),
+                    ASTNode::Number(5.),
+                    ASTNode::Number(6.)
+                ])
+            ]),
+            ASTNode::Number(78.),
+            ASTNode::Number(9.)
+        ]);
+        assert_eq!(result, expected);
+    }
+
+    #[test]
+    fn test_compile_ast2() {
+        let result = ASTNode::from_str("F(f)(x)", 0).unwrap();
+        let expected = ASTNode::Function("F".wrap(), vec![
+            ASTNode::Identifier("f".wrap()),
+            ASTNode::Identifier("x".wrap())
+        ]);
+
+        assert_eq!(result, expected)
+    }
+
+    #[test]
+    fn test_compile_ast3() {
+        let result = ASTNode::from_str(" F  ( f )   ( x    )", 0).unwrap();
+        let expected = ASTNode::Function("F".wrap(), vec![
+            ASTNode::Identifier("f".wrap()),
+            ASTNode::Identifier("x".wrap())
+        ]);
+        assert_eq!(result, expected)
+    }
+
+    #[test]
+    #[should_panic]
+    fn test_compile_ast4() {
+        let result = ASTNode::from_str(",", 0).unwrap();
+    }
+
+    #[test]
+    fn test_compile_ast5() {
+        let result = ASTNode::from_str("forgot)to_close_right_bracket", 0);
+        let er = result.err().unwrap();
+        assert_eq!(er.error_type, ASTErrorType::ExtraRightBracket);
+        assert_eq!(er.position, 6);
+    }
+
+    #[test]
+    fn test_compile_ast6() {
+        let result = ASTNode::from_str("ex,left(bracket()", 0);
+        let er = result.err().unwrap();
+        assert_eq!(er.error_type, ASTErrorType::BracketNotClosed);
+        // Position of first left bracket
+        assert_eq!(er.position, 7);
+    }
+
+    #[test]
+    fn test_compile_ast7() {
+        let result = ASTNode::from_str("point(3, 5)", 0);
+        let expected = ASTNode::Function("point".wrap(), vec![
+            ASTNode::Expression(vec![
+                ASTNode::Number(3.),
+                ASTNode::Number(5.)
+            ])
+        ]);
+    }
+
+    #[test]
+    fn test_compile_ast8() {
+        let result = ASTNode::from_str("point({}, {})", 0);
+        let expected = ASTNode::Function("point".wrap(), vec![
+            ASTNode::Expression(vec![
+                ASTNode::Variable,
+                ASTNode::Variable
+            ])
+        ]);
+    }
+
+    #[test]
+    fn test_parse_1() {
+        let s1 = "point(3, 5)";
+        let s2 = "point({}, {})";
+        let mat = ASTNode::from_str(s2, 0).unwrap();
+        let result = copy_args_with_mat(s1, mat).unwrap();
+        assert_eq!(result[0], 3.);
+        assert_eq!(result[1], 5.);
+
+        let result_2 = copy_args(s1, s2).unwrap();
+        assert_eq!(result_2[0], 3.);
+        assert_eq!(result_2[1], 5.);
     }
 }
