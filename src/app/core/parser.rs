@@ -11,23 +11,23 @@ use lazy_static::lazy_static;
 use paste::paste;
 
 mod parser_error;
+mod async_set;
 mod ast;
+mod pattern_factory;
 
 // Included for reexport
 pub use parser_error::ParserError;
 
-/// Enum to hold different result type
-enum ResultType {
-    /// Corresponds to the arguments in {}
-    Number(f64),
-    NumberVector(Vec<f64>)
-}
+use self::async_set::AsyncSet;
+use self::pattern_factory::*;
 
-/// Regex to replace bracket expressions
-lazy_static! {
-    static ref BRACKET_REPLACE: Regex = Regex::new(r"\{\*(\d*)\}").unwrap();
+pub fn initialize_parser() {
+    init_pattern_factory();
 }
 
 pub fn parse(s: CheapString) -> Result<FigureObjectComplex, ParserError> {
+    // for pattern in PATTERNS.iter() {
+    //     if
+    // }
     todo!()
 }

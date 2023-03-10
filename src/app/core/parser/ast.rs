@@ -290,8 +290,6 @@ fn splice_fn_like_args(s: &str, offset: usize) -> Result<ASTNode, ASTError> {
         }
     }
 
-    println!("{:?}", parts);
-
     let fn_ident = (&s[0..s.find('(').unwrap()]).trim().wrap();
 
     // Add one for the stripped left bracket (
@@ -321,17 +319,18 @@ pub enum ASTParseError {
     TypeMismatch(CheapString, CheapString)
 }
 
-/// Gets the list of variables if the structure of the two strings matched, otherwise return an error
-pub fn copy_args(s: &str, mat: &str) -> Result<Vec<f64>, ASTError> {
-    let ast2 = ASTNode::from_str(mat)?;
-    return copy_args_with_mat(s, ast2);
+impl AST {
+    /// Returns a vector containing the matching pattern if the pattern matches, otherwise return None
+    /// Raises an error if there is anything wrong with the syntax
+    fn matches(&self, s: &AST) -> Result<Vec<f64>, ASTError> {
+        return copy_args_with_mat(&self.root, &s.root);
+    }
 }
 
 /// Gets the list of variables if the structure of the two strings matched, otherwise return an error
 /// This works for precompiled ASTNodes
-pub fn copy_args_with_mat(s: &str, ast2: ASTNode) -> Result<Vec<f64>, ASTError> {
+fn copy_args_with_mat(ast1: &ASTNode, ast2: &ASTNode) -> Result<Vec<f64>, ASTError> {
     let mut v = vec![];
-    let ast1 = ASTNode::from_str(s)?;
 
     copy_args_recursive(&ast1, &ast2, &mut v).map_err(|x| {
         match x {
@@ -590,31 +589,23 @@ mod test {
     fn test_parse_1() {
         let s1 = "point(3, 5)";
         let s2 = "point({}, {})";
-        let mat = ASTNode::from_str(s2).unwrap();
-        let result = copy_args_with_mat(s1, mat).unwrap();
+        let ast1 = ASTNode::from_str(s1).unwrap();
+        let ast2 = ASTNode::from_str(s2).unwrap();
+        let result = copy_args_with_mat(&ast1, &ast2).unwrap();
         assert_eq!(result[0], 3.);
         assert_eq!(result[1], 5.);
-
-        let result_2 = copy_args(s1, s2).unwrap();
-        assert_eq!(result_2[0], 3.);
-        assert_eq!(result_2[1], 5.);
     }
 
     #[test]
     fn test_parse_2() {
         let s1 = "point(3, hiya(4, (5, 6))), f((7, 8), 9)";
         let s2 = "point({}, hiya(4, ({}, 6))), f(({}, 8), {})";
-        let mat = ASTNode::from_str(s2).unwrap();
-        let result = copy_args_with_mat(s1, mat).unwrap();
+        let ast1 = ASTNode::from_str(s1).unwrap();
+        let ast2 = ASTNode::from_str(s2).unwrap();
+        let result = copy_args_with_mat(&ast1, &ast2).unwrap();
         assert_eq!(result[0], 3.);
         assert_eq!(result[1], 5.);
         assert_eq!(result[2], 7.);
         assert_eq!(result[3], 9.);
-
-        let result_2 = copy_args(s1, s2).unwrap();
-        assert_eq!(result_2[0], 3.);
-        assert_eq!(result_2[1], 5.);
-        assert_eq!(result_2[2], 7.);
-        assert_eq!(result_2[3], 9.);
     }
 }
