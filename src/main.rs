@@ -1,5 +1,3 @@
-#![allow(unused)]
-use yew::prelude::*;
 use tikzpaint_rs::App;
 
 fn main() {

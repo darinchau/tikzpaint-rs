@@ -11,7 +11,9 @@ Self: 'static {
     fn input(&self) -> usize;
     /// Returns the output dimension of this projection
     fn output(&self) -> usize;
-    /// Performs the projection. We guarantee the coordinates passed into this trait has correct number of dimensions.
+    /// Performs the projection. This might panic if the dimensions of the input coordinates is wrong
+    /// We guarantee the coordinates passed into this trait has correct number of dimensions - dimensions
+    /// checking is done inside figure object and drawable objects.
     fn call(&self, v: &Coordinates) -> Coordinates;
 
     /// Used for outputing error message
@@ -49,7 +51,7 @@ impl Clone for Projection {
 }
 
 impl Projection {
-    pub fn project(&self, v: &Coordinates) -> Result<Coordinates, DimensionError>{
+    pub fn project(&self, v: &Coordinates) -> Result<Coordinates, DimensionError> {
         if v.dims != self.input() {
             return Err(DimensionError{
                 msg: format!("Found incorrect input dimensions. Expect {}, found {}", self.input(), v.dims),
@@ -84,7 +86,7 @@ impl IsProjection for Projection {
 /// let x = Coordinates::new(vec![3, 4, 5]);
 /// let y = Coordinates::new(vec![3, 4, 5]);
 /// let proj = Identity{ dims: 3 }.wrap();
-/// let projected = proj.call(&y).unwrap();
+/// let projected = proj.call(&y);
 /// assert!(x[0] == projected[0]);
 /// assert!(x[1] == projected[1]);
 /// assert!(x[2] == projected[2]);
@@ -174,7 +176,7 @@ impl Concat {
     /// ]);
     /// let proj3 = Concat::from(proj1, proj2).unwrap();
     /// let this_is_also_proj1 = proj3.first();
-    /// let y1 = this_is_also_proj1.call(&x).unwrap();
+    /// let y1 = this_is_also_proj1.call(&x);
     /// assert!(y1 == Coordinates::new(vec![3, 4, 10]));
     /// ```
     pub fn first(&self) -> Projection {
@@ -199,7 +201,7 @@ impl Concat {
     /// ]);
     /// let proj3 = Concat::from(proj1, proj2).unwrap();
     /// let this_is_also_proj2 = proj3.second();
-    /// let y2 = this_is_also_proj2.call(&x).unwrap();
+    /// let y2 = this_is_also_proj2.call(&x);
     /// assert!(y2 == Coordinates::new(vec![13, 7]));
     /// ```
     pub fn second(&self) -> Projection {

@@ -22,6 +22,8 @@ use crate::app::core::terminal_text_renderer::{TerminalTextRenderer};
 
 use utils::util::*;
 
+use futures::join;
+
 pub fn initialize_app() {
-    initialize_parser()
+    initialize_parser();
 }
