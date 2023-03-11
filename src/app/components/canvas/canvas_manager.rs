@@ -73,6 +73,9 @@ pub enum CanvasManagerMessage {
 
     /// Means we probably have to redraw everything since the dimensions are different
     ChangedWindowSize,
+
+    /// Means something in the terminal changed
+    ChangedTerminal
 }
 
 macro_rules! mborrow {
@@ -158,7 +161,10 @@ impl CanvasManager {
                 TerminalEventType::GotText(x) => x
             };
 
-            if let Err(e) = mborrow!(f).draw_with_text(text) {
+            // Draw the thing
+            let draw_result = mborrow!(f).draw_with_text(text);
+
+            if let Err(e) = draw_result {
                 match e.error_type {
                     ParserErrorType::EmptyObject => {
                         return TerminalResetEvent {
@@ -175,6 +181,9 @@ impl CanvasManager {
                     }
                 }
             }
+
+            // Tells the figure complex to render the new object
+            link.send_message(CanvasManagerMessage::ChangedTerminal);
 
             return TerminalResetEvent {
                 event_type: TerminalResetType::Reset,
@@ -279,18 +288,20 @@ impl Component for CanvasManager {
         let fig = &*self.fig.borrow();
 
         match msg {
-            CanvasManagerMessage::ChangedFigure => {
+            CanvasManagerMessage::ChangedWindowSize => {
+                // We will defer the rerender until the resize of canvas element,
+                // which will be handled in th canvas renderer callback
+            }
+
+            // This means an event on the terminal or the sensor
+            _ => {
+                // This triggers a simple render where we put the newly drawn stuff in
                 let action = fig.render(self.csh.clone());
 
                 if let Err(e) = action {
                     log!(format!("Failed to redraw canvas. Reason: {:?}", e));
                     return false;
                 }
-            }
-
-            CanvasManagerMessage::ChangedWindowSize => {
-                // We will defer the rerender until the resize of canvas element,
-                // which will be handled in th canvas renderer callback
             }
         };
 

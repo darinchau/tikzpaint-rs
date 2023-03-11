@@ -36,6 +36,7 @@ const ABOUT_ICON: &'static str = include_str!("./headerbar/images/info.svg");
 const REDO_ICON: &'static str = include_str!("./headerbar/images/redo.svg");
 const UNDO_ICON: &'static str = include_str!("./headerbar/images/undo.svg");
 const HELP_ICON: &'static str = include_str!("./headerbar/images/help.svg");
+const LOGO: &'static str = include_str!("./headerbar/images/logo.svg");
 
 fn wrap_callback(props: &HeaderBarProps, msg: HeaderBarType) -> Callback<ButtonEvent> {
     let button_signal_emitter = (&props.cb).clone();
@@ -63,6 +64,7 @@ pub fn header_bar(props: &HeaderBarProps) -> Html {
     let redo = Html::from_html_unchecked(AttrValue::from(REDO_ICON));
     let undo = Html::from_html_unchecked(AttrValue::from(UNDO_ICON));
     let help = Html::from_html_unchecked(AttrValue::from(HELP_ICON));
+    let logo = Html::from_html_unchecked(AttrValue::from(LOGO));
 
     // Make the CSS
     let h = props.height.to_string();
@@ -73,10 +75,21 @@ pub fn header_bar(props: &HeaderBarProps) -> Html {
         });
     let h_style_name = height_style.get_class_name();
 
+    // logo css
+    let logo_style = Style::new(format!("height: {}px;", h))
+        .unwrap_or_else(|_| {
+            log!("Failed to load headbar logo height style");
+            Style::new("").unwrap()
+        });
+    let logo_style_name = height_style.get_class_name();
+
     let id = props.id;
 
     html! {
         <div id={id} class={format!("topnav {}", h_style_name)}>
+            <a class={format!("logo {}", logo_style_name)} id={"header-logo"} href={"https://github.com/darinchau/tikzpaint-rs"}>
+                {logo}
+            </a>
             <Button id={"header-about-button"} name={"about"} button_type={ButtonType::Other} cb={on_about}>
                 {about}
             </Button>

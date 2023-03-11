@@ -8,7 +8,7 @@
     top: 0;
     left: 0;
     width: 100%;
-    z-index: 999;
+    z-index: 10;
 }
 
 /* Style the links inside the navigation bar */
@@ -45,4 +45,20 @@
 
 .topnav svg {
     transform: scale(0.5);
+}
+
+/* Something about the logo itself */
+.topnav a {
+    float: left;
+    display: block;
+    color: #f2f2f2;
+    text-align: center;
+    text-decoration: none;
+    font-size: 17px;
+    border: none;
+    background: none;
+}
+
+.topnav a svg {
+    transform: scale(1);
 }

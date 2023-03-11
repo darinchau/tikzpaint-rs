@@ -19,6 +19,7 @@ use crate::figures::*;
 use crate::app::*;
 use crate::renderer::CanvasStateHandle;
 use crate::renderer::DrawError;
+use std::fmt::Debug;
 use std::rc::Rc;
 use std::cell::RefCell;
 
@@ -32,6 +33,12 @@ use std::cell::RefCell;
 pub struct FigureObjectComplex {
     pub st: CheapString,
     pub fo: Rc<RefCell<DrawableObject>>
+}
+
+impl Debug for FigureObjectComplex {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "FOC(command:{}, obj:{:?})", self.st, self.fo.borrow())
+    }
 }
 
 impl FigureObjectComplex {
@@ -77,11 +84,14 @@ impl FigureComplex {
 
     /// Draws a figure with the text prompt. Offloads the text to the parser
     pub fn draw_with_text<S1: StringLike>(&mut self, s: S1) -> Result<(), ParserError> {
+        log!(format!("Trying to draw {}", s));
         let wrapped_text = s.wrap();
-        let result = parse(wrapped_text.clone())?;
+        let foc = parse(wrapped_text.clone())?;
+
+        log!(format!("Translates to {:?}", foc));
 
         // Draw on the figure
-        if let Err(e) = self.fig.draw(result.fo.borrow().clone()) {
+        if let Err(e) = self.fig.draw(foc.fo.borrow().clone()) {
             let er_msg = format!("Dimension error: {}", e.msg);
             return Err(ParserError {
                 error_type: ParserErrorType::DimensionError,
