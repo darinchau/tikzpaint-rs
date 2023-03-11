@@ -89,7 +89,21 @@ mod test {
 
     #[test]
     fn test_parse_1() {
+        initialize_parser();
         let cmd = "point(3, 5)".wrap();
         let res = parse(cmd).unwrap();
+    }
+
+    #[test]
+    fn test_parse_2() {
+        initialize_parser();
+        let cmd = "".wrap();
+        if let Err(x) = parse(cmd) {
+            assert_eq!(x.error_type, ParserErrorType::ASTCompilationError);
+        }
+        else {
+            panic!()
+        }
+
     }
 }

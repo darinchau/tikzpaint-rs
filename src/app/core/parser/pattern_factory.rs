@@ -54,14 +54,18 @@ pub enum PatternMatchError {
 /// Performs linear search and try to match every pattern possible
 pub fn try_patterns(s: &AST) -> Result<DrawableObject, PatternMatchError> {
     for pat in &*PATTERNS.lock().unwrap() {
+        println!("{:?}", &pat.ast);
         match s.matches(&pat.ast) {
-            Ok(x) => {
+            Ok(Some(x)) => {
                 return Ok(pat.call(x));
             }
 
             // AST parse error just means the pattern does not match
             Err(e) => {
-                // return Err(PatternMatchError::ASTMatchError(format!("Error: {:?}", e)));
+                return Err(PatternMatchError::ASTMatchError(format!("Error: {:?}", e)));
+            }
+
+            Ok(None) => {
                 continue;
             }
         }

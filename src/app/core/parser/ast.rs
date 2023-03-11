@@ -5,7 +5,7 @@ use crate::figures::*;
 use lazy_static::lazy_static;
 use regex::Regex;
 use std::{fmt::{Debug, Display}, rc::Rc};
-use super::ast_matcher::copy_args_with_mat;
+use super::ast_matcher::{copy_args_with_mat, ASTParseError};
 
 /// Implementation of AST.
 pub struct AST {
@@ -88,6 +88,12 @@ impl AST {
         Ok(Self {
             root
         })
+    }
+}
+
+impl Debug for AST {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{:?}", self.root)
     }
 }
 
@@ -325,22 +331,9 @@ fn splice_fn_like_args(s: &str, offset: usize) -> Result<ASTNode, ASTError> {
 impl AST {
     /// Returns a vector containing the matching pattern if the pattern matches, otherwise return None
     /// Raises an error if there is anything wrong with the syntax
-    pub fn matches(&self, s: &AST) -> Result<Vec<f64>, ASTParseError> {
+    pub fn matches(&self, s: &AST) -> Result<Option<Vec<f64>>, ASTParseError> {
         return copy_args_with_mat(&self.root, &s.root);
     }
-}
-
-#[derive(Debug, PartialEq)]
-pub enum ASTParseError {
-    VarCannotMatchExpr,
-    VarCannotMatchFn,
-    VarOnLeftExpr,
-    NumberMismatch(f64, f64),
-    IdentMismatch(String, String),
-    NumChildrenMismatch(usize, usize),
-    FnTypeMismatch(usize, usize),
-    FnNameMismatch(String, String),
-    TypeMismatch(String, String)
 }
 
 #[cfg(test)]
@@ -537,7 +530,7 @@ mod test {
         let s2 = "point({}, {})";
         let ast1 = ASTNode::from_str(s1).unwrap();
         let ast2 = ASTNode::from_str(s2).unwrap();
-        let result = copy_args_with_mat(&ast1, &ast2).unwrap();
+        let result = copy_args_with_mat(&ast1, &ast2).unwrap().unwrap();
         assert_eq!(result[0], 3.);
         assert_eq!(result[1], 5.);
     }
@@ -548,7 +541,7 @@ mod test {
         let s2 = "point({}, hiya(4, ({}, 6))), f(({}, 8), {})";
         let ast1 = ASTNode::from_str(s1).unwrap();
         let ast2 = ASTNode::from_str(s2).unwrap();
-        let result = copy_args_with_mat(&ast1, &ast2).unwrap();
+        let result = copy_args_with_mat(&ast1, &ast2).unwrap().unwrap();
         assert_eq!(result[0], 3.);
         assert_eq!(result[1], 5.);
         assert_eq!(result[2], 7.);
