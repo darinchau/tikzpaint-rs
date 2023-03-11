@@ -29,7 +29,6 @@ pub use base::projection::WrappableAsProjection;
 pub use figureobjects::point::FOPoint;
 pub use drawables::point::Point;
 
-pub use utils::serializable::Serializable;
 pub use utils::dimension_error::DimensionError;
 pub use utils::cheap_string::CheapString;
 pub use utils::cheap_string::StringLike;

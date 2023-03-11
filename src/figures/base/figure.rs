@@ -5,18 +5,12 @@ use std::cell::RefCell;
 use crate::figures::*;
 use gloo::console::log;
 
+#[derive(PartialEq)]
 // Rerender every time we draw/project/do anything basically
 pub struct Figure {
     dims: usize,
     to_draw: Vec<DrawableObject>,
     newly_drawn: RefCell<Vec<DrawableObject>>,
-    hash: usize
-}
-
-impl PartialEq for Figure {
-    fn eq(&self, other: &Self) -> bool {
-        return self.hash == other.hash;
-    }
 }
 
 impl Figure {
@@ -25,7 +19,6 @@ impl Figure {
             dims,
             to_draw: vec![],
             newly_drawn: RefCell::new(vec![]),
-            hash: 0
         }
     }
 
@@ -40,7 +33,6 @@ impl Figure {
         let a = obj.wrap();
         self.to_draw.push(a.clone());
         self.newly_drawn.borrow_mut().push(a);
-        self.hash += 1;
         return Ok(());
     }
 

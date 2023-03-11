@@ -37,22 +37,8 @@ impl Drawable for Point {
     fn dims(&self) -> usize {
         return self.p.dims();
     }
-}
 
-impl Serializable for Point {
-    fn from_str(s: &str) -> Option<Self> {
-        if !s.starts_with("point") {
-            return None;
-        }
-
-        if let Some(x) = Coordinates::from_str(&s[5..]) {
-            return Some(Point::new(x));
-        }
-
-        return None;
-    }
-
-    fn into_str(&self) -> String {
-        format!("point{}", self.p.coordinates()[0].into_str())
+    fn repr(&self) -> String {
+        format!("point{}", self.p.coordinates()[0].to_string())
     }
 }

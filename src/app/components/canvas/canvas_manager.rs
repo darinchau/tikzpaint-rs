@@ -113,7 +113,7 @@ impl CanvasManager {
                     let (local_x, local_y) = deref_get(tf.clone()).world_to_local(x, y);
 
                     let p = Point::new(Coordinates::new(vec![local_x, local_y]));
-                    let repr = p.into_str();
+                    let repr = p.repr();
                     let pt = FigureObjectComplex::new(p.wrap(), repr);
                     mborrow!(f).draw(pt);
 

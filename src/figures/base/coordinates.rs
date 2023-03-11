@@ -5,7 +5,6 @@ use std::f64::EPSILON;
 use std::rc::Rc;
 
 use crate::figures::DimensionError;
-use crate::figures::Serializable;
 
 pub struct Coordinates {
     values: Rc<Vec<f64>>,
@@ -121,10 +120,13 @@ impl Coordinates {
 impl Display for Coordinates {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         let mut s = String::new();
-        for i in 0..self.dims {
-            let f = if i < self.dims - 1 {format!("{}, ", self[i])} else {format!("{}", self[i])};
-            s.push_str(&f);
+        for (i, v) in self.values.iter().enumerate() {
+            s.push_str(&v.to_string());
+            if i != self.dims - 1 {
+                s.push_str(", ");
+            }
         }
+
         write!(f, "({})", s)
     }
 }
@@ -278,44 +280,6 @@ impl Coordinates {
             ]),
             dims: 3
         });
-    }
-}
-
-impl Serializable for Coordinates {
-    fn into_str(&self) -> String {
-        let mut s = String::new();
-        for (i, v) in self.values.iter().enumerate() {
-            s.push_str(&v.into_str());
-            if i != self.dims - 1 {
-                s.push_str(", ");
-            }
-        }
-
-        format!("({})", s)
-    }
-
-    fn from_str(s: &str) -> Option<Self> {
-        if !s.starts_with("(") {
-            return None;
-        }
-
-        let mut split = (&s[1..s.len()-1]).split(",");
-
-        let num_dims = split
-            .next()?
-            .parse::<usize>()
-            .ok()?;
-
-        let mut v = vec![0_f64; num_dims];
-
-        for i in (0..num_dims) {
-            v.push(f64::from_str(split.next()?)?);
-        }
-
-        return Some(Self {
-            values: Rc::new(v),
-            dims: num_dims
-        })
     }
 }
 

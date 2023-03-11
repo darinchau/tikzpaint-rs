@@ -6,6 +6,7 @@ use crate::figures::*;
 use crate::renderer::*;
 use std::rc::Rc;
 use std::any::Any;
+use std::fmt::Debug;
 
 /// A plottable object is the last step before output. This is like the final state of the object to say we are about to plot stuff
 /// At this point we guarantee that we only have x coordinates and y coordinates
@@ -194,6 +195,9 @@ pub trait Drawable: 'static {
 
     /// Returns the dimension that this drawable object lives in
     fn dims(&self) -> usize;
+
+    /// This is useful for debug purposes. It should produce a unique string
+    fn repr(&self) -> String;
 }
 
 pub trait WrappableAsDrawable {
@@ -216,12 +220,19 @@ pub struct DrawableObject {
 }
 
 impl Drawable for DrawableObject {
+    /// Draws this object
     fn draw(&self) -> Vec<FigureObject> {
         return self.obj.draw();
     }
 
+    /// Return the number of dimensions this object lives in
     fn dims(&self) -> usize {
         return self.obj.dims();
+    }
+
+    /// Returns a string that uniquely represents this object. This is useful for debug only.
+    fn repr(&self) -> String {
+        return self.obj.repr();
     }
 }
 
@@ -230,5 +241,17 @@ impl Clone for DrawableObject {
         DrawableObject {
             obj: Rc::clone(&self.obj)
         }
+    }
+}
+
+impl PartialEq for DrawableObject {
+    fn eq(&self, other: &Self) -> bool {
+        return self.repr() == other.repr();
+    }
+}
+
+impl Debug for DrawableObject {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{}", self.repr())
     }
 }
