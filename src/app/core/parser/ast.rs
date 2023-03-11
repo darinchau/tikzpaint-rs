@@ -13,9 +13,9 @@ pub struct AST {
 #[derive(PartialEq)]
 pub enum ASTNode {
     Number(f64),
-    Identifier(CheapString),
+    Identifier(String),
     Expression(Vec<ASTNode>),
-    Function(CheapString, Vec<ASTNode>),
+    Function(String, Vec<ASTNode>),
 
     /// A variable purely exists for unformatting expressions using AST
     Variable
@@ -103,7 +103,7 @@ impl ASTNode {
 
         // - Is it a pure string (i.e. valid variable name in rust)
         if IS_IDENT.is_match(s) {
-            let ident = parse_ident(s, offset)?.wrap();
+            let ident = parse_ident(s, offset)?;
             return Ok(ASTNode::Identifier(ident));
         }
 
@@ -290,7 +290,7 @@ fn splice_fn_like_args(s: &str, offset: usize) -> Result<ASTNode, ASTError> {
         }
     }
 
-    let fn_ident = (&s[0..s.find('(').unwrap()]).trim().wrap();
+    let fn_ident = (&s[0..s.find('(').unwrap()]).trim().to_string();
 
     // Add one for the stripped left bracket (
     let mut cum_str_len = fn_ident.len() + 1;
@@ -312,11 +312,11 @@ pub enum ASTParseError {
     VarCannotMatchFn,
     VarOnLeftExpr,
     NumberMismatch(f64, f64),
-    IdentMismatch(CheapString, CheapString),
+    IdentMismatch(String, String),
     NumChildrenMismatch(usize, usize),
     FnTypeMismatch(usize, usize),
-    FnNameMismatch(CheapString, CheapString),
-    TypeMismatch(CheapString, CheapString)
+    FnNameMismatch(String, String),
+    TypeMismatch(String, String)
 }
 
 impl AST {
@@ -391,7 +391,7 @@ fn copy_args_recursive(s: &ASTNode, mat: &ASTNode, result: &mut Vec<f64>) -> Res
             }
         }
 
-        (x, y) => { return Err(ASTParseError::TypeMismatch(format!("{:?}", x).wrap(), format!("{:?}", y).wrap())) }
+        (x, y) => { return Err(ASTParseError::TypeMismatch(format!("{:?}", x), format!("{:?}", y))) }
     }
 
     Ok(())
@@ -444,7 +444,7 @@ mod test {
         let result = ASTNode::from_str("123, point(4, 5, 6), 78, 9").unwrap();
         let expected = ASTNode::Expression(vec![
             ASTNode::Number(123.),
-            ASTNode::Function("point".wrap(), vec![
+            ASTNode::Function("point".to_string(), vec![
                 ASTNode::Expression(vec![
                     ASTNode::Number(4.),
                     ASTNode::Number(5.),
@@ -460,9 +460,9 @@ mod test {
     #[test]
     fn test_compile_ast2() {
         let result = ASTNode::from_str("F(f)(x)").unwrap();
-        let expected = ASTNode::Function("F".wrap(), vec![
-            ASTNode::Identifier("f".wrap()),
-            ASTNode::Identifier("x".wrap())
+        let expected = ASTNode::Function("F".to_string(), vec![
+            ASTNode::Identifier("f".to_string()),
+            ASTNode::Identifier("x".to_string())
         ]);
 
         assert_eq!(result, expected)
@@ -471,9 +471,9 @@ mod test {
     #[test]
     fn test_compile_ast3() {
         let result = ASTNode::from_str(" F  ( f )   ( x    )").unwrap();
-        let expected = ASTNode::Function("F".wrap(), vec![
-            ASTNode::Identifier("f".wrap()),
-            ASTNode::Identifier("x".wrap())
+        let expected = ASTNode::Function("F".to_string(), vec![
+            ASTNode::Identifier("f".to_string()),
+            ASTNode::Identifier("x".to_string())
         ]);
         assert_eq!(result, expected)
     }
@@ -506,7 +506,7 @@ mod test {
     fn test_compile_ast7() {
         let s = "point(3, 5)";
         let result = ASTNode::from_str(s).unwrap();
-        let expected = ASTNode::Function("point".wrap(), vec![
+        let expected = ASTNode::Function("point".to_string(), vec![
             ASTNode::Expression(vec![
                 ASTNode::Number(3.),
                 ASTNode::Number(5.)
@@ -519,7 +519,7 @@ mod test {
     fn test_compile_ast8() {
         let s = "point({}, {})";
         let result = ASTNode::from_str(s).unwrap();
-        let expected = ASTNode::Function("point".wrap(), vec![
+        let expected = ASTNode::Function("point".to_string(), vec![
             ASTNode::Expression(vec![
                 ASTNode::Variable,
                 ASTNode::Variable
@@ -532,8 +532,8 @@ mod test {
     fn test_compile_ast9() {
         let s = "f((x))";
         let result = ASTNode::from_str(s).unwrap();
-        let expected = ASTNode::Function("f".wrap(), vec![
-            ASTNode::Identifier("x".wrap())
+        let expected = ASTNode::Function("f".to_string(), vec![
+            ASTNode::Identifier("x".to_string())
         ]);
         assert_eq!(result, expected);
     }
@@ -543,10 +543,10 @@ mod test {
         let s = "(x), (x, y)";
         let result = ASTNode::from_str(s).unwrap();
         let expected = ASTNode::Expression(vec![
-            ASTNode::Identifier("x".wrap()),
+            ASTNode::Identifier("x".to_string()),
             ASTNode::Expression(vec![
-                ASTNode::Identifier("x".wrap()),
-                ASTNode::Identifier("y".wrap())
+                ASTNode::Identifier("x".to_string()),
+                ASTNode::Identifier("y".to_string())
             ])
         ]);
         assert_eq!(result, expected);
@@ -558,10 +558,10 @@ mod test {
         let s = "point({}, hiya(4, ({}, 6))), f(({}, 8), {})";
         let result = ASTNode::from_str(s).unwrap();
         let expected = ASTNode::Expression(vec![
-            ASTNode::Function("point".wrap(), vec![
+            ASTNode::Function("point".to_string(), vec![
                 ASTNode::Expression(vec![
                     ASTNode::Variable,
-                    ASTNode::Function("hiya".wrap(), vec![
+                    ASTNode::Function("hiya".to_string(), vec![
                         ASTNode::Expression(vec![
                             ASTNode::Number(4.),
                             ASTNode::Expression(vec![
@@ -572,7 +572,7 @@ mod test {
                     ])
                 ])
             ]),
-            ASTNode::Function("f".wrap(), vec![
+            ASTNode::Function("f".to_string(), vec![
                 ASTNode::Expression(vec![
                     ASTNode::Expression(vec![
                         ASTNode::Variable,

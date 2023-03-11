@@ -11,14 +11,12 @@ use lazy_static::lazy_static;
 use paste::paste;
 
 mod parser_error;
-mod async_set;
 mod ast;
 mod pattern_factory;
 
 // Included for reexport
 pub use parser_error::ParserError;
 
-use self::async_set::AsyncSet;
 use self::pattern_factory::*;
 
 pub fn initialize_parser() {
