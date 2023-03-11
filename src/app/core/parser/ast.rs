@@ -1,9 +1,11 @@
 //! This file contains the definition for the abstract syntax tree of the text
+//! Construct an AST by AST::new() and try to match an AST by AST::matches()
 
 use crate::figures::*;
 use lazy_static::lazy_static;
 use regex::Regex;
-use std::fmt::Debug;
+use std::{fmt::{Debug, Display}, rc::Rc};
+use super::ast_matcher::copy_args_with_mat;
 
 /// Implementation of AST.
 pub struct AST {
@@ -48,20 +50,39 @@ pub enum ASTErrorType {
     InvalidSyntax,
 }
 
+impl Display for ASTErrorType {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        let s =  match self {
+            Self::BracketNotClosed => String::from("Found unclosed left bracket"),
+            Self::ExtraRightBracket => String::from("Found extra right bracket"),
+            Self::ParseNumberFail => String::from("Failed to parse number"),
+            Self::InvalidSyntax => String::from("Invalid syntax -")
+        };
+        write!(f, "{s}")
+    }
+}
+
 #[derive(Debug)]
 pub struct ASTError {
-    error_type: ASTErrorType,
+    pub error_type: ASTErrorType,
 
     // Position which the error occur
-    position: usize,
+    pub position: usize,
 
     // Optional message
-    message: Option<String>,
+    pub message: Option<String>,
 
-    source: &'static str,
+    pub source: &'static str,
 }
 
 impl AST {
+    /// Creates an ASTNode from a string
+    /// Offset is purely for error displaying purpopses
+    /// This does one of the following few things:
+    /// - If this is a pure string, then this is an identifier
+    /// - If this contains at least one left or right bracket, then commence the bracket search
+    /// etc. etc. Returns the ASTNode, or returns an error if the parser failed to parse the code
+
     pub fn new(s: &str) -> Result<AST, ASTError> {
         let root = ASTNode::from_str(s)?;
         Ok(Self {
@@ -77,12 +98,7 @@ lazy_static! {
 }
 
 impl ASTNode {
-    /// Creates an ASTNode from a string
-    /// Offset is purely for error displaying purpopses
-    /// This does one of the following few things:
-    /// - If this is a pure string, then this is an identifier
-    /// - If this contains at least one left or right bracket, then commence the bracket search
-    /// etc. etc. Returns the ASTNode, or returns an error if the parser failed to parse the code
+    /// This function exists for testing only
     fn from_str(st: &str) -> Result<ASTNode, ASTError> {
         return ASTNode::from_str_recursive(st, 0);
     }
@@ -306,6 +322,14 @@ fn splice_fn_like_args(s: &str, offset: usize) -> Result<ASTNode, ASTError> {
     return Ok(ASTNode::Function(fn_ident, subnodes))
 }
 
+impl AST {
+    /// Returns a vector containing the matching pattern if the pattern matches, otherwise return None
+    /// Raises an error if there is anything wrong with the syntax
+    pub fn matches(&self, s: &AST) -> Result<Vec<f64>, ASTParseError> {
+        return copy_args_with_mat(&self.root, &s.root);
+    }
+}
+
 #[derive(Debug, PartialEq)]
 pub enum ASTParseError {
     VarCannotMatchExpr,
@@ -317,84 +341,6 @@ pub enum ASTParseError {
     FnTypeMismatch(usize, usize),
     FnNameMismatch(String, String),
     TypeMismatch(String, String)
-}
-
-impl AST {
-    /// Returns a vector containing the matching pattern if the pattern matches, otherwise return None
-    /// Raises an error if there is anything wrong with the syntax
-    fn matches(&self, s: &AST) -> Result<Vec<f64>, ASTError> {
-        return copy_args_with_mat(&self.root, &s.root);
-    }
-}
-
-/// Gets the list of variables if the structure of the two strings matched, otherwise return an error
-/// This works for precompiled ASTNodes
-fn copy_args_with_mat(ast1: &ASTNode, ast2: &ASTNode) -> Result<Vec<f64>, ASTError> {
-    let mut v = vec![];
-
-    copy_args_recursive(&ast1, &ast2, &mut v).map_err(|x| {
-        match x {
-            _ => todo!()
-        }
-    });
-
-    return Ok(v);
-}
-
-fn copy_args_recursive(s: &ASTNode, mat: &ASTNode, result: &mut Vec<f64>) -> Result<(), ASTParseError> {
-    match (s, mat) {
-        (ASTNode::Number(x), ASTNode::Variable) => {result.push(x.clone())},
-
-        // If we were to write variables and identifiers this is the line we would have to change
-        (ASTNode::Identifier(x), ASTNode::Variable) => { todo!() },
-
-        (ASTNode::Expression(_), ASTNode::Variable) => { return Err(ASTParseError::VarCannotMatchExpr) },
-        (ASTNode::Function(_, _), ASTNode::Variable) => { return Err(ASTParseError::VarCannotMatchFn) },
-        (ASTNode::Variable, _) => { return Err(ASTParseError::VarOnLeftExpr)},
-
-        // If the right hand side is anything but a variable, the types and values have to match up
-        (ASTNode::Number(x), ASTNode::Number(y)) => {
-            if x != y {
-                return Err(ASTParseError::NumberMismatch(*x, *y))
-            }
-        },
-
-        (ASTNode::Identifier(x), ASTNode::Identifier(y)) => {
-            if x != y {
-                return Err(ASTParseError::IdentMismatch(x.clone(), y.clone()))
-            }
-        },
-
-        (ASTNode::Expression(x), ASTNode::Expression(y)) => {
-            if x.len() != y.len() {
-                return Err(ASTParseError::NumChildrenMismatch(x.len(), y.len()))
-            }
-
-            let n = x.len();
-            for i in 0..n {
-                copy_args_recursive(&x[i], &y[i], result)?;
-            }
-        }
-
-        (ASTNode::Function(name_x, x), ASTNode::Function(name_y, y)) => {
-            if x.len() != y.len() {
-                return Err(ASTParseError::FnTypeMismatch(x.len(), y.len()))
-            }
-
-            if name_x != name_y {
-                return Err(ASTParseError::FnNameMismatch(name_x.clone(), name_y.clone()))
-            }
-
-            let n = x.len();
-            for i in 0..n {
-                copy_args_recursive(&x[i], &y[i], result)?;
-            }
-        }
-
-        (x, y) => { return Err(ASTParseError::TypeMismatch(format!("{:?}", x), format!("{:?}", y))) }
-    }
-
-    Ok(())
 }
 
 #[cfg(test)]

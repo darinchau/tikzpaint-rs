@@ -30,8 +30,8 @@ use std::cell::RefCell;
 /// A figure object complex is a Interior mutable string, interior mutable drawable object, along with the world coordinates of this object
 /// We can look up a figure object complex by nearest points.
 pub struct FigureObjectComplex {
-    st: CheapString,
-    fo: Rc<RefCell<DrawableObject>>
+    pub st: CheapString,
+    pub fo: Rc<RefCell<DrawableObject>>
 }
 
 impl FigureObjectComplex {
@@ -82,7 +82,12 @@ impl FigureComplex {
 
         // Draw on the figure
         if let Err(e) = self.fig.draw(result.fo.borrow().clone()) {
-            return Err(ParserError::DimensionError { err: e.msg, src: e.source });
+            let er_msg = format!("Dimension error: {}", e.msg);
+            return Err(ParserError {
+                error_type: ParserErrorType::DimensionError,
+                msg: er_msg,
+                src: e.source
+            });
         }
 
         self.ttext.push(wrapped_text);

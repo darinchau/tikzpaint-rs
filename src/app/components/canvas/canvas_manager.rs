@@ -159,30 +159,20 @@ impl CanvasManager {
             };
 
             if let Err(e) = mborrow!(f).draw_with_text(text) {
-                match e {
-                    ParserError::CommandNotFound{msg} =>  {
-                        return TerminalResetEvent {
-                            event_type: TerminalResetType::StaySame,
-                            error_msg: Some(msg)
-                        }
-                    },
-
-                    ParserError::DimensionError { err, src } => {
-                        let er_msg = format!("Dimension error: {err}\n- from: {src}");
-                        return TerminalResetEvent {
-                            event_type: TerminalResetType::StaySame,
-                            error_msg: Some(er_msg)
-                        }
-                    },
-
-                    ParserError::EmptyObject => {
+                match e.error_type {
+                    ParserErrorType::EmptyObject => {
                         return TerminalResetEvent {
                             event_type: TerminalResetType::Reset,
                             error_msg: None
                         }
                     },
 
-                    _ => { todo!() }
+                    _ => {
+                        return TerminalResetEvent {
+                            event_type: TerminalResetType::StaySame,
+                            error_msg: Some(e.msg)
+                        }
+                    }
                 }
             }
 

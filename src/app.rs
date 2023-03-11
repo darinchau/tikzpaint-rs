@@ -17,7 +17,7 @@ use components::molecules::sidebar::{SideBar, SideBarEvent, SideBarType};
 use components::molecules::terminal::{Terminal, TerminalEvent, TerminalEventType, TerminalResetType, TerminalResetEvent};
 
 use crate::app::core::figure_object_complex::{FigureComplex, FigureObjectComplex};
-use crate::app::core::parser::{parse, initialize_parser, ParserError};
+use crate::app::core::parser::{parse, initialize_parser, ParserError, ParserErrorType};
 use crate::app::core::terminal_text_renderer::{TerminalTextRenderer};
 
 use utils::util::*;
