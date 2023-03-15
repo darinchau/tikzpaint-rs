@@ -1,7 +1,7 @@
-//! This file holds the base implementation of a displayable
-//! If you want to define your own layer zero struct, you must implement two traits:
-//! 1. FigureObject - an object that holds coordinates in DIMS dimension
-//! 2. Plot - The figure will transform DIM coordinates into 2 dimensions - implement Plot to turn it into everything else to plot it on screen
+//! Figure objects are the first layer of objects between tikz code and our code. They are responsible for handling projections.
+//! Plottables must translate directly into tikz code and svg code and whatever
+//! Drawable objects are high level abstractions of figure objects.
+
 use crate::figures::*;
 use crate::renderer::*;
 use std::rc::Rc;
@@ -12,7 +12,7 @@ use std::fmt::Debug;
 /// At this point we guarantee that we only have x coordinates and y coordinates
 pub trait Plottable {
     /// Define the construction of Tikz code from an object
-    fn tikzify(&self) -> TikzFigure;
+    fn tikzify(&self) -> String;
 
     /// Define the logic for which we draw the object on an Html Canvas
     fn draw_on_canvas(&self, c: CanvasStateHandle) -> Result<(), DrawError>;
@@ -35,7 +35,7 @@ impl PlottableObject {
 }
 
 impl Plottable for PlottableObject {
-    fn tikzify(&self) -> TikzFigure {
+    fn tikzify(&self) -> String {
         return self.ptr.tikzify();
     }
 
@@ -44,12 +44,6 @@ impl Plottable for PlottableObject {
     }
 }
 
-
-// ===============================================================================================================================
-// ===============================================================================================================================
-// ===============================================================================================================================
-
-/// A figure object is the first layer that unifies the different methods of drawing
 pub trait IsFigureObject: Plottable {
     /// Returns a name of this figure object. This is useful for error checking
     fn name(&self) -> &'static str;
@@ -82,7 +76,6 @@ impl<T: IsFigureObject + Sized + 'static> FO for T {
     }
 }
 
-
 /// A figure object is the base object (Layer 1 interface) between Tikz/SVG code and our code.
 /// We have an additional layer of rust bindings to SVGs and Tikz because they are hard af to draw and manipulate
 /// But Figure objects are the first layer that creates objects and is able to translate into both SVG and Tikz
@@ -104,7 +97,7 @@ pub trait WrappableAsFigureObject {
 impl<T: IsFigureObject + Sized + 'static> WrappableAsFigureObject for T {}
 
 impl Plottable for FigureObject {
-    fn tikzify(&self) -> TikzFigure {
+    fn tikzify(&self) -> String {
         self.ptr.tikzify()
     }
 
@@ -143,24 +136,7 @@ impl FigureObject {
     }
 
     /// Project this figure object to a 2-dimensional Plottable object
-    pub fn project_to_plot(&self, p: Projection) -> Result<PlottableObject, DimensionError> {
-        if p.input() != self.dims() {
-            return Err(DimensionError {
-                msg: format!("Expect the output dimension of the projection {} to be same as the dimension of the {} ({})", p.dims(), self.name, self.dims()),
-                source: "project_to_plot() from FigureObject"
-            });
-        }
-
-        if p.output() != 2 {
-            return Err(DimensionError {
-                msg: format!("Expect the output dimension of the projection {} to be 2", p.dims()),
-                source: "project_to_plot() from FigureObject"
-            });
-        }
-
-        let res = self.project(p)?;
-        let ptr = Rc::new(res) as Rc<dyn Plottable>;
-
+    pub fn plot(self) -> Result<PlottableObject, DimensionError> {
         let coords = self.coordinates().iter().map(|x| {
             if x.dims != 2 {
                 panic!("Expected two dimensional points in Plottable::coords(), found {}", x.dims);
@@ -168,6 +144,8 @@ impl FigureObject {
 
             (x[0], x[1])
         }).collect();
+
+        let ptr = Rc::new(self) as Rc<dyn Plottable>;
 
         Ok(PlottableObject { ptr, coords })
     }
@@ -179,79 +157,5 @@ impl Clone for FigureObject {
             ptr: Rc::clone(&self.ptr),
             name: self.name
         }
-    }
-}
-
-// ==================================================================================================
-// ============================== Implement wrap pattern for Drawables ==============================
-// ==================================================================================================
-
-/// Drawables are high-level implementations of Figure objects. They contain methods and stuff to implement
-/// drawing multiple figure objects in a particular way.
-/// If we look at the requirements for a Drawable object, we see we need the draw method, sized, clone, and no lifetime parameters
-pub trait Drawable: 'static {
-    /// Returns a vector of FigureObject that we will pass to the figure to draw.
-    fn draw(&self) -> Vec<FigureObject>;
-
-    /// Returns the dimension that this drawable object lives in
-    fn dims(&self) -> usize;
-
-    /// This is useful for debug purposes. It should produce a unique string
-    fn repr(&self) -> String;
-}
-
-pub trait WrappableAsDrawable {
-    /// Consumes ownership of self and returns a drawable object wrapper (a reference counted pointer to the object)
-    fn wrap(self) -> DrawableObject where Self: Sized + Drawable + Any + 'static {
-        if let Some(s) = (&self as &dyn Any).downcast_ref::<DrawableObject>() {
-            s.clone()
-        }
-        else {
-            DrawableObject { obj: Rc::new(self) }
-        }
-    }
-}
-
-impl<T: Drawable + Sized> WrappableAsDrawable for T {}
-
-/// Drawable wrappers are reference counted smart pointers to the object itself.
-pub struct DrawableObject {
-    obj: Rc<dyn Drawable>
-}
-
-impl Drawable for DrawableObject {
-    /// Draws this object
-    fn draw(&self) -> Vec<FigureObject> {
-        return self.obj.draw();
-    }
-
-    /// Return the number of dimensions this object lives in
-    fn dims(&self) -> usize {
-        return self.obj.dims();
-    }
-
-    /// Returns a string that uniquely represents this object. This is useful for debug only.
-    fn repr(&self) -> String {
-        return self.obj.repr();
-    }
-}
-
-impl Clone for DrawableObject {
-    fn clone(&self) -> Self {
-        DrawableObject {
-            obj: Rc::clone(&self.obj)
-        }
-    }
-}
-
-impl PartialEq for DrawableObject {
-    fn eq(&self, other: &Self) -> bool {
-        return self.repr() == other.repr();
-    }
-}
-
-impl Debug for DrawableObject {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, "{}", self.repr())
     }
 }

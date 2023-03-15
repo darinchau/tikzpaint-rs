@@ -5,6 +5,7 @@ use std::fmt::Display;
 use crate::figures::*;
 
 pub trait TikzShape {
+    /// This returns the command and the preamble
     fn draw(&self) -> (String, Option<String>);
 }
 
@@ -24,55 +25,33 @@ impl TikzDrawMode {
     }
 }
 
-// ===============================================================================================================
-// ===============================================================================================================
-// ===============================================================================================================
+/// Possible things to draw in a tikz path
+pub enum TikzPathType {
+    /// Straight line segment
+    Line{to: (f64, f64)},
 
-macro_rules! tikz_shape {
-    {$($name:ident: $fmt:expr, ($($x:ident), *)),*} => {
-        $ (
-            paste::item! {
-                pub struct [< Tikz $name >] {
-                    $(
-                        $x: f64,
-                    )*
-                    mode: TikzDrawMode
-                }
+    /// Quadratic Bezier Curve
+    Quadratic{control: (f64, f64), to: (f64, f64)},
 
-                impl [< Tikz $name >] {
-                    pub fn new($(
-                        $x: f64,
-                    )* mode: Option<TikzDrawMode>) -> Self {
-                        if let Some(m) = mode {
-                            return Self {$(
-                                $x,
-                            )* mode: m};
-                        }
+    /// Cubic Bezier Curve
+    Cubic{control_start: (f64, f64), control_end: (f64, f64), to: (f64, f64)},
 
-                        return Self {$(
-                            $x,
-                        )* mode: TikzDrawMode::Draw};
-                    }
-                }
+    /// Rectangle
+    Rectangle{to: (f64, f64)},
 
-                impl TikzShape for [< Tikz $name >] {
-                    fn draw(&self) -> (String, Option<String>) {
-                        let expr = format!($fmt, $(
-                            self.$x,
-                        )*);
-                        let rs = format!("{}, {};", self.mode.to_start_command(), expr);
-                        return (rs, None);
-                    }
-                }
-            }
-        )*
-    };
+    // /// This path is made up of two segments: going the x direction first then the y direction
+    // LineXY{to: (f64, f64)},
+
+    // /// This path is made up of two segments: going the y direction first then the x direction
+    // LineYX{to: (f64, f64)}
+
+    Circle{radius: f64},
 }
 
-tikz_shape!{
-    Rectangle: "({}, {}) rectangle ({}, {})", (start_x, start_y, end_x, end_y),
-    Circle: "({}, {}) circle ({})", (x, y, radius),
-    Ellipse: "({}, {}) ellipse ({} and {})", (x, y, radius_x, radius_y)
+/// Implementation of a tikz path
+pub struct TikzPath {
+    start: (f64, f64),
+    data: TikzPathType
 }
 
 

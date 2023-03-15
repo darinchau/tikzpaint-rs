@@ -74,8 +74,11 @@ impl Figure {
         for x in vecd {
             for obj in x.draw() {
                 let new_p = fig_proj.clone();
-                let new_obj = (&obj).project_to_plot(new_p)?;
-                let ret_s = f(new_obj);
+
+                // This projects everything to 2 dimensions. Early return error if some figure object is of wrong dimension
+                let new_obj = (&obj).project(new_p)?;
+                let plottable = new_obj.plot()?;
+                let ret_s = f(plottable);
                 v.push(ret_s);
             }
         }
@@ -117,7 +120,7 @@ impl Figure {
         for s in self.load_all(|x| {
             return x.tikzify();
         }, proj)? {
-            let res = s.output();
+            let res = s;
             st.push_str("\t");
             st.push_str(&res);
             st.push_str("\n");

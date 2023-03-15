@@ -1,4 +1,4 @@
-//! Implementation of a node. Our convention is to begin the name of every direct implementation of figure object
+//! Implementation of a single point. Our convention is to begin the name of every direct implementation of figure object
 //! with the prefix FO-
 
 use crate::figures::*;
@@ -7,23 +7,20 @@ use crate::renderer::*;
 #[derive(Clone)]
 pub struct FOPoint {
     point: Coordinates,
-    content: String,
 }
 
 impl FOPoint {
     pub fn new(x: Coordinates) -> Self {
         Self {
             point: x,
-            content: String::from("")
         }
     }
 }
 
 impl Plottable for FOPoint {
-    fn tikzify(&self) -> TikzFigure {
+    fn tikzify(&self) -> String {
         let (x, y) = (self.point[0], self.point[1]);
-        TikzFigure::new()
-            .draw(TikzCircle::new(x, y, 2., None))
+        todo!()
     }
 
     fn draw_on_canvas(&self, c: CanvasStateHandle) -> Result<(), DrawError> {
@@ -44,7 +41,6 @@ impl IsFigureObject for FOPoint {
         let new_p = p.project(&self.point).unwrap();
         let new_self = Self {
             point: new_p,
-            content: self.content.clone()
         };
 
         return new_self;

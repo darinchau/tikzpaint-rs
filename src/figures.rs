@@ -13,9 +13,9 @@ pub use base::figureobject::IsFigureObject;
 pub use base::figureobject::FigureObject;
 pub use base::figureobject::WrappableAsFigureObject;
 
-pub use base::figureobject::Drawable;
-pub use base::figureobject::DrawableObject;
-pub use base::figureobject::WrappableAsDrawable;
+pub use base::drawable::Drawable;
+pub use base::drawable::DrawableObject;
+pub use base::drawable::WrappableAsDrawable;
 
 pub use base::figure::Figure;
 
