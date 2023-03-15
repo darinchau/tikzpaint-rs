@@ -85,47 +85,4 @@ impl Figure {
 
         return Ok(v);
     }
-
-    /// Output Tikz is a wrapper around the load method, also the core of Tikz code
-    /// generation. The function object we pass is x -> x.tikzify(), and we collect
-    /// everything into one string.
-    ///
-    /// Example:
-    /// ```
-    /// use tikzpaint_rs::figures::{Figure, Identity};
-    /// use tikzpaint_rs::figures::WrappableAsProjection;
-    ///
-    /// let fig = Figure::new(2);
-    /// let st = fig.output_tikz(Identity{dims: 2}).unwrap();
-    /// assert_eq!(st, "\\begin{tikzpicture}\n\\end{tikzpicture}")
-    /// ```
-    pub fn output_tikz<P: IsProjection + Any + 'static>(&self, projection: P) -> Result<String, DimensionError> {
-        // If p is not a projection make it a projection, otherwise leave it as is.
-        let proj = projection.wrap();
-
-        if self.dims != proj.input() {
-            return Err(DimensionError{
-                msg: format!("The input dimension of the projection ({}) should be the same as the figure dimension ({})", proj.input(), self.dims),
-                source: "output_tikz() from Figure"
-            })
-        }
-        if proj.output() != 2 {
-            return Err(DimensionError{
-                msg: format!("The output dimension of the projection ({}) should be 2", proj.dims()),
-                source: "output_tikz() from Figure"
-            })
-        }
-
-        let mut st = String::from("\\begin{tikzpicture}\n");
-        for s in self.load_all(|x| {
-            return x.tikzify();
-        }, proj)? {
-            let res = s;
-            st.push_str("\t");
-            st.push_str(&res);
-            st.push_str("\n");
-        }
-        st.push_str("\\end{tikzpicture}");
-        return Ok(st);
-    }
 }
