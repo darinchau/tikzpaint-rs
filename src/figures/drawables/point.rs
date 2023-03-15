@@ -39,6 +39,6 @@ impl Drawable for Point {
     }
 
     fn repr(&self) -> String {
-        format!("point{}", self.p.coordinates()[0].to_string())
+        format!("point{}", self.p.point().to_string())
     }
 }

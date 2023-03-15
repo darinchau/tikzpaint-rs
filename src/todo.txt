@@ -1,3 +1,5 @@
+Finish the implementation of the path figure object
+Add plot options
 Add more different commands
 Allow matching arbitrary expressions
 Allow user defined variables

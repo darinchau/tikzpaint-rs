@@ -22,16 +22,6 @@ pub trait Plottable {
 /// Plottable object is like a universal wrapper around a Plottable
 pub struct PlottableObject {
     ptr: Rc<dyn Plottable>,
-    coords: Vec<(f64, f64)>
-}
-
-impl PlottableObject {
-    /// Gets and returns the coordinates as an array
-    /// This is like extra promise that we only have x and y coordinates
-    /// For the default implementation, this function will panic if the resulting coordinates are not all in 2 dimensions
-    pub fn coordinates(&self) -> &Vec<(f64, f64)> {
-        return &self.coords;
-    }
 }
 
 impl Plottable for PlottableObject {
@@ -48,16 +38,8 @@ pub trait IsFigureObject: Plottable {
     /// Returns a name of this figure object. This is useful for error checking
     fn name(&self) -> &'static str;
 
-    /// Returns a list of the coordinates of the figure object
-    fn coordinates(&self) -> Vec<Coordinates>;
-
     /// Returns the ambient dimensions this object lives in.
     fn dims(&self) -> usize;
-
-    /// Returns the number of coordinates this thing is composed of
-    fn len(&self) -> usize {
-        return self.coordinates().len();
-    }
 
     /// Project every coordinate in self according to the projection p
     /// We guarantee the projection object passed to you has dimensions (self.dims() -> _)
@@ -107,19 +89,9 @@ impl Plottable for FigureObject {
 }
 
 impl FigureObject {
-    /// Returns a list of the coordinates of the figure object
-    pub fn coordinates(&self) -> Vec<Coordinates> {
-        return self.ptr.coordinates();
-    }
-
     /// Returns the ambient dimensions this object lives in.
     pub fn dims(&self) -> usize {
         return self.ptr.dims();
-    }
-
-    /// Returns the number of coordinates this thing is composed of
-    pub fn len(&self) -> usize {
-        return self.ptr.coordinates().len();
     }
 
     /// Project every coordinate in self according to the projection p
@@ -137,17 +109,9 @@ impl FigureObject {
 
     /// Project this figure object to a 2-dimensional Plottable object
     pub fn plot(self) -> Result<PlottableObject, DimensionError> {
-        let coords = self.coordinates().iter().map(|x| {
-            if x.dims != 2 {
-                panic!("Expected two dimensional points in Plottable::coords(), found {}", x.dims);
-            }
-
-            (x[0], x[1])
-        }).collect();
-
-        let ptr = Rc::new(self) as Rc<dyn Plottable>;
-
-        Ok(PlottableObject { ptr, coords })
+        // This is a hacky way to perform dimension checking but this reduces duplicate code in implementations
+        let new_self = self.project(Identity{dims: 2}.wrap())?;
+        Ok(PlottableObject { ptr: Rc::new(new_self) as Rc<dyn Plottable> })
     }
 }
 

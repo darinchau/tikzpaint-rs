@@ -10,6 +10,12 @@ pub struct FOPoint {
 }
 
 impl FOPoint {
+    pub fn point(&self) -> Coordinates {
+        return self.point.clone();
+    }
+}
+
+impl FOPoint {
     pub fn new(x: Coordinates) -> Self {
         Self {
             point: x,
@@ -29,14 +35,6 @@ impl Plottable for FOPoint {
 }
 
 impl IsFigureObject for FOPoint {
-    fn coordinates(&self) -> Vec<Coordinates> {
-        vec![self.point.clone()]
-    }
-
-    fn len(&self) -> usize {
-        1
-    }
-
     fn project(&self, p: Projection) -> Self {
         let new_p = p.project(&self.point).unwrap();
         let new_self = Self {

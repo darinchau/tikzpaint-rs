@@ -11,9 +11,9 @@ Self: 'static {
     fn input(&self) -> usize;
     /// Returns the output dimension of this projection
     fn output(&self) -> usize;
-    /// Performs the projection. This might panic if the dimensions of the input coordinates is wrong
-    /// We guarantee the coordinates passed into this trait has correct number of dimensions - dimensions
-    /// checking is done inside figure object and drawable objects.
+    /// Performs the projection. We guarantee the coordinates passed into this trait has correct number of dimensions
+    /// dimensions checking is done inside figure object and drawable objects. This might panic if the dimensions of the input coordinates is wrong
+    /// so just a warning for someone using projections in raw
     fn call(&self, v: &Coordinates) -> Coordinates;
 
     /// Used for outputing error message

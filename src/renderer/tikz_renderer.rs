@@ -25,36 +25,6 @@ impl TikzDrawMode {
     }
 }
 
-/// Possible things to draw in a tikz path
-pub enum TikzPathType {
-    /// Straight line segment
-    Line{to: (f64, f64)},
-
-    /// Quadratic Bezier Curve
-    Quadratic{control: (f64, f64), to: (f64, f64)},
-
-    /// Cubic Bezier Curve
-    Cubic{control_start: (f64, f64), control_end: (f64, f64), to: (f64, f64)},
-
-    /// Rectangle
-    Rectangle{to: (f64, f64)},
-
-    // /// This path is made up of two segments: going the x direction first then the y direction
-    // LineXY{to: (f64, f64)},
-
-    // /// This path is made up of two segments: going the y direction first then the x direction
-    // LineYX{to: (f64, f64)}
-
-    Circle{radius: f64},
-}
-
-/// Implementation of a tikz path
-pub struct TikzPath {
-    start: (f64, f64),
-    data: TikzPathType
-}
-
-
 pub struct TikzFigure {
     data: Vec<Rc<dyn TikzShape>>
 }
