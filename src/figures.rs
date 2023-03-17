@@ -3,9 +3,6 @@ mod figureobjects;
 mod drawables;
 mod utils;
 
-pub use base::coordinates::Coordinates;
-
-
 pub use base::figureobject::*;
 
 pub use base::drawable::Drawable;

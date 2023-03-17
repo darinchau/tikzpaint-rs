@@ -1,6 +1,7 @@
 //! This is a direct implementation of a point out of the FOPoint
 
 use crate::figures::*;
+use crate::renderer::*;
 
 /// The implementation of a node with no contents.
 ///

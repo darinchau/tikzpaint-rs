@@ -32,7 +32,7 @@ impl FigureObject for FOPoint {
     }
 
     fn draw_on_canvas(&self, c: HtmlCanvas) -> Result<(), DrawError> {
-        return c.draw_circle((self.point[0], self.point[1]), 2.);
+        return c.draw_circle(self.point, 2.);
     }
 
     fn repr(&self) -> String {

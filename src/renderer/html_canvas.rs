@@ -12,6 +12,7 @@ use yew::prelude::*;
 use gloo::console::log;
 
 use crate::renderer::*;
+use crate::renderer::*;
 
 const PI: f64 = 3.1415926535897932384626433;
 
@@ -106,9 +107,8 @@ impl HtmlCanvas {
 
     /// For all the draw methods, returns () if the result is successfully drawn,
     /// otherwise returns an Err
-    pub fn draw_circle(&self, local_coords: (f64, f64), radius: f64) -> Result<(), DrawError> {
-        let (a, b) = local_coords;
-        let (x, y) = self.tf.borrow().local_to_client(a, b);
+    pub fn draw_circle(&self, local_coords: Coordinates, radius: f64) -> Result<(), DrawError> {
+        let (x, y) = self.tf.borrow().local_to_client(local_coords);
         let c = self.context()?;
         c.begin_path();
         c.arc(x, y, radius, 0., PI * 2.).cvt()?;
@@ -119,12 +119,9 @@ impl HtmlCanvas {
 
     /// For all the draw methods, returns () if the result is successfully drawn,
     /// otherwise returns an Err
-    pub fn draw_rectangles(&self, corner_1: (f64, f64), corner_2: (f64, f64)) -> Result<(), DrawError> {
-        let (a, b) = corner_1;
-        let (c, d) = corner_2;
-
-        let (t, l) = self.tf.borrow().local_to_client(a, b);
-        let (b, r) = self.tf.borrow().local_to_client(c, d);
+    pub fn draw_rectangles(&self, corner_1: Coordinates, corner_2: Coordinates) -> Result<(), DrawError> {
+        let (t, l) = self.tf.borrow().local_to_client(corner_1);
+        let (b, r) = self.tf.borrow().local_to_client(corner_2);
 
         let bot = max(t, b);
         let top = min(t, b);
@@ -138,12 +135,9 @@ impl HtmlCanvas {
 
     /// For all the draw methods, returns () if the result is successfully drawn,
     /// otherwise returns an Err
-    pub fn draw_line(&self, start: (f64, f64), end: (f64, f64)) -> Result<(), DrawError> {
-        let (a, b) = start;
-        let (c, d) = end;
-
-        let (x1, y1) = self.tf.borrow().local_to_client(a, b);
-        let (x2, y2) = self.tf.borrow().local_to_client(c, d);
+    pub fn draw_line(&self, start: Coordinates, end: Coordinates) -> Result<(), DrawError> {
+        let (x1, y1) = self.tf.borrow().local_to_client(start);
+        let (x2, y2) = self.tf.borrow().local_to_client(end);
 
         let ctx = self.context()?;
 
@@ -155,7 +149,7 @@ impl HtmlCanvas {
     }
 
     /// An optimized version for drawing many lines to approximate a curve
-    pub fn draw_curve(&self, coords: Vec<(f64, f64)>) -> Result<(), DrawError> {
+    pub fn draw_curve(&self, coords: Vec<Coordinates>) -> Result<(), DrawError> {
         todo!()
     }
 

@@ -8,6 +8,8 @@ use std::cell::RefCell;
 use std::rc::Rc;
 use gloo::console::log;
 
+use crate::renderer::*;
+
 #[derive(PartialEq, Clone, Copy)]
 pub struct Transform {
     /// Screen size according to inner_width and inner_height
@@ -83,29 +85,29 @@ impl Transform {
     }
 
     /// Transforms screen_x and screen_y into local_coordinates
-    pub fn world_to_local(&self, x: i32, y: i32) -> (f64, f64) {
+    pub fn world_to_local(&self, x: i32, y: i32) -> Coordinates {
         // Satisfies x = origin + a * scale_x;
         let a = (x - self.origin.0) as f64/self.scale;
         let b = (self.origin.1 - y) as f64/self.scale;
-        (a, b)
+        Coordinates::new(a, b)
     }
 
     #[inline(always)]
-    fn ltw(&self, a: f64, b: f64) -> (f64, f64) {
-        let x = self.origin.0 as f64 + a * self.scale;
-        let y = self.origin.1 as f64 - b * self.scale;
+    fn ltw(&self, v: Coordinates) -> (f64, f64) {
+        let x = self.origin.0 as f64 + v[0] * self.scale;
+        let y = self.origin.1 as f64 - v[1] * self.scale;
         (x, y)
     }
 
     /// Transforms local x and y to screen_x, screen_y
-    pub fn local_to_world(&self, a: f64, b: f64) -> (i32, i32) {
-        let (x, y) = self.ltw(a, b);
+    pub fn local_to_world(&self, v: Coordinates) -> (i32, i32) {
+        let (x, y) = self.ltw(v);
         (x.round() as i32, y.round() as i32)
     }
 
     /// Transforms local x and y to client coordinates (render coordinates)
-    pub fn local_to_client(&self, a: f64, b: f64) -> (f64, f64) {
-        let (x, y) = self.ltw(a, b);
+    pub fn local_to_client(&self, v: Coordinates) -> (f64, f64) {
+        let (x, y) = self.ltw(v);
 
         // Subtract the margins
         let (top, _, bottom, left) = self.margins;
@@ -136,7 +138,7 @@ mod tests {
         // y: 60 + 536/2
 
         assert_eq!(tf.origin, (603, 328));
-        assert_eq!(tf.local_to_world(0., 0.), (603, 328));
+        assert_eq!(tf.local_to_world(Coordinates::new(0., 0.)), (603, 328));
     }
 
     #[test]
@@ -156,14 +158,14 @@ mod tests {
 
         // Position of (0, 1) on screen: origin + 1 * scale * (0, 1)
 
-        assert_eq!(tf.local_to_world(0., 1.), (603, 228));
-        assert_eq!(tf.world_to_local(603, 228), (0., 1.));
+        assert_eq!(tf.local_to_world(Coordinates::new(0., 1.)), (603, 228));
+        assert_eq!(tf.world_to_local(603, 228), Coordinates::new(0., 1.));
 
-        assert_eq!(tf.local_to_world(0., 2.), (603, 128));
-        assert_eq!(tf.world_to_local(603, 128), (0., 2.));
+        assert_eq!(tf.local_to_world(Coordinates::new(0., 2.)), (603, 128));
+        assert_eq!(tf.world_to_local(603, 128), Coordinates::new(0., 2.));
 
-        assert_eq!(tf.local_to_world(0., -1.), (603, 428));
-        assert_eq!(tf.world_to_local(603, 428), (0., -1.));
+        assert_eq!(tf.local_to_world(Coordinates::new(0., -1.)), (603, 428));
+        assert_eq!(tf.world_to_local(603, 428), Coordinates::new(0., -1.));
     }
 
     #[test]
@@ -172,13 +174,13 @@ mod tests {
         tf.set_screen_size(1016, 746);
         tf.set_scale(100.);
 
-        assert_eq!(tf.local_to_world(1., 0.), (703, 328));
-        assert_eq!(tf.world_to_local(703, 328), (1., 0.));
+        assert_eq!(tf.local_to_world(Coordinates::new(1., 0.)), (703, 328));
+        assert_eq!(tf.world_to_local(703, 328), Coordinates::new(1., 0.));
 
-        assert_eq!(tf.local_to_world(2., 0.), (803, 328));
-        assert_eq!(tf.world_to_local(803, 328), (2., 0.));
+        assert_eq!(tf.local_to_world(Coordinates::new(2., 0.)), (803, 328));
+        assert_eq!(tf.world_to_local(803, 328), Coordinates::new(2., 0.));
 
-        assert_eq!(tf.local_to_world(-1., 0.), (503, 328));
-        assert_eq!(tf.world_to_local(503, 328), (-1., 0.));
+        assert_eq!(tf.local_to_world(Coordinates::new(-1., 0.)), (503, 328));
+        assert_eq!(tf.world_to_local(503, 328), Coordinates::new(-1., 0.));
     }
 }

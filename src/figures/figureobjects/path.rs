@@ -63,15 +63,13 @@ pub enum PathType {
 impl PathType {
     /// Takes canvas and coordinates. Return new pen coordinates
     fn draw_on_canvas(&self, c: HtmlCanvas, coord: Coordinates) -> Result<Coordinates, DrawError> {
-        let (x, y) = (coord[0], coord[1]);
-
         let z = match self {
             PathType::Arc { start_angle, end_angle, x_radius, y_radius } => {
                 todo!()
             },
 
             PathType::Circle { radius } => {
-                c.draw_circle((x, y), *radius)?;
+                c.draw_circle(coord, *radius)?;
                 coord
             },
 
@@ -80,22 +78,21 @@ impl PathType {
             },
 
             PathType::Line { to } => {
-                let (x2, y2) = (to[0], to[1]);
-                c.draw_line((x, y), (x2, y2))?;
+                c.draw_line(coord, *to)?;
                 *to
             },
 
             PathType::LineXY { to } => {
-                let (x2, y2) = (to[0], to[1]);
-                c.draw_line((x, y), (x2, y))?;
-                c.draw_line((x2, y), (x2, y2))?;
+                let intermediate = Coordinates::new(to[0], coord[1]);
+                c.draw_line(coord, intermediate)?;
+                c.draw_line(intermediate, *to)?;
                 *to
             },
 
             PathType::LineYX { to } => {
-                let (x2, y2) = (to[0], to[1]);
-                c.draw_line((x, y), (x, y2))?;
-                c.draw_line((x, y2), (x2, y2))?;
+                let intermediate = Coordinates::new(coord[0], to[1]);
+                c.draw_line(coord, intermediate)?;
+                c.draw_line(intermediate, *to)?;
                 *to
             },
 
@@ -104,8 +101,7 @@ impl PathType {
             },
 
             PathType::Rectangle { to } => {
-                let (x2, y2) = (to[0], to[1]);
-                c.draw_rectangles((x, y), (x2, y2));
+                c.draw_rectangles(coord, *to);
                 *to
             }
         };
