@@ -23,33 +23,17 @@ impl FOPoint {
     }
 }
 
-impl Plottable for FOPoint {
+impl FigureObject for FOPoint {
     fn tikzify(&self) -> String {
         let (x, y) = (self.point[0], self.point[1]);
         todo!()
     }
 
-    fn draw_on_canvas(&self, c: CanvasStateHandle) -> Result<(), DrawError> {
+    fn draw_on_canvas(&self, c: HtmlCanvas) -> Result<(), DrawError> {
         return c.draw_circle((self.point[0], self.point[1]), 2.);
     }
-}
 
-impl IsFigureObject for FOPoint {
-    fn project(&self, p: Projection) -> Self {
-        let new_p = p.project(&self.point).unwrap();
-        let new_self = Self {
-            point: new_p,
-        };
-
-        return new_self;
-    }
-
-    fn dims(&self) -> usize {
-        return self.point.dims;
-    }
-
-    fn name(&self) -> &'static str {
-        "point"
+    fn repr(&self) -> String {
+        todo!()
     }
 }
-

@@ -9,17 +9,14 @@ use std::fmt::Debug;
 
 /// High level implementations of figure objects. They are insulated from migration hell
 pub trait Drawable: 'static {
-    /// Returns a vector of FigureObject that we will pass to the figure to draw.
-    fn draw(&self) -> Vec<FigureObject>;
-
-    /// Returns the dimension that this drawable object lives in
-    fn dims(&self) -> usize;
+    /// Returns a vector of PlottableObject that we will pass to the figure to draw.
+    fn draw(&self) -> Vec<PlottableObject>;
 
     /// This is useful for debug purposes. It should produce a unique string
     fn repr(&self) -> String;
 }
 
-pub trait WrappableAsDrawable {
+pub trait WrapAsDrawable {
     /// Consumes ownership of self and returns a drawable object wrapper (a reference counted pointer to the object)
     fn wrap(self) -> DrawableObject where Self: Sized + Drawable + Any + 'static {
         if let Some(s) = (&self as &dyn Any).downcast_ref::<DrawableObject>() {
@@ -31,7 +28,7 @@ pub trait WrappableAsDrawable {
     }
 }
 
-impl<T: Drawable + Sized> WrappableAsDrawable for T {}
+impl<T: Sized + Drawable + Any + 'static> WrapAsDrawable for T {}
 
 /// Drawable wrappers are reference counted smart pointers to the object itself.
 pub struct DrawableObject {
@@ -40,13 +37,8 @@ pub struct DrawableObject {
 
 impl Drawable for DrawableObject {
     /// Draws this object
-    fn draw(&self) -> Vec<FigureObject> {
+    fn draw(&self) -> Vec<PlottableObject> {
         return self.obj.draw();
-    }
-
-    /// Return the number of dimensions this object lives in
-    fn dims(&self) -> usize {
-        return self.obj.dims();
     }
 
     /// Returns a string that uniquely represents this object. This is useful for debug only.

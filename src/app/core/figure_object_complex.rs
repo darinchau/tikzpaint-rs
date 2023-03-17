@@ -17,7 +17,7 @@ use gloo::console::log;
 
 use crate::figures::*;
 use crate::app::*;
-use crate::renderer::CanvasStateHandle;
+use crate::renderer::HtmlCanvas;
 use crate::renderer::DrawError;
 use std::fmt::Debug;
 use std::rc::Rc;
@@ -63,23 +63,16 @@ impl FigureComplex {
     pub fn new(dims: usize) -> Self {
         FigureComplex {
             basis: vec![],
-            fig: Figure::new(dims),
+            fig: Figure::new(),
             ttext: TerminalTextRenderer::new(),
             newly_drawn: vec![]
         }
     }
 
     /// Draws a figure object complex on self. Returns nothing if it is successful, and bubbles an error if the dimension is wrong.
-    pub fn draw(&mut self, d: FigureObjectComplex) -> Result<(), DimensionError> {
-        let obj = self.fig.draw(d.fo.borrow().clone());
-        if let Err(x) = obj {
-            return Err(x);
-        }
-
-        let text_copy = d.st.clone();
-        self.ttext.push(text_copy);
-
-        return Ok(());
+    pub fn draw(&mut self, d: FigureObjectComplex) {
+        self.fig.draw(d.fo.borrow().clone());
+        self.ttext.push(d.st.clone());
     }
 
     /// Draws a figure with the text prompt. Offloads the text to the parser
@@ -91,16 +84,9 @@ impl FigureComplex {
         log!(format!("Translates to {:?}", foc));
 
         // Draw on the figure
-        if let Err(e) = self.fig.draw(foc.fo.borrow().clone()) {
-            let er_msg = format!("Dimension error: {}", e.msg);
-            return Err(ParserError {
-                error_type: ParserErrorType::DimensionError,
-                msg: er_msg,
-                src: e.source
-            });
-        }
-
+        self.fig.draw(foc.fo.borrow().clone());
         self.ttext.push(wrapped_text);
+
         Ok(())
     }
 
@@ -111,10 +97,10 @@ impl FigureComplex {
     }
 
     /// Renders the canvas
-    pub fn render(&self, canvas: CanvasStateHandle) -> Result<(), DrawError> {
+    pub fn render(&self, canvas: HtmlCanvas) -> Result<(), DrawError> {
         let y = self.fig.render(|x| {
             x.draw_on_canvas(canvas.clone())
-        }, Identity{dims: 2}).unwrap();
+        });
 
         for x in y {
             x?;
@@ -124,11 +110,11 @@ impl FigureComplex {
     }
 
     /// Rerenders the canvas
-    pub fn rerender(&self, canvas: CanvasStateHandle) -> Result<(), DrawError> {
+    pub fn rerender(&self, canvas: HtmlCanvas) -> Result<(), DrawError> {
         log!("Redrawing canvas");
         let y = self.fig.load_all(|x| {
             x.draw_on_canvas(canvas.clone())
-        }, Identity{dims: 2}).unwrap();
+        });
 
         for x in y {
             x?;

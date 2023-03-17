@@ -1,3 +1,5 @@
+//! Handler for drawing on HTML canvas
+
 use std::cell::RefCell;
 use std::error::Error;
 use std::fmt::Debug;
@@ -40,7 +42,7 @@ impl ConvertError for Result<(), JsValue> {
 /// Make a canvas state handle to not screw up Rc Refcell patterns
 /// Every draw will consist of a translation according to the transform,
 #[derive(PartialEq, Clone)]
-pub struct CanvasStateHandle {
+pub struct HtmlCanvas {
     ptr: Rc<RefCell<NodeRef>>,
     tf: Rc<RefCell<Transform>>
 }
@@ -57,7 +59,7 @@ macro_rules! fig {
     };
 }
 
-impl CanvasStateHandle {
+impl HtmlCanvas {
     pub fn new(t: Rc<RefCell<Transform>>) -> Self {
         Self {
             ptr: Rc::new(RefCell::new(NodeRef::default())),

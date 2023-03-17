@@ -30,12 +30,8 @@ impl Point {
 }
 
 impl Drawable for Point {
-    fn draw(&self) -> Vec<FigureObject> {
+    fn draw(&self) -> Vec<PlottableObject> {
         return vec![self.p.clone().wrap()];
-    }
-
-    fn dims(&self) -> usize {
-        return self.p.dims();
     }
 
     fn repr(&self) -> String {

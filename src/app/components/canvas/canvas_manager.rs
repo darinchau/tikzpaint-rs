@@ -89,7 +89,7 @@ macro_rules! mborrow {
 pub struct CanvasManager {
     fig: Rc<RefCell<FigureComplex>>,
     tf: Rc<RefCell<Transform>>,
-    csh: CanvasStateHandle,
+    csh: HtmlCanvas,
 }
 
 impl CanvasManager {
@@ -115,7 +115,7 @@ impl CanvasManager {
 
                     let (local_x, local_y) = deref_get(tf.clone()).world_to_local(x, y);
 
-                    let p = Point::new(Coordinates::new(vec![local_x, local_y]));
+                    let p = Point::new(Coordinates::new(local_x, local_y));
                     let repr = p.repr();
                     let pt = FigureObjectComplex::new(p.wrap(), repr);
                     mborrow!(f).draw(pt);
@@ -280,7 +280,7 @@ impl Component for CanvasManager {
         CanvasManager {
             fig: Rc::new(RefCell::new(fig_state)),
             tf: t_ptr.clone(),
-            csh: CanvasStateHandle::new(t_ptr.clone())
+            csh: HtmlCanvas::new(t_ptr.clone())
         }
     }
 

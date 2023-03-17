@@ -31,26 +31,16 @@ pub struct Path {
     data: PathType
 }
 
-impl Plottable for Path {
-    fn draw_on_canvas(&self, c: CanvasStateHandle) -> Result<(), DrawError> {
+impl FigureObject for Path {
+    fn draw_on_canvas(&self, c: HtmlCanvas) -> Result<(), DrawError> {
+        todo!()
+    }
+
+    fn repr(&self) -> String {
         todo!()
     }
 
     fn tikzify(&self) -> String {
-        todo!()
-    }
-}
-
-impl IsFigureObject for Path {
-    fn dims(&self) -> usize {
-        return self.start.dims;
-    }
-
-    fn name(&self) -> &'static str {
-        "path"
-    }
-
-    fn project(&self, p: Projection) -> Self where Self: Sized {
         todo!()
     }
 }

@@ -24,7 +24,7 @@ pub enum CanvasRendererEvent {
 pub struct CanvasRendererProps {
     pub tf: Transform,
     pub id: AttrValue,
-    pub canvas: CanvasStateHandle,
+    pub canvas: HtmlCanvas,
     pub cb: Callback<CanvasRendererEvent>
 }
 

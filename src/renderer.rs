@@ -1,9 +1,9 @@
 mod tikz_renderer;
 mod util;
-mod canvas_state_handle;
+mod html_canvas;
 mod transform;
 
 pub use tikz_renderer::*;
 pub use util::*;
-pub use canvas_state_handle::*;
+pub use html_canvas::*;
 pub use transform::*;

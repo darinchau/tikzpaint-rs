@@ -42,7 +42,7 @@ macro_rules! pattern {
 
 /// This function is called on initialization of the parser. Put patterns here.
 pub fn init_pattern_factory() {
-    pattern!("point({}, {})", |v| Point::new(Coordinates::new(v)));
+    pattern!("point({}, {})", |v: Vec<f64>| Point::new(Coordinates::new(v[0], v[1])));
 }
 
 #[derive(PartialEq, Clone, Debug)]
