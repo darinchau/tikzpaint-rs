@@ -16,7 +16,7 @@ pub trait FigureObject {
     fn repr(&self) -> String;
 
     /// Define the construction of Tikz code from an object
-    fn tikzify(&self) -> String;
+    fn tikzify(&self) -> (String, Option<String>);
 
     /// Define the logic for which we draw the object on an Html Canvas
     fn draw_on_canvas(&self, c: HtmlCanvas) -> Result<(), DrawError>;
@@ -29,7 +29,7 @@ pub struct PlottableObject {
 }
 
 impl FigureObject for PlottableObject {
-    fn tikzify(&self) -> String {
+    fn tikzify(&self) -> (String, Option<String>) {
         return self.ptr.tikzify();
     }
 
@@ -39,6 +39,12 @@ impl FigureObject for PlottableObject {
 
     fn repr(&self) -> String {
         return self.ptr.repr();
+    }
+}
+
+impl TikzShape for PlottableObject {
+    fn draw(&self) -> (String, Option<String>) {
+        return self.tikzify();
     }
 }
 

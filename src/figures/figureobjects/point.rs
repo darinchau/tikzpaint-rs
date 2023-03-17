@@ -24,9 +24,11 @@ impl FOPoint {
 }
 
 impl FigureObject for FOPoint {
-    fn tikzify(&self) -> String {
-        let (x, y) = (self.point[0], self.point[1]);
-        todo!()
+    fn tikzify(&self) -> (String, Option<String>) {
+        return (
+            format!("\\filldraw[color=black] {} circle (0.8pt);", self.point),
+            None
+        )
     }
 
     fn draw_on_canvas(&self, c: HtmlCanvas) -> Result<(), DrawError> {
@@ -34,6 +36,6 @@ impl FigureObject for FOPoint {
     }
 
     fn repr(&self) -> String {
-        todo!()
+        format!("point{}", self.point)
     }
 }

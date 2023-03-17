@@ -39,6 +39,14 @@ impl ConvertError for Result<(), JsValue> {
     }
 }
 
+fn max(a: f64, b: f64) -> f64 {
+    if a > b {a} else {b}
+}
+
+fn min(a: f64, b: f64) -> f64 {
+    if a < b {a} else {b}
+}
+
 /// Make a canvas state handle to not screw up Rc Refcell patterns
 /// Every draw will consist of a translation according to the transform,
 #[derive(PartialEq, Clone)]
@@ -111,24 +119,44 @@ impl HtmlCanvas {
 
     /// For all the draw methods, returns () if the result is successfully drawn,
     /// otherwise returns an Err
-    pub fn draw_rectangle(&self, topleft: (f64, f64), bottomright: (f64, f64)) -> Result<(), DrawError> {
-        let (a, b) = topleft;
-        let (c, d) = bottomright;
-
-        if a <= c {
-            return Err(DrawError { msg: format!("Top coordinates ({a}) is smaller than bottom coordinates ({c})") });
-        }
-
-        if b >= d {
-            return Err(DrawError { msg: format!("Left coordinates ({b}) is bigger than right coordinates ({d})") });
-        }
+    pub fn draw_rectangles(&self, corner_1: (f64, f64), corner_2: (f64, f64)) -> Result<(), DrawError> {
+        let (a, b) = corner_1;
+        let (c, d) = corner_2;
 
         let (t, l) = self.tf.borrow().local_to_client(a, b);
         let (b, r) = self.tf.borrow().local_to_client(c, d);
 
-        self.context()?.fill_rect(t, l, b - t, r - l);
+        let bot = max(t, b);
+        let top = min(t, b);
+        let lef = min(l, r);
+        let rig = max(l, r);
+
+        self.context()?.fill_rect(top, lef, bot - top, rig - lef);
 
         Ok(())
+    }
+
+    /// For all the draw methods, returns () if the result is successfully drawn,
+    /// otherwise returns an Err
+    pub fn draw_line(&self, start: (f64, f64), end: (f64, f64)) -> Result<(), DrawError> {
+        let (a, b) = start;
+        let (c, d) = end;
+
+        let (x1, y1) = self.tf.borrow().local_to_client(a, b);
+        let (x2, y2) = self.tf.borrow().local_to_client(c, d);
+
+        let ctx = self.context()?;
+
+        ctx.move_to(x1, y1);
+        ctx.line_to(x2, y2);
+        ctx.stroke();
+
+        Ok(())
+    }
+
+    /// An optimized version for drawing many lines to approximate a curve
+    pub fn draw_curve(&self, coords: Vec<(f64, f64)>) -> Result<(), DrawError> {
+        todo!()
     }
 
     /// Resets all the contents on the canvas
