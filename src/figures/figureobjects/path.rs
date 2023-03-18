@@ -1,5 +1,6 @@
 //! A path created with the tikz path as reference. It will be capable of drawing circles and so many more stuff
 use crate::figures::*;
+use crate::core::*;
 
 pub enum PathDrawStyle {
     /// Draws the line

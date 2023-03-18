@@ -13,6 +13,7 @@ use web_sys::HtmlElement;
 use wasm_bindgen::JsCast;
 use crate::figures::*;
 use crate::app::*;
+use crate::core::*;
 use std::cell::RefCell;
 use std::rc::Rc;
 
@@ -220,6 +221,7 @@ impl CanvasManager {
 
             let (x, y) = (event.new_size.x, event.new_size.y);
             mborrow!(tf).set_screen_size(x, y);
+            log!(format!("Setting origin to {}, {}", x, y));
 
             // Trigger rerender
             link.send_message(CanvasManagerMessage::ChangedWindowSize);
@@ -286,6 +288,7 @@ impl Component for CanvasManager {
         // Make a blanket initialization first due to where use_state can be called
         let mut tf = Transform::new(h, w, th);
         tf.set_screen_size(x, y);
+        log!(format!("Initializing origin to {}, {}", x, y));
 
         let t_ptr = Rc::new(RefCell::new(tf));
 

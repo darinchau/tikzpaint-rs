@@ -11,7 +11,7 @@ use web_sys::{window, HtmlCanvasElement, CanvasRenderingContext2d};
 use yew::prelude::*;
 use gloo::console::log;
 
-use crate::figures::*;
+use crate::core::{Transform, Coordinates};
 
 const PI: f64 = 3.1415926535897932384626433;
 

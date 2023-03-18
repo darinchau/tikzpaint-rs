@@ -1,5 +1,6 @@
 //! An arbitrary curve approximated by a straight line
 use crate::figures::*;
+use crate::core::*;
 
 pub struct Curve {
     p: FOPoint,

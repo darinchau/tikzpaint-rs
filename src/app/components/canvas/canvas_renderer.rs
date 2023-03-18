@@ -13,6 +13,7 @@ use gloo::console::log;
 
 use crate::app::*;
 use crate::figures::*;
+use crate::core::*;
 
 #[derive(Clone, Copy)]
 pub enum CanvasRendererEvent {

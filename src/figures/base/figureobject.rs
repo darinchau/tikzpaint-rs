@@ -3,6 +3,7 @@
 //! Drawable objects are high level abstractions of figure objects.
 
 use crate::figures::*;
+use crate::core::*;
 use std::rc::Rc;
 use std::any::Any;
 use std::fmt::Debug;

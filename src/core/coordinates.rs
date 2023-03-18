@@ -3,7 +3,7 @@ use std::hash::Hash;
 use std::ops::{Add, Sub, Mul, Div, Index};
 use std::rc::Rc;
 
-use crate::figures::DimensionError;
+use crate::core::DimensionError;
 
 const EPS: f64 = 1e-10;
 

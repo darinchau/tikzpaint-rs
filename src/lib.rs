@@ -4,6 +4,7 @@
 
 pub mod figures;
 pub mod app;
+pub mod core;
 use yew::prelude::*;
 use app::{CanvasManager, initialize_app};
 use yew::suspense::{Suspension, SuspensionResult};

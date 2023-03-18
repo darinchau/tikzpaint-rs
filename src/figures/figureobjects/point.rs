@@ -2,6 +2,7 @@
 //! with the prefix FO-
 
 use crate::figures::*;
+use crate::core::*;
 
 #[derive(Clone)]
 pub struct FOPoint {

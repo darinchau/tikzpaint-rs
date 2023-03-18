@@ -3,6 +3,8 @@
 
 use crate::figures::*;
 use crate::app::*;
+use crate::core::*;
+
 use std::rc::Rc;
 use std::cell::RefCell;
 

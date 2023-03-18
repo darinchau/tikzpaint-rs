@@ -6,9 +6,8 @@
 
 use std::cell::RefCell;
 use std::rc::Rc;
-use gloo::console::log;
 
-use crate::figures::*;
+use crate::core::{Coordinates};
 
 #[derive(PartialEq, Clone, Copy)]
 pub struct Transform {
@@ -55,9 +54,9 @@ impl Transform {
         let ox = left + x/2;
         let oy = top + y/2;
         self.origin = (ox, oy);
-        log!(format!("Setting origin to {}, {}", ox, oy));
     }
 
+    /// Recalculates the screen size
     pub fn set_screen_size(&mut self, x: i32, y: i32) {
         self.screen_size = (x, y);
         self.reset_origin();

@@ -4,6 +4,7 @@ use std::rc::Rc;
 use std::{cell::RefCell, sync::Mutex};
 use super::ast::{ASTNode, AST};
 use crate::figures::*;
+use crate::core::*;
 
 type PatternConstructor = Box<dyn Fn(Vec<f64>) -> DrawableObject + Send + Sync>;
 
