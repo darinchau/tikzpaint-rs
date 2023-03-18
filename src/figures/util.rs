@@ -1,5 +1,13 @@
 //! Defines Tikz and SVG property field
 
+pub mod dimension_error;
+pub mod cheap_string;
+pub mod coord_transform;
+
+pub use dimension_error::DimensionError;
+pub use cheap_string::*;
+pub use coord_transform::*;
+
 pub trait IsTikzPropertyField {
     fn to_tikz(&self) -> (String, Option<String>);
 }

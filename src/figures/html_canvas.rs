@@ -11,8 +11,7 @@ use web_sys::{window, HtmlCanvasElement, CanvasRenderingContext2d};
 use yew::prelude::*;
 use gloo::console::log;
 
-use crate::renderer::*;
-use crate::renderer::*;
+use crate::figures::*;
 
 const PI: f64 = 3.1415926535897932384626433;
 
@@ -77,7 +76,7 @@ impl HtmlCanvas {
     }
 
     pub fn set_canvas(&self, nr: NodeRef) {
-        log!("Initializing canvas");
+        log!("Binding canvas to handle");
         fm!(self) = nr;
     }
 
@@ -150,7 +149,26 @@ impl HtmlCanvas {
 
     /// An optimized version for drawing many lines to approximate a curve
     pub fn draw_curve(&self, coords: Vec<Coordinates>) -> Result<(), DrawError> {
-        todo!()
+        if coords.len() == 0 {
+            return Err(DrawError{
+                msg: format!("The number of coordinates cannot be 0"),
+            });
+        }
+
+        let ctx = self.context()?;
+
+        let (x1, y1) = self.tf.borrow().local_to_client(coords[0]);
+        ctx.move_to(x1, y1);
+
+
+        for coord in coords[1..].iter() {
+            let (x2, y2) = self.tf.borrow().local_to_client(*coord);
+            ctx.line_to(x2, y2);
+        }
+
+        ctx.stroke();
+
+        Ok(())
     }
 
     /// Resets all the contents on the canvas

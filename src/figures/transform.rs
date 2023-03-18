@@ -8,7 +8,7 @@ use std::cell::RefCell;
 use std::rc::Rc;
 use gloo::console::log;
 
-use crate::renderer::*;
+use crate::figures::*;
 
 #[derive(PartialEq, Clone, Copy)]
 pub struct Transform {

@@ -17,8 +17,6 @@ use gloo::console::log;
 
 use crate::figures::*;
 use crate::app::*;
-use crate::renderer::HtmlCanvas;
-use crate::renderer::DrawError;
 use std::fmt::Debug;
 use std::rc::Rc;
 use std::cell::RefCell;
@@ -60,7 +58,7 @@ pub struct FigureComplex {
 }
 
 impl FigureComplex {
-    pub fn new(dims: usize) -> Self {
+    pub fn new() -> Self {
         FigureComplex {
             basis: vec![],
             fig: Figure::new(),

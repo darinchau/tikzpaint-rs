@@ -1,6 +1,7 @@
 //! Implementation of the top header bar of the app
 
 use std::error::Error;
+use std::fmt::Display;
 
 use gloo::console::log;
 use stylist::Style;
@@ -9,24 +10,40 @@ use yew::prelude::*;
 use web_sys::HtmlElement;
 use wasm_bindgen::JsCast;
 use crate::app::{Button, ButtonType, ButtonEvent};
+use paste::paste;
 
-#[derive(Clone, Copy, PartialEq, Debug)]
-pub enum SideBarType {
-    Point,
-    Test,
-    Test2,
-    Test3,
+macro_rules! sidebar_type {
+    ($($x:ident), *) => {
+        #[derive(Clone, Copy, PartialEq, Debug)]
+        pub enum SideBarType {
+            $ (
+                $x,
+            )*
+        }
+
+        impl SideBarType {
+            pub fn to_name(&self) -> &'static str {
+                match &self {
+                    $ (
+                        SideBarType::$x => stringify!($x),
+                    ) *
+
+                    _ => "Unknown"
+                }
+            }
+        }
+    };
 }
 
-impl SideBarType {
-    pub fn to_name(&self) -> &'static str {
-        match &self {
-            SideBarType::Point => "Point",
-            SideBarType::Test => "Test",
-            SideBarType::Test2 => "Test2",
-            SideBarType::Test3 => "Test3",
-            _ => "Unknown"
-        }
+sidebar_type! {
+    Point,
+    Path,
+    Move
+}
+
+impl Display for SideBarType {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{}", self.to_name())
     }
 }
 
@@ -51,14 +68,13 @@ pub struct SideBarProps {
 fn wrap_callback(props: &SideBarProps, msg: SideBarType) -> Callback<ButtonEvent> {
     let button_signal_emitter = (&props.cb).clone();
 
-    let on_button = Callback::from(move |event: ButtonEvent| {
+    Callback::from(move |event: ButtonEvent| {
         let t = button_signal_emitter.emit(SideBarEvent {
             button_type: msg,
             event
         });
         return t;
-    });
-    return on_button;
+    })
 }
 
 fn sidebar_css(props: &SideBarProps) -> String {
@@ -97,12 +113,6 @@ fn wrap_button(props: &SideBarProps, button_type: SideBarType) -> Html {
 
 #[function_component(SideBar)]
 pub fn side_bar(props: &SideBarProps) -> Html {
-    //Load the callbacks
-    let on_point = wrap_callback(props, SideBarType::Point);
-    let on_test1 = wrap_callback(props, SideBarType::Test);
-    let on_test2 = wrap_callback(props, SideBarType::Test2);
-    let on_test3 = wrap_callback(props, SideBarType::Test3);
-
     // Make the CSS
     let h_style_name = sidebar_css(props);
 
@@ -110,14 +120,15 @@ pub fn side_bar(props: &SideBarProps) -> Html {
 
     html! {
         <div id={props.id} class={format!("sidebar {}", h_style_name)}>
+            <div class={"grid"}>
+                {wrap_button(props, SideBarType::Move)}
+            </div>
             <div class={"sidebar-label"}>
-                {"Some label"}
+                {"Objects"}
             </div>
             <div class={"grid"}>
                 {wrap_button(props, SideBarType::Point)}
-                {wrap_button(props, SideBarType::Test)}
-                {wrap_button(props, SideBarType::Test2)}
-                {wrap_button(props, SideBarType::Test3)}
+                {wrap_button(props, SideBarType::Path)}
             </div>
         </div>
     }

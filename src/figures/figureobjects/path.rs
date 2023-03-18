@@ -1,5 +1,4 @@
 //! A path created with the tikz path as reference. It will be capable of drawing circles and so many more stuff
-use crate::renderer::*;
 use crate::figures::*;
 
 pub enum PathDrawStyle {
@@ -137,13 +136,13 @@ impl PathType {
 }
 
 /// Implementation of a tikz path
-pub struct Path {
+pub struct FOPath {
     style: PathDrawStyle,
     start: Coordinates,
     data: Vec<PathType>
 }
 
-impl FigureObject for Path {
+impl FigureObject for FOPath {
     fn draw_on_canvas(&self, c: HtmlCanvas) -> Result<(), DrawError> {
         let mut current_coords = self.start;
 

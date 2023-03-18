@@ -4,7 +4,6 @@
 
 pub mod figures;
 pub mod app;
-pub mod renderer;
 use yew::prelude::*;
 use app::{CanvasManager, initialize_app};
 use yew::suspense::{Suspension, SuspensionResult};
@@ -14,7 +13,7 @@ use yew::suspense::{Suspension, SuspensionResult};
 pub fn app() -> Html {
     html!{
         <>
-            <CanvasManager header_height={60} side_bar_width={190} terminal_height={150} figure_dims={2} debug={true}/>
+            <CanvasManager header_height={60} side_bar_width={190} terminal_height={150} debug={true}/>
         </>
     }
 }

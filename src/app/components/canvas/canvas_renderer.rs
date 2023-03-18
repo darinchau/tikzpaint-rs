@@ -12,7 +12,7 @@ use yew::prelude::*;
 use gloo::console::log;
 
 use crate::app::*;
-use crate::renderer::*;
+use crate::figures::*;
 
 #[derive(Clone, Copy)]
 pub enum CanvasRendererEvent {

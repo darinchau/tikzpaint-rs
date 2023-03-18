@@ -11,7 +11,7 @@ use yew::prelude::*;
 use web_sys::HtmlElement;
 use wasm_bindgen::JsCast;
 use crate::app::*;
-use crate::figures::{CheapString, StringLike};
+use crate::figures::*;
 
 // ================================================================================================================== //
 // ========================================== Implementation of a terminal ========================================== //

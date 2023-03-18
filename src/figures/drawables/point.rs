@@ -1,23 +1,8 @@
 //! This is a direct implementation of a point out of the FOPoint
 
 use crate::figures::*;
-use crate::renderer::*;
 
-/// The implementation of a node with no contents.
-///
-/// Example
-/// ```
-/// use tikzpaint_rs::figures::*;
-/// let p1 = Point::new(Coordinates::new(vec![2, 3]));
-/// let p2 = Point::new(Coordinates::new(vec![4, 5]));
-/// let mut fig = Figure::new(2);
-/// fig.draw(p1);
-/// fig.draw(p2);
-/// let result = fig.output_tikz(Identity{dims: 2}).unwrap();
-/// let expect = "\\begin{tikzpicture}\n\t\\node[] at (2, 3) {}\n\t\\node[] at (4, 5) {}\n\\end{tikzpicture}";
-/// assert_eq!(result, expect);
-/// ```
-
+/// A point without anything else
 pub struct Point {
     p: FOPoint,
 }

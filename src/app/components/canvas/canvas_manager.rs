@@ -13,7 +13,6 @@ use web_sys::HtmlElement;
 use wasm_bindgen::JsCast;
 use crate::figures::*;
 use crate::app::*;
-use crate::renderer::*;
 use std::cell::RefCell;
 use std::rc::Rc;
 
@@ -27,7 +26,6 @@ pub struct CanvasManagerProps {
     pub header_height: usize,
     pub side_bar_width: usize,
     pub terminal_height: usize,
-    pub figure_dims: usize,
     pub debug: Option<bool>
 }
 
@@ -88,19 +86,28 @@ macro_rules! mborrow {
 /// i.e. the header bar, the side bar, and the canvas
 pub struct CanvasManager {
     fig: Rc<RefCell<FigureComplex>>,
-    tf: Rc<RefCell<Transform>>,
-    csh: HtmlCanvas,
+    transform: Rc<RefCell<Transform>>,
+    canvas: HtmlCanvas,
+    sidebar_state: Rc<RefCell<SideBarType>>,
+}
+
+fn create_figure_object(v: Coordinates) -> FigureObjectComplex {
+    let p = Point::new(v);
+    let repr = p.repr();
+    let pt = FigureObjectComplex::new(p.wrap(), repr);
+    return pt;
 }
 
 impl CanvasManager {
     fn get_canvas_sensor_cb(&self, props: &CanvasManagerProps, ctx: &Context<Self>) -> Callback<CanvasSensorEvent> {
         let f = self.fig.clone();
-        let tf = self.tf.clone();
+        let tf = self.transform.clone();
         let link = ctx.link().clone();
         let debug_mode = is_true(props.debug);
 
         // Handles main canvas sensor events
         let canvas_sensor_cb = Callback::from(move |event: CanvasSensorEvent| {
+            let (x, y) = event.mouse_click_event.screen_pos;
             // Suppose we need to spawn a point. We need do perform the following:
             // 1. Get the coordinates of the click. Transform that into the canvas coordinates
             // 2. Spawn a point at the canvas coordinates
@@ -115,12 +122,16 @@ impl CanvasManager {
 
                     let v = deref_get(tf.clone()).world_to_local(x, y);
 
-                    let p = Point::new(v);
-                    let repr = p.repr();
-                    let pt = FigureObjectComplex::new(p.wrap(), repr);
-                    mborrow!(f).draw(pt);
+                    let foc = create_figure_object(v);
+                    mborrow!(f).draw(foc);
 
                     link.send_message(CanvasManagerMessage::ChangedFigure);
+                },
+
+                MouseClickType::MouseMove => {
+                    if event.dragging {
+                        log!(format!("Dragging at position: {x}, {y}"))
+                    }
                 },
 
                 _ => ()
@@ -140,8 +151,10 @@ impl CanvasManager {
     }
 
     fn get_sidebar_cb(&self, props: &CanvasManagerProps, ctx: &Context<Self>) -> Callback<SideBarEvent> {
+        let sbs = self.sidebar_state.clone();
         let sidebar_cb = Callback::from(move |event: SideBarEvent| {
-
+            mborrow!(sbs) = event.button_type;
+            log!(format!("Setting side bar type to {:?}", event.button_type));
         });
 
         return sidebar_cb;
@@ -149,7 +162,7 @@ impl CanvasManager {
 
     fn get_terminal_cb(&self, props: &CanvasManagerProps, ctx: &Context<Self>) -> Callback<TerminalEvent, TerminalResetEvent> {
         let f = self.fig.clone();
-        let tf = self.tf.clone();
+        let tf = self.transform.clone();
         let link = ctx.link().clone();
         let debug_mode = is_true(props.debug);
 
@@ -197,7 +210,7 @@ impl CanvasManager {
     fn get_resize_cb(&self, props: &CanvasManagerProps, ctx: &Context<Self>) -> Callback<WindowResizeEvent> {
         let debug_mode = is_true(props.debug);
 
-        let tf = self.tf.clone();
+        let tf = self.transform.clone();
         let link = ctx.link().clone();
 
         let resize_cb = Callback::from(move |event: WindowResizeEvent| {
@@ -217,11 +230,11 @@ impl CanvasManager {
 
     fn get_renderer_cb(&self, props: &CanvasManagerProps, ctx: &Context<Self>) -> Callback<CanvasRendererEvent> {
         let f = self.fig.clone();
-        let tf = self.tf.clone();
+        let tf = self.transform.clone();
         let link = ctx.link().clone();
         let debug_mode = is_true(props.debug);
 
-        let csh = self.csh.clone();
+        let csh = self.canvas.clone();
 
         // Handles main canvas sensor events
         let canvas_sensor_cb = Callback::from(move |event: CanvasRendererEvent| {
@@ -257,8 +270,7 @@ impl Component for CanvasManager {
         let th = props.terminal_height;
 
         // Process figure and callbacks
-        let dims = props.figure_dims;
-        let fig_state = FigureComplex::new(dims);
+        let fig_state = FigureComplex::new();
 
         // We need to keep track of the world coordinates and figure coordinates conversion.
         // so we basically need to keep track of the transforms of this world. We need to keep track of
@@ -277,10 +289,14 @@ impl Component for CanvasManager {
 
         let t_ptr = Rc::new(RefCell::new(tf));
 
+        // Make a new sidebar state
+        let sidebar_state = SideBarType::Move;
+
         CanvasManager {
             fig: Rc::new(RefCell::new(fig_state)),
-            tf: t_ptr.clone(),
-            csh: HtmlCanvas::new(t_ptr.clone())
+            transform: t_ptr.clone(),
+            canvas: HtmlCanvas::new(t_ptr.clone()),
+            sidebar_state: Rc::new(RefCell::new(sidebar_state))
         }
     }
 
@@ -296,7 +312,7 @@ impl Component for CanvasManager {
             // This means an event on the terminal or the sensor
             _ => {
                 // This triggers a simple render where we put the newly drawn stuff in
-                let action = fig.render(self.csh.clone());
+                let action = fig.render(self.canvas.clone());
 
                 if let Err(e) = action {
                     log!(format!("Failed to redraw canvas. Reason: {:?}", e));
@@ -333,11 +349,11 @@ impl Component for CanvasManager {
         let fg = &*(*self.fig).borrow();
         let terminal_text = fg.unpack_html();
 
-        let other_t = *(*self.tf.clone()).borrow();
+        let other_t = *(*self.transform.clone()).borrow();
 
-        let tf = *(*self.tf.clone()).borrow();
+        let tf = *(*self.transform.clone()).borrow();
 
-        let csh = self.csh.clone();
+        let csh = self.canvas.clone();
 
         html!{
             <>
