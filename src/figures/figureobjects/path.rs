@@ -179,6 +179,8 @@ impl FigureObject for FOPath {
             s.push_str(&x.repr());
         }
 
+        s.push_str(";");
+
         return (s, None)
     }
 }

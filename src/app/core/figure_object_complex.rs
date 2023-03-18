@@ -56,7 +56,6 @@ pub struct FigureComplex {
     basis: Vec<FigureObjectComplex>,
     fig: Figure,
     ttext: TerminalTextRenderer,
-    newly_drawn: Vec<FigureObjectComplex>,
 }
 
 impl FigureComplex {
@@ -65,11 +64,10 @@ impl FigureComplex {
             basis: vec![],
             fig: Figure::new(),
             ttext: TerminalTextRenderer::new(),
-            newly_drawn: vec![]
         }
     }
 
-    /// Draws a figure object complex on self. Returns nothing if it is successful, and bubbles an error if the dimension is wrong.
+    /// Draws a figure object complex on self.
     pub fn draw(&mut self, d: FigureObjectComplex) {
         self.fig.draw(d.fo.borrow().clone());
         self.ttext.push(d.st.clone());

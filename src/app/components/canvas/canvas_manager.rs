@@ -89,14 +89,7 @@ pub struct CanvasManager {
     fig: Rc<RefCell<FigureComplex>>,
     transform: Rc<RefCell<Transform>>,
     canvas: HtmlCanvas,
-    sidebar_state: Rc<RefCell<SideBarType>>,
-}
-
-fn create_figure_object(v: Coordinates) -> FigureObjectComplex {
-    let p = Point::new(v);
-    let repr = p.repr();
-    let pt = FigureObjectComplex::new(p.wrap(), repr);
-    return pt;
+    draw_handler: Rc<RefCell<DrawHandler>>,
 }
 
 impl CanvasManager {
@@ -104,6 +97,7 @@ impl CanvasManager {
         let f = self.fig.clone();
         let tf = self.transform.clone();
         let link = ctx.link().clone();
+        let dh = self.draw_handler.clone();
         let debug_mode = is_true(props.debug);
 
         // Handles main canvas sensor events
@@ -123,7 +117,7 @@ impl CanvasManager {
 
                     let v = deref_get(tf.clone()).world_to_local(x, y);
 
-                    let foc = create_figure_object(v);
+                    let foc = dh.borrow().get_foc(v);
                     mborrow!(f).draw(foc);
 
                     link.send_message(CanvasManagerMessage::ChangedFigure);
@@ -152,9 +146,9 @@ impl CanvasManager {
     }
 
     fn get_sidebar_cb(&self, props: &CanvasManagerProps, ctx: &Context<Self>) -> Callback<SideBarEvent> {
-        let sbs = self.sidebar_state.clone();
+        let dh = self.draw_handler.clone();
         let sidebar_cb = Callback::from(move |event: SideBarEvent| {
-            mborrow!(sbs) = event.button_type;
+            mborrow!(dh).set_state(event.button_type);
             log!(format!("Setting side bar type to {:?}", event.button_type));
         });
 
@@ -292,14 +286,11 @@ impl Component for CanvasManager {
 
         let t_ptr = Rc::new(RefCell::new(tf));
 
-        // Make a new sidebar state
-        let sidebar_state = SideBarType::Move;
-
         CanvasManager {
             fig: Rc::new(RefCell::new(fig_state)),
             transform: t_ptr.clone(),
             canvas: HtmlCanvas::new(t_ptr.clone()),
-            sidebar_state: Rc::new(RefCell::new(sidebar_state))
+            draw_handler: Rc::new(RefCell::new(DrawHandler::new()))
         }
     }
 

@@ -12,4 +12,7 @@ pub use base::drawable::WrapAsDrawable;
 pub use base::figure::Figure;
 
 pub use figureobjects::point::FOPoint;
+pub use figureobjects::line::FOLine;
+
 pub use drawables::point::Point;
+
