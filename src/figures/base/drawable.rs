@@ -6,9 +6,10 @@ use crate::figures::*;
 use std::any::Any;
 use std::rc::Rc;
 use std::fmt::Debug;
+use std::sync::Arc;
 
 /// High level implementations of figure objects. They are insulated from migration hell
-pub trait Drawable: 'static {
+pub trait Drawable: Send + Sync + 'static {
     /// Returns a vector of PlottableObject that we will pass to the figure to draw.
     fn draw(&self) -> Vec<PlottableObject>;
 
@@ -23,7 +24,7 @@ pub trait WrapAsDrawable {
             s.clone()
         }
         else {
-            DrawableObject { obj: Rc::new(self) }
+            DrawableObject { obj: Arc::new(self) }
         }
     }
 }
@@ -32,7 +33,7 @@ impl<T: Sized + Drawable + Any + 'static> WrapAsDrawable for T {}
 
 /// Drawable wrappers are reference counted smart pointers to the object itself.
 pub struct DrawableObject {
-    obj: Rc<dyn Drawable>
+    obj: Arc<dyn Drawable>
 }
 
 impl Drawable for DrawableObject {
@@ -50,7 +51,7 @@ impl Drawable for DrawableObject {
 impl Clone for DrawableObject {
     fn clone(&self) -> Self {
         DrawableObject {
-            obj: Rc::clone(&self.obj)
+            obj: Arc::clone(&self.obj)
         }
     }
 }

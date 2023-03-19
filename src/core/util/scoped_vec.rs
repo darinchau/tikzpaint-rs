@@ -1,41 +1,38 @@
 //! A scoped vector is a wrapper around a shallow-copied vector with various helper methods
 //! If this vector is closed, then an iter loops through the whole thing
 //! but if this is not closed, only loop through the new elements
-
-use std::borrow::BorrowMut;
-use std::cell::RefCell;
-use std::rc::{Rc, Weak};
-use std::slice::Iter;
+use std::sync::{Arc, Mutex};
 use std::fmt::Debug;
 
-use gloo::console::log;
-
 pub struct ScopedVec<T: Copy + Debug> {
-    ptr: Rc<RefCell<ScopedVecInner<T>>>
+    ptr: Arc<Mutex<ScopedVecInner<T>>>
 }
 
 impl<T: Copy + Debug> ScopedVec<T> {
     pub fn new() -> Self {
         Self {
-            ptr: Rc::new(RefCell::new(ScopedVecInner::new()))
+            ptr: Arc::new(Mutex::new(ScopedVecInner::new()))
         }
     }
 
     pub fn push(&mut self, t: T) {
-        (*(*self.ptr).borrow_mut()).push(t);
+        let mut inner = self.ptr.lock().unwrap();
+        inner.push(t);
     }
 
     pub fn close(&mut self) {
-        (*(*self.ptr).borrow_mut()).close();
+        let mut inner = self.ptr.lock().unwrap();
+        inner.close();
     }
 
     pub fn iter(&self) -> ScopedVecIterator<T> {
-        (*(*self.ptr).borrow_mut()).iter()
+        let mut inner = self.ptr.lock().unwrap();
+        inner.iter()
     }
 
     pub fn shallow_copy(&self) -> Self {
         Self {
-            ptr: Rc::clone(&self.ptr)
+            ptr: Arc::clone(&self.ptr)
         }
     }
 }

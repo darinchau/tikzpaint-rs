@@ -2,57 +2,14 @@
 //! Construct an AST by AST::new() and try to match an AST by AST::matches()
 
 use crate::figures::*;
+use crate::core::calc::*;
 use lazy_static::lazy_static;
 use regex::Regex;
 use std::{fmt::{Debug, Display}, rc::Rc};
 use super::ast_matcher::{copy_args_with_mat, ASTParseError};
 use paste::paste;
 
-macro_rules! variable_types {
-    ($($x:ident, $t:ty), *) => {
-        paste!{
-            #[derive(Clone, Copy, PartialEq)]
-            /// A variable is like a macro - it is something that contains a single ASTNode
-            pub enum VariableType {
-                $(
-                    $x,
-                ) *
-            }
-
-            impl Debug for VariableType {
-                fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-                    match self {
-                        $ (
-                            VariableType::$x => write!(f, stringify!($x)),
-                        ) *
-                    }
-                }
-            }
-
-            #[derive(Clone, PartialEq)]
-            pub enum VariablePayload {
-                $(
-                    $x($t),
-                ) *
-            }
-
-            impl Debug for VariablePayload {
-                fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-                    match self {
-                        $ (
-                            VariablePayload::$x(y) => write!(f, "Var({:?})", y),
-                        ) *
-                    }
-                }
-            }
-        }
-    };
-}
-
-variable_types!{
-    Number, f64,
-    NumberTuple, Vec<f64>
-}
+use super::variables::*;
 
 /// Implementation of AST.
 pub struct AST {
@@ -450,7 +407,7 @@ fn splice_fn_like_args(s: &str, offset: usize) -> Result<ASTNode, ASTError> {
 impl AST {
     /// Returns a vector containing the matching pattern if the pattern matches, otherwise return None
     /// Raises an error if there is anything wrong with the syntax
-    pub fn matches(&self, s: &AST) -> Result<Option<Vec<f64>>, ASTParseError> {
+    pub fn matches(&self, s: &AST) -> Result<Option<Vec<VariablePayload>>, ASTParseError> {
         return copy_args_with_mat(&self.root, &s.root);
     }
 }

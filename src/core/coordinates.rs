@@ -1,16 +1,8 @@
 use std::fmt::{Display, Debug};
-use std::hash::Hash;
 use std::ops::{Add, Sub, Mul, Div, Index};
 use std::rc::Rc;
 
-use crate::core::DimensionError;
-
-const EPS: f64 = 1e-10;
-
-#[inline(always)]
-fn abs(s: f64) -> f64 {
-    s.abs()
-}
+use crate::core::calc::*;
 
 #[derive(Clone, Copy)]
 pub struct Coordinates {
@@ -98,7 +90,7 @@ impl Coordinates {
     /// ```
     pub fn normalize(self) -> Self {
         let mag = self.magnitude();
-        if mag <= EPS {
+        if is_zero(mag) {
             return Coordinates{
                 values: (0., 0.)
             };
@@ -122,7 +114,7 @@ impl Debug for Coordinates {
 impl PartialEq for Coordinates {
     /// Returns true if the dimensions are the same and every entry is the same (within certain threshold)
     fn eq(&self, other: &Self) -> bool {
-        abs(self.values.0 - other.values.0) <= EPS && abs(self.values.1 - other.values.1) <= EPS
+        eq(&self.values.0, &other.values.0) && eq(&self.values.1, &other.values.1)
     }
 }
 
@@ -157,6 +149,7 @@ impl Mul<f64> for Coordinates {
     }
 }
 
+#[derive(PartialEq, Debug, Clone, Copy)]
 pub struct DivisionByZeroError;
 
 impl Div<f64> for Coordinates {
@@ -164,7 +157,7 @@ impl Div<f64> for Coordinates {
 
     /// Represents scalar division. Returns an error if division by 0.
     fn div(self, other: f64) -> Self::Output {
-        if abs(other) <= EPS {
+        if is_zero(other) {
             return Err(DivisionByZeroError);
         }
 
@@ -183,5 +176,46 @@ impl Index<usize> for Coordinates {
             return &self.values.1;
         }
         panic!("Invalid index into coordinates")
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_add() {
+        let p1 = Coordinates::new(1, 2);
+        let p2 = Coordinates::new(3, 4);
+        assert_eq!(p1 + p2, Coordinates::new(4, 6));
+    }
+
+    #[test]
+    fn test_sub() {
+        let p1 = Coordinates::new(1, 2);
+        let p2 = Coordinates::new(3, 4);
+        assert_eq!(p1 - p2, Coordinates::new(-2, -2));
+    }
+
+    #[test]
+    fn test_mul() {
+        let p1 = Coordinates::new(1, 2);
+        assert_eq!(p1 * 2.0, Coordinates::new(2, 4));
+    }
+
+    #[test]
+    fn test_div() {
+        let p1 = Coordinates::new(1, 2);
+        assert_eq!(p1 / 2.0, Ok(Coordinates::new(0.5, 1.0)));
+        assert!((p1 / 0.0).is_err());
+    }
+
+    #[test]
+    fn test_normalize() {
+        let p1 = Coordinates::new(3, 4);
+        assert_eq!(p1.normalize(), Coordinates::new(0.6, 0.8));
+
+        let p2 = Coordinates::new(0, 0);
+        assert_eq!(p2.normalize(), Coordinates::new(0, 0));
     }
 }

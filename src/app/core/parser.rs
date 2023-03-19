@@ -15,6 +15,7 @@ use paste::paste;
 mod ast;
 mod pattern_factory;
 mod ast_matcher;
+mod variables;
 
 use self::pattern_factory::*;
 use self::ast::AST;

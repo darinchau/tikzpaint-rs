@@ -1,6 +1,7 @@
 //! This module defines the logic where we try to pattern-match the user's command against a list of predefined commands
 
 use super::ast::*;
+use super::variables::*;
 
 /// If AST::matches() returns this, it screams stop immediately
 #[derive(Debug, PartialEq)]
@@ -12,7 +13,7 @@ pub enum ASTParseError {
 /// If it doesn't, then return none
 /// otherwise return an error
 /// This works for precompiled ASTNodes
-pub fn copy_args_with_mat(ast1: &ASTNode, ast2: &ASTNode) -> Result<Option<Vec<f64>>, ASTParseError> {
+pub fn copy_args_with_mat(ast1: &ASTNode, ast2: &ASTNode) -> Result<Option<Vec<VariablePayload>>, ASTParseError> {
     let mut v = vec![];
 
     let x = copy_args_recursive(&ast1, &ast2, &mut v)?;
@@ -25,14 +26,14 @@ pub fn copy_args_with_mat(ast1: &ASTNode, ast2: &ASTNode) -> Result<Option<Vec<f
 }
 
 /// Returns true if the AST matches, pushing the results in order into the result vector whenever necessary
-fn copy_args_recursive(s: &ASTNode, mat: &ASTNode, result: &mut Vec<f64>) -> Result<bool, ASTParseError> {
+fn copy_args_recursive(s: &ASTNode, mat: &ASTNode, result: &mut Vec<VariablePayload>) -> Result<bool, ASTParseError> {
     // Honestly it kinda doesn't matter which type of mismatch we get. Hence we simplified the implementation of ast parse errors
-    return match (s, mat) {
+    match (s, mat) {
         (ASTNode::Number(x), ASTNode::Variable(t)) => {
             if *t != VariableType::Number {
                 return Ok(false);
             }
-            result.push(x.clone());
+            result.push(VariablePayload::Number(*x));
             Ok(true)
         },
 
@@ -42,7 +43,7 @@ fn copy_args_recursive(s: &ASTNode, mat: &ASTNode, result: &mut Vec<f64>) -> Res
         },
 
         (ASTNode::Expression(x), ASTNode::Variable(t)) => {
-            todo!()
+            match_expr(x, t, result)
         },
 
         (ASTNode::Function(x, v), ASTNode::Variable(t)) => {
@@ -95,4 +96,8 @@ fn copy_args_recursive(s: &ASTNode, mat: &ASTNode, result: &mut Vec<f64>) -> Res
         // The remaining cases means the node types does not match up
         _ => return Ok(false)
     }
+}
+
+fn match_expr(expr: &Vec<ASTNode>, var: &VariableType, res: &mut Vec<VariablePayload>) -> Result<bool, ASTParseError> {
+    todo!()
 }

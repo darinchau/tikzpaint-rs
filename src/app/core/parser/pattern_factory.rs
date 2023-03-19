@@ -2,11 +2,12 @@
 
 use std::rc::Rc;
 use std::{cell::RefCell, sync::Mutex};
-use super::ast::{ASTNode, AST};
+use super::ast::*;
+use super::variables::*;
 use crate::figures::*;
 use crate::core::*;
 
-type PatternConstructor = Box<dyn Fn(Vec<f64>) -> DrawableObject + Send + Sync>;
+type PatternConstructor = Box<dyn Fn(Vec<VariablePayload>) -> DrawableObject + Send + Sync>;
 
 /// A pattern is something to match our code against
 struct Pattern {
@@ -16,7 +17,7 @@ struct Pattern {
 
 impl Pattern {
     fn new<F>(pat: &str, f: F) -> Self where
-    F: Fn(Vec<f64>) -> DrawableObject + Send + Sync + 'static {
+    F: Fn(Vec<VariablePayload>) -> DrawableObject + Send + Sync + 'static {
         let ast = AST::new(pat).expect(&format!("Failed to compile predefined patterns! {}", pat));
         Self {
             ast,
@@ -24,7 +25,7 @@ impl Pattern {
         }
     }
 
-    fn call(&self, v: Vec<f64>) -> DrawableObject {
+    fn call(&self, v: Vec<VariablePayload>) -> DrawableObject {
         return (self.ptr)(v);
     }
 }
@@ -34,8 +35,8 @@ static PATTERNS: Mutex<Vec<Pattern>> = Mutex::new(Vec::new());
 macro_rules! pattern {
     ($s:expr, $f:expr) => {
         {
-            let cls = |v| ($f)(v).wrap();
-            let pat = Pattern::new($s, cls);
+            let drawable = |v| ($f)(v).wrap();
+            let pat = Pattern::new($s, drawable);
             PATTERNS.lock().unwrap().push(pat);
         }
     };
@@ -72,5 +73,5 @@ pub fn try_patterns(s: &AST) -> Result<DrawableObject, PatternMatchError> {
 
 /// This function is called on initialization of the parser. Put patterns here.
 pub fn init_pattern_factory() {
-    pattern!("point({}, {})", |v: Vec<f64>| Point::new(Coordinates::new(v[0], v[1])));
+    pattern!("point({}, {})", |v: Vec<VariablePayload>| Point::new(Coordinates::new(&v[0], &v[1])));
 }

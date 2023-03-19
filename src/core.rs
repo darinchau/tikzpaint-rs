@@ -3,6 +3,7 @@ mod tikz_renderer;
 mod html_canvas;
 mod transform;
 mod coordinates;
+pub mod calc;
 
 pub use tikz_renderer::*;
 pub use util::*;
