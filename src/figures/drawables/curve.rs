@@ -5,71 +5,42 @@ use std::rc::Rc;
 use crate::figures::*;
 use crate::core::*;
 
+use gloo::console::log;
+
 pub struct Curve {
-    obj: Rc<RefCell<CurveInner>>
-}
-
-struct CurveInner {
-    v: Vec<PlottableObject>,
-    current: Coordinates,
-    finished: bool
-}
-
-impl CurveInner {
-    pub fn new(x: Coordinates) -> Self {
-        Self {
-            v: vec![],
-            current: x,
-            finished: false
-        }
-    }
-
-    pub fn add(&mut self, x: Coordinates) {
-        if !self.finished {
-            self.v.push(FOLine::new(self.current, x).wrap());
-            self.current = x;
-        }
-    }
-
-    pub fn finish(&mut self) {
-        self.finished = true;
-    }
-
-    fn draw(&self) -> Vec<PlottableObject> {
-        if self.v.len() < 2 {
-            return vec![];
-        }
-
-        todo!()
-    }
-
-    fn repr(&self) -> String {
-        todo!()
-    }
+    v: ScopedVec<Coordinates>,
 }
 
 impl Drawable for Curve {
+    /// Draws the curve. This gets a reference of coordinates
     fn draw(&self) -> Vec<PlottableObject> {
-        self.obj.borrow().draw()
+        let mut v = vec![];
+        let mut current = None;
+        for x in self.v.iter() {
+            if let Some(c) = current {
+                v.push(FOLine::new(c, x).wrap());
+            }
+
+            current = Some(x);
+        }
+
+        return v;
     }
 
     fn repr(&self) -> String {
-        self.obj.borrow().repr()
+        let mut s = String::from("curve");
+        for x in self.v.iter() {
+            s.push_str(&format!("{}", x));
+        }
+        return s;
     }
 }
 
 impl Curve {
-    pub fn new(x: Coordinates) -> Self {
+    /// Creates a new curve. We guarantee that nowhere in this curve we access the vector of coordinates mutably
+    pub fn new(vx: ScopedVec<Coordinates>) -> Self {
         Self {
-            obj: Rc::new(RefCell::new(CurveInner::new(x)))
+            v: vx
         }
-    }
-
-    pub fn add(&self, x: Coordinates) {
-        self.obj.borrow_mut().add(x)
-    }
-
-    pub fn finish(&self) {
-        self.obj.borrow_mut().finish()
     }
 }

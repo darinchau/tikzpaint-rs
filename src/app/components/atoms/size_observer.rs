@@ -32,10 +32,9 @@ pub struct WindowResizeListenerProps {
     pub cb: Option<Callback<WindowResizeEvent>>
 }
 
-
-
 pub const ASSUMPTION: (i32, i32) = (1920, 1080);
 
+/// Attempt to get the window size. Returns an error if failed
 pub fn get_size() -> Result<(i32, i32), &'static str> {
     if let Some(window) = web_sys::window() {
         let width_ = window.inner_width()

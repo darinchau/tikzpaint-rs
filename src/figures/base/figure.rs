@@ -47,6 +47,19 @@ impl Figure {
         return self.load(f, &self.to_draw);
     }
 
+    /// Rerender the last object only. This will not do anything if there is nothing in the figure
+    pub fn load_last<T, S>(&self, f: T) -> Vec<S> where
+    T: Fn(PlottableObject) -> S
+    {
+        if self.to_draw.len() == 0 {
+            return vec![];
+        }
+
+        let x = self.to_draw[self.to_draw.len()-1].clone();
+
+        return self.load(f, &vec![x]);
+    }
+
     fn load<T, S>(&self, f: T, vecd: &Vec<DrawableObject>) -> Vec<S> where
         T: Fn(PlottableObject) -> S
     {
@@ -59,5 +72,11 @@ impl Figure {
         }
 
         return v;
+    }
+
+    pub fn undo(&mut self) -> Option<DrawableObject> {
+        let x = self.to_draw.pop();
+        (*self.newly_drawn.borrow_mut()).pop();
+        return x;
     }
 }

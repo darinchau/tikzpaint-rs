@@ -3,10 +3,12 @@
 pub mod dimension_error;
 pub mod cheap_string;
 pub mod coord_transform;
+pub mod scoped_vec;
 
 pub use dimension_error::DimensionError;
 pub use cheap_string::*;
 pub use coord_transform::*;
+pub use scoped_vec::ScopedVec;
 
 pub trait IsTikzPropertyField {
     fn to_tikz(&self) -> (String, Option<String>);

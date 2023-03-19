@@ -20,6 +20,10 @@ impl TerminalTextRenderer {
         self.v.push(r);
     }
 
+    pub fn pop(&mut self) -> Option<CheapString> {
+        self.v.pop()
+    }
+
     pub fn unpack(&self) -> Vec<CheapString> {
         self.v.iter().map(|x| {
             x.clone()

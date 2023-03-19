@@ -13,6 +13,8 @@ pub use base::figure::Figure;
 
 pub use figureobjects::point::FOPoint;
 pub use figureobjects::line::FOLine;
+pub use figureobjects::path::FOPath;
 
 pub use drawables::point::Point;
+pub use drawables::curve::Curve;
 

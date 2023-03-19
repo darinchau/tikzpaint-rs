@@ -74,7 +74,13 @@ pub enum CanvasManagerMessage {
     ChangedWindowSize,
 
     /// Means something in the terminal changed
-    ChangedTerminal
+    ChangedTerminal,
+
+    /// The figure has changed but we specifically want it to rerender
+    ChangedFigureRerender,
+
+    /// The figure has changed but we want the figure to rerender the last object
+    ChangedFigureRerenderLast
 }
 
 macro_rules! mborrow {
@@ -89,7 +95,6 @@ pub struct CanvasManager {
     fig: Rc<RefCell<FigureComplex>>,
     transform: Rc<RefCell<Transform>>,
     canvas: HtmlCanvas,
-    draw_handler: Rc<RefCell<DrawHandler>>,
 }
 
 impl CanvasManager {
@@ -97,39 +102,48 @@ impl CanvasManager {
         let f = self.fig.clone();
         let tf = self.transform.clone();
         let link = ctx.link().clone();
-        let dh = self.draw_handler.clone();
         let debug_mode = is_true(props.debug);
 
         // Handles main canvas sensor events
         let canvas_sensor_cb = Callback::from(move |event: CanvasSensorEvent| {
             let (x, y) = event.mouse_click_event.screen_pos;
+            let v = tf.borrow().world_to_local(x, y);
             // Suppose we need to spawn a point. We need do perform the following:
             // 1. Get the coordinates of the click. Transform that into the canvas coordinates
             // 2. Spawn a point at the canvas coordinates
             // 3. Pass the figure to the renderer and perform the rendering of the svg
-            match event.mouse_click_event.click_type {
+            let render_type = match event.mouse_click_event.click_type {
                 MouseClickType::LeftClick => {
-                    let (x, y) = event.mouse_click_event.screen_pos;
+                    mborrow!(f).click(v)
+                },
 
-                    if debug_mode {
-                        log!(format!("Recieved mouse click at ({x}, {y})"));
-                    }
-
-                    let v = deref_get(tf.clone()).world_to_local(x, y);
-
-                    let foc = dh.borrow().get_foc(v);
-                    mborrow!(f).draw(foc);
-
-                    link.send_message(CanvasManagerMessage::ChangedFigure);
+                MouseClickType::MouseDown => {
+                    mborrow!(f).start_dragging(v)
                 },
 
                 MouseClickType::MouseMove => {
                     if event.dragging {
-                        log!(format!("Dragging at position: {x}, {y}"))
+                        mborrow!(f).dragging(v)
+                    }
+                    else {
+                        FigureRenderType::DoNothing
                     }
                 },
 
-                _ => ()
+                MouseClickType::MouseUp => {
+                    mborrow!(f).stop_dragging(v)
+                },
+
+                _ => FigureRenderType::DoNothing
+            };
+
+            // Render the canvas
+            match render_type {
+                FigureRenderType::Render => { link.send_message(CanvasManagerMessage::ChangedFigure) },
+                FigureRenderType::Rerender => { link.send_message(CanvasManagerMessage::ChangedFigureRerender) },
+                FigureRenderType::RerenderLast => { link.send_message(CanvasManagerMessage::ChangedFigureRerenderLast) },
+                FigureRenderType::DoNothing => {}
+                FigureRenderType::Error(s) => {log!(format!("Failed to render figure: {}", s))}
             }
         });
 
@@ -146,9 +160,9 @@ impl CanvasManager {
     }
 
     fn get_sidebar_cb(&self, props: &CanvasManagerProps, ctx: &Context<Self>) -> Callback<SideBarEvent> {
-        let dh = self.draw_handler.clone();
+        let f = self.fig.clone();
         let sidebar_cb = Callback::from(move |event: SideBarEvent| {
-            mborrow!(dh).set_state(event.button_type);
+            mborrow!(f).set_state(event.button_type);
             log!(format!("Setting side bar type to {:?}", event.button_type));
         });
 
@@ -209,13 +223,13 @@ impl CanvasManager {
         let link = ctx.link().clone();
 
         let resize_cb = Callback::from(move |event: WindowResizeEvent| {
-            if debug_mode {
-                log!(format!("Windows resized to ({}, {})", event.new_size.x, event.new_size.y));
-            }
-
             let (x, y) = (event.new_size.x, event.new_size.y);
             mborrow!(tf).set_screen_size(x, y);
-            log!(format!("Setting origin to {}, {}", x, y));
+
+            if debug_mode {
+                log!(format!("Windows resized to ({}, {})", event.new_size.x, event.new_size.y));
+                log!(format!("Setting origin to {}, {}", x, y));
+            }
 
             // Trigger rerender
             link.send_message(CanvasManagerMessage::ChangedWindowSize);
@@ -233,9 +247,13 @@ impl CanvasManager {
         let csh = self.canvas.clone();
 
         // Handles main canvas sensor events
-        let canvas_sensor_cb = Callback::from(move |event: CanvasRendererEvent| {
+        let canvas_renderer_cb = Callback::from(move |event: CanvasRendererEvent| {
             match event {
                 CanvasRendererEvent::SetUpDimensions { w, h } => {
+                    if debug_mode {
+                        log!("Setting up the canvas");
+                    }
+
                     let action = mborrow!(f).rerender(csh.clone());
 
                     if let Err(e) = action {
@@ -247,7 +265,7 @@ impl CanvasManager {
             }
         });
 
-        return canvas_sensor_cb;
+        return canvas_renderer_cb;
     }
 }
 
@@ -290,30 +308,43 @@ impl Component for CanvasManager {
             fig: Rc::new(RefCell::new(fig_state)),
             transform: t_ptr.clone(),
             canvas: HtmlCanvas::new(t_ptr.clone()),
-            draw_handler: Rc::new(RefCell::new(DrawHandler::new()))
         }
     }
 
     fn update(&mut self, ctx: &Context<Self>, msg: Self::Message) -> bool {
         let fig = &*self.fig.borrow();
 
-        match msg {
+        let result = match msg {
             CanvasManagerMessage::ChangedWindowSize => {
                 // We will defer the rerender until the resize of canvas element,
                 // which will be handled in th canvas renderer callback
+                Ok(())
             }
 
             // This means an event on the terminal or the sensor
-            _ => {
+            CanvasManagerMessage::ChangedFigure | CanvasManagerMessage::ChangedTerminal => {
                 // This triggers a simple render where we put the newly drawn stuff in
-                let action = fig.render(self.canvas.clone());
+                log!("I should render");
+                fig.render(self.canvas.clone())
+            }
 
-                if let Err(e) = action {
-                    log!(format!("Failed to redraw canvas. Reason: {:?}", e));
-                    return false;
-                }
+            CanvasManagerMessage::ChangedFigureRerender => {
+                // This triggers a simple render where we put the newly drawn stuff in
+                log!("I should rerender");
+                fig.rerender(self.canvas.clone())
+            },
+
+            CanvasManagerMessage::ChangedFigureRerenderLast => {
+                // This triggers a simple render where we put the newly drawn stuff in
+                log!("I should rerender the last object");
+                fig.rerender_last(self.canvas.clone())
             }
         };
+
+        if let Err(e) = result {
+            log!(format!("Failed to redraw canvas. Reason: {:?}", e));
+            return false;
+        }
 
         true
     }
@@ -341,7 +372,7 @@ impl Component for CanvasManager {
 
         // Make copies of stuff to pass into html
         let fg = &*(*self.fig).borrow();
-        let terminal_text = fg.unpack_html();
+        let terminal_text = fg.get_terminal_text();
 
         let other_t = *(*self.transform.clone()).borrow();
 

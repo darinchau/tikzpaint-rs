@@ -32,14 +32,3 @@ pub fn jsvalue_to_string(jsvalue: JsValue) -> Result<String, String> {
         return Err(x);
     }
 }
-
-pub fn deref_get<T: Clone>(x: Rc<RefCell<T>>) -> T {
-    (*(*x).borrow()).clone()
-}
-
-// pub fn try_deref_get<T>(x: &Rc<RefCell<T>>) -> Result<&T, ()> {
-//     match (**x).try_borrow() {
-//         Ok(x) => Ok(&*x),
-//         Err(e) => Err(())
-//     }
-// }
