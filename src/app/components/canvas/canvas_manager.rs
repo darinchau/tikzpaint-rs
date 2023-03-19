@@ -228,7 +228,6 @@ impl CanvasManager {
 
             if debug_mode {
                 log!(format!("Windows resized to ({}, {})", event.new_size.x, event.new_size.y));
-                log!(format!("Setting origin to {}, {}", x, y));
             }
 
             // Trigger rerender
@@ -251,7 +250,7 @@ impl CanvasManager {
             match event {
                 CanvasRendererEvent::SetUpDimensions { w, h } => {
                     if debug_mode {
-                        log!("Setting up the canvas");
+                        log!("Performing a canvas rerender because dimensions of the windows have changed");
                     }
 
                     let action = mborrow!(f).rerender(csh.clone());
@@ -324,19 +323,16 @@ impl Component for CanvasManager {
             // This means an event on the terminal or the sensor
             CanvasManagerMessage::ChangedFigure | CanvasManagerMessage::ChangedTerminal => {
                 // This triggers a simple render where we put the newly drawn stuff in
-                log!("I should render");
                 fig.render(self.canvas.clone())
             }
 
             CanvasManagerMessage::ChangedFigureRerender => {
                 // This triggers a simple render where we put the newly drawn stuff in
-                log!("I should rerender");
                 fig.rerender(self.canvas.clone())
             },
 
             CanvasManagerMessage::ChangedFigureRerenderLast => {
                 // This triggers a simple render where we put the newly drawn stuff in
-                log!("I should rerender the last object");
                 fig.rerender_last(self.canvas.clone())
             }
         };

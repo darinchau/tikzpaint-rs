@@ -24,19 +24,32 @@ pub fn copy_args_with_mat(ast1: &ASTNode, ast2: &ASTNode) -> Result<Option<Vec<f
     return Ok(Some(v));
 }
 
-/// Returns true if the AST matches, and
+/// Returns true if the AST matches, pushing the results in order into the result vector whenever necessary
 fn copy_args_recursive(s: &ASTNode, mat: &ASTNode, result: &mut Vec<f64>) -> Result<bool, ASTParseError> {
     // Honestly it kinda doesn't matter which type of mismatch we get. Hence we simplified the implementation of ast parse errors
     return match (s, mat) {
-        (ASTNode::Number(x), ASTNode::Variable) => {
+        (ASTNode::Number(x), ASTNode::Variable(t)) => {
+            if *t != VariableType::Number {
+                return Ok(false);
+            }
             result.push(x.clone());
             Ok(true)
         },
 
         // If we were to write variables and identifiers this is the line we would have to change
-        (ASTNode::Identifier(x), ASTNode::Variable) => { todo!() },
+        (ASTNode::Identifier(x), ASTNode::Variable(t)) => {
+            todo!()
+        },
 
-        (ASTNode::Variable, _) => { return Err(ASTParseError::VarOnLeftExpr) },
+        (ASTNode::Expression(x), ASTNode::Variable(t)) => {
+            todo!()
+        },
+
+        (ASTNode::Function(x, v), ASTNode::Variable(t)) => {
+            todo!()
+        },
+
+        (ASTNode::Variable(_), _) => { return Err(ASTParseError::VarOnLeftExpr) },
 
         // If the right hand side is anything but a variable, the types and values have to match up
         (ASTNode::Number(x), ASTNode::Number(y)) => return Ok(x == y),
