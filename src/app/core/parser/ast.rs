@@ -40,11 +40,14 @@ impl Debug for ASTNode {
 
 #[derive(Debug, PartialEq)]
 pub enum ASTErrorType {
-    /// The usize denotes the position which we found the unclosed left bracket
-    BracketNotClosed,
+    /// We found the unclosed left bracket
+    UnclosedBrackets,
 
-    /// The usize denotes the position which we found the right bracket
-    ExtraRightBracket,
+    /// We found unopened right brackets
+    ExtraBrackets,
+
+    /// We found mismatching bracket types, for example ( closed by }
+    BracketsMismatch,
 
     /// The usize denotes the start of the number
     ParseNumberFail,
@@ -59,11 +62,12 @@ pub enum ASTErrorType {
 impl Display for ASTErrorType {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         let s =  match self {
-            Self::BracketNotClosed => String::from("Found unclosed left bracket"),
-            Self::ExtraRightBracket => String::from("Found extra right bracket"),
+            Self::UnclosedBrackets => String::from("Found unclosed left bracket"),
+            Self::ExtraBrackets => String::from("Found extra right bracket"),
             Self::ParseNumberFail => String::from("Failed to parse number"),
             Self::InvalidSyntax => String::from("Invalid syntax -"),
-            Self::InvalidVariableSyntax => String::from("Invalid variable syntax -")
+            Self::InvalidVariableSyntax => String::from("Invalid variable syntax -"),
+            Self::BracketsMismatch => String::from("Mismatching brackets")
         };
         write!(f, "{s}")
     }
@@ -121,7 +125,7 @@ impl ASTNode {
         let s = st.trim();
 
         // - Is it a variable?
-        if check_brackets(s, "{}") {
+        if s.check_brackets("{}") {
             return handle_variable(s, offset);
         }
 
@@ -140,24 +144,14 @@ impl ASTNode {
         // This is to handle a special case:
         // If the expression is surrounded in brackets, then remove the brackets and wrap that in an expression
         // But if what is inside is already an expression, then no need to wrap them in extra brackets
-        if check_brackets(s, "()") {
+        if s.check_brackets("()") {
             let node = ASTNode::from_str_recursive(&s[1..s.len()-1], offset)?;
             return Ok(node);
         }
 
         // Extract all brackets and commas and perform recursion magic
-        if s.contains('(') || s.contains(',') {
-            return Ok(splice_string(s, offset)?);
-        }
-
-        // This means s has an unclosed right bracket
-        if s.contains(')') {
-            return Err(ASTError {
-                error_type: ASTErrorType::ExtraRightBracket,
-                position: offset + s.find(')').unwrap(),
-                message: None,
-                source: "AST::from_str()"
-            });
+        if s.contains_one_of("(){},+-*/") {
+            return Ok(splice_complex_expr(s, offset)?);
         }
 
         return Err(ASTError {
@@ -169,19 +163,76 @@ impl ASTNode {
     }
 }
 
-/// This removes the surrounding curly brackets of a string. This panics if the string is not surrounded by curly brackets.
-#[inline(always)]
-fn remove_curly_brackets(s: &str) -> &str {
-    let len = s.len();
-    if len >= 2 && &s[0..1] == "{" && &s[len-1..] == "}" {
-        &s[1..len-1]
-    } else {
-        panic!("The string should be surrounded by curly brackets")
+trait ExtraStringMethodsForAST {
+    /// Returns true if s contains one of the characters in chars
+    fn contains_one_of(&self, chars: &'static str) -> bool;
+
+    /// This removes the surrounding curly brackets of a string. This panics if the string is not surrounded by curly brackets.
+    fn remove_curly_brackets(&self) -> Self;
+
+    /// Returns true if there is a "top-level" bracket surrounding an expression
+    /// (1, 2, 3) is true
+    /// (1)(2) is false
+    /// 1, 2, 3 is false
+    /// ((1), 2) is true
+    fn check_brackets(&self, delimeters: &str) -> bool;
+}
+
+impl ExtraStringMethodsForAST for &str {
+    fn contains_one_of(&self, chars: &'static str) -> bool {
+        for x in chars.chars() {
+            if self.contains(x) {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    #[inline(always)]
+    fn remove_curly_brackets(&self) -> Self {
+        let len = self.len();
+        if len >= 2 && &self[0..1] == "{" && &self[len-1..] == "}" {
+            &self[1..len-1]
+        } else {
+            panic!("The string should be surrounded by curly brackets")
+        }
+    }
+
+    /// Returns true if there is a "top-level" bracket surrounding an expression
+    /// (1, 2, 3) is true
+    /// (1)(2) is false
+    /// 1, 2, 3 is false
+    /// ((1), 2) is true
+    fn check_brackets(&self, delimeters: &str) -> bool {
+        let (left, right) = {
+            let mut c = delimeters.chars();
+            (c.next().unwrap(), c.next().unwrap())
+        };
+
+        if !self.starts_with(left) {
+            return false;
+        }
+
+        let mut brackets_count = 0;
+        for (i, c) in self.chars().enumerate() {
+            if c == left {
+                brackets_count += 1;
+            }
+            else if c == right {
+                brackets_count -= 1;
+                if brackets_count == 0 {
+                    return i == self.len() - 1;
+                }
+            }
+        }
+
+        return brackets_count == 0;
     }
 }
 
 fn handle_variable(st: &str, offset: usize) -> Result<ASTNode, ASTError> {
-    let contents = remove_curly_brackets(st);
+    let contents = st.remove_curly_brackets();
 
     // If contents is white space, then it should match a single number
     if contents.trim().is_empty() {
@@ -224,50 +275,12 @@ fn handle_variable(st: &str, offset: usize) -> Result<ASTNode, ASTError> {
         return Ok(ASTNode::Variable(VariableType::Function(contents.to_string(), vec![])));
     }
 
-    // // If contents has * as its last character, then assume the previous part is a valid AST which we can get variables
-    // if &contents[contents.len()-1..] == "*" {
-    //     let ast = ASTNode::from_str(&contents[0..contents.len()-1])?;
-    //     return Ok(ASTNode::Variable(VariableType::Expression(Box::new(ast))));
-    // }
-
     return Err(ASTError {
         error_type: ASTErrorType::InvalidVariableSyntax,
         position: offset + 1,
         message: Some(format!("Unknown variable syntax: ({})", contents)),
         source: "AST::handle_variable()"
     });
-}
-
-
-/// Returns true if there is a "top-level" bracket surrounding an expression
-/// (1, 2, 3) is true
-/// (1)(2) is false
-/// 1, 2, 3 is false
-/// ((1), 2) is true
-fn check_brackets(s: &str, delimeters: &str) -> bool {
-    let (left, right) = {
-        let mut c = delimeters.chars();
-        (c.next().unwrap(), c.next().unwrap())
-    };
-
-    if !s.starts_with(left) {
-        return false;
-    }
-
-    let mut brackets_count = 0;
-    for (i, c) in s.chars().enumerate() {
-        if c == left {
-            brackets_count += 1;
-        }
-        else if c == right {
-            brackets_count -= 1;
-            if brackets_count == 0 {
-                return i == s.len() - 1;
-            }
-        }
-    }
-
-    return brackets_count == 0;
 }
 
 /// It is known that s is a number. Make that into an AST node
@@ -285,42 +298,81 @@ fn parse_ident(s: &str, offset: usize) -> Result<String, ASTError> {
     Ok(s.to_string())
 }
 
-/// This means we encountered a complex expression. We want to splice the string at top-level bracket commas
-fn splice_string(s: &str, offset: usize) -> Result<ASTNode, ASTError> {
-    // Use a two-pass strategy
-    // First pass is for commas
-    let mut left_bracket_pos = None;
-    let mut brackets_count = 0;
+#[derive(Clone, Copy, PartialEq)]
+enum BracketTypes {
+    Round,
+    Curly
+}
 
-    let mut root: Vec<ASTNode> = vec![];
+impl Display for BracketTypes {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            BracketTypes::Curly => write!(f, "{{"),
+            BracketTypes::Round => write!(f, "(")
+        }
+    }
+}
 
+impl Debug for BracketTypes {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            BracketTypes::Curly => write!(f, "}}"),
+            BracketTypes::Round => write!(f, ")")
+        }
+    }
+}
+
+fn handle_brackets_close(brackets: &mut Vec<(BracketTypes, usize)>, expected: BracketTypes, pos: usize) -> Result<(), ASTError> {
+    if let Some((ty, _)) = brackets.pop() {
+        if ty != expected {
+            return Err(ASTError {
+                error_type: ASTErrorType::BracketsMismatch,
+                position: pos,
+                message: Some(format!("Found mismatching brackets {} closed by {:?}", expected, ty)),
+                source: "AST::splice_at_top_level_delim()"
+            });
+        }
+
+        return Ok(());
+    }
+
+    return Err(ASTError {
+        error_type: ASTErrorType::ExtraBrackets,
+        position: pos,
+        message: Some(format!("Found extra right bracket {:?} without corresponding open brackets", expected)),
+        source: "AST::splice_at_top_level_delim()"
+    });
+}
+
+/// Splice at all top level delimeter. Returns an error if the bracket types does not match or we found dangling brackets
+fn splice_at_top_level_delim<'a>(s: &'a str, offset: usize, delim: char) -> Result<Vec<(&'a str, usize)>, ASTError> {
     let mut substrs = vec![];
 
     // The position of the first character of this substring
     let mut first_substr_pos = 0;
 
+    let mut brackets = vec![];
+
     for (i, c) in s.chars().enumerate() {
+        // Use the stack implementation to check
         if c == '(' {
-            if left_bracket_pos.is_none() {
-                left_bracket_pos = Some(i);
-            }
-            brackets_count += 1;
+            brackets.push((BracketTypes::Round, i));
         }
-        else if c == ')' {
-            // - if the bracket is not closed, bubble up an error
-            brackets_count -= 1;
-            if brackets_count < 0 {
-                return Err(ASTError {
-                    error_type: ASTErrorType::ExtraRightBracket,
-                    position: offset + i,
-                    message: None,
-                    source: "AST::splice_string()"
-                });
-            }
+        if c == ')' {
+            handle_brackets_close(&mut brackets, BracketTypes::Round, offset + i)?;
         }
-        else if c == ',' {
+
+        // Handle curly brackets
+        if c == '{' {
+            brackets.push((BracketTypes::Curly, i));
+        }
+        if c == '}' {
+            handle_brackets_close(&mut brackets, BracketTypes::Curly, offset + i)?;
+        }
+
+        else if c == delim {
             // Splice if it is a top level bracket
-            if brackets_count == 0 {
+            if brackets.len() == 0 {
                 let substr = &s[first_substr_pos..i];
                 substrs.push((substr, first_substr_pos + offset));
                 first_substr_pos = i + 1;
@@ -329,27 +381,39 @@ fn splice_string(s: &str, offset: usize) -> Result<ASTNode, ASTError> {
         }
     }
 
+    if brackets.len() > 0 {
+        let (ty, pos) = brackets[0];
+        return Err(ASTError {
+            error_type: ASTErrorType::UnclosedBrackets,
+            position: offset + pos,
+            message: Some(format!("Found unclosed bracket {}", ty)),
+            source: "AST::splice_at_top_level_delim()"
+        });
+    }
+
     // That means we found at least one top level commas
     if first_substr_pos > 0 {
         substrs.push((&s[first_substr_pos..], first_substr_pos));
+    }
 
+    return Ok(substrs);
+}
+
+/// This means we encountered a complex expression. We want to splice the string at top-level bracket commas
+fn splice_complex_expr(s: &str, offset: usize) -> Result<ASTNode, ASTError> {
+    // Use a two-pass strategy
+    // First pass is for commas
+    let substrs = splice_at_top_level_delim(s, offset, ',')?;
+
+    let mut root: Vec<ASTNode> = vec![];
+
+    // That means we found at least one top level commas
+    if substrs.len() > 1 {
         for (substr, idx) in substrs.into_iter() {
-            root.push(ASTNode::from_str_recursive(substr.trim(), offset + idx)?);
+            root.push(ASTNode::from_str_recursive(substr, offset + idx)?);
         }
 
         return Ok(ASTNode::Expression(root));
-    }
-
-    // Catch a left bracket thing if we found
-    if let Some(i) = left_bracket_pos {
-        if brackets_count > 0 {
-            return Err(ASTError {
-                error_type: ASTErrorType::BracketNotClosed,
-                position: offset + i,
-                message: None,
-                source: "AST::splice_str()"
-            });
-        }
     }
 
     // Second pass
@@ -376,7 +440,7 @@ fn splice_fn_like_args(s: &str, offset: usize) -> Result<ASTNode, ASTError> {
             brackets_count -= 1;
             if brackets_count < 0 {
                 return Err(ASTError {
-                    error_type: ASTErrorType::ExtraRightBracket,
+                    error_type: ASTErrorType::ExtraBrackets,
                     position: offset + i,
                     message: None,
                     source: "AST::splice_fn_like_args()"
@@ -460,13 +524,39 @@ mod test {
     #[test]
     fn test_check_bracket() {
         let delims = "()";
-        assert_eq!(check_brackets("(s)", delims), true);
-        assert_eq!(check_brackets("(x, y)", delims), true);
-        assert_eq!(check_brackets("3x + y", delims), false);
-        assert_eq!(check_brackets("(x), (y)", delims), false);
-        assert_eq!(check_brackets("((x), (y))", delims), true);
-        assert_eq!(check_brackets("(((()()())())())", delims), true);
-        assert_eq!(check_brackets("(", delims), false);
+        assert_eq!("(s)".check_brackets(delims), true);
+        assert_eq!("(x, y)".check_brackets(delims), true);
+        assert_eq!("3x + y".check_brackets(delims), false);
+        assert_eq!("(x), (y)".check_brackets(delims), false);
+        assert_eq!("((x), (y))".check_brackets(delims), true);
+        assert_eq!("(((()()())())())".check_brackets(delims), true);
+        assert_eq!("(".check_brackets(delims), false);
+    }
+
+    fn compare_spliced(result: Vec<(&'static str, usize)>, expected: Vec<&'static str>) -> bool {
+        for ((s0, _), t0) in result.into_iter().zip(expected.into_iter()) {
+            if s0.trim() != t0.trim() {
+                return false;
+            }
+        }
+
+        return true;
+    }
+
+    #[test]
+    fn test_splice_1() {
+        let st = "1, 2, (3, 4), 5, (6, (7, 8))";
+        let expected = vec!["1", "2", "(3, 4)", "5", "(6, (7, 8))"];
+        let result = splice_at_top_level_delim(st,  0, ',').unwrap();
+        assert!(compare_spliced(result, expected));
+    }
+
+    #[test]
+    fn test_splice_2() {
+        let st = "1, {2, 3}, (4, {5, 6})";
+        let expected = vec!["1", "{2, 3}", "(4, {5, 6})"];
+        let result = splice_at_top_level_delim(st,  0, ',').unwrap();
+        assert!(compare_spliced(result, expected));
     }
 
     #[test]
@@ -519,7 +609,7 @@ mod test {
     fn test_compile_ast5() {
         let result = ASTNode::from_str("forgot)to_close_right_bracket");
         let er = result.err().unwrap();
-        assert_eq!(er.error_type, ASTErrorType::ExtraRightBracket);
+        assert_eq!(er.error_type, ASTErrorType::ExtraBrackets);
         assert_eq!(er.position, 6);
     }
 
@@ -527,7 +617,7 @@ mod test {
     fn test_compile_ast6() {
         let result = ASTNode::from_str("ex,left(bracket()");
         let er = result.err().unwrap();
-        assert_eq!(er.error_type, ASTErrorType::BracketNotClosed);
+        assert_eq!(er.error_type, ASTErrorType::UnclosedBrackets);
         // Position of first left bracket
         assert_eq!(er.position, 7);
     }
