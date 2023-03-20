@@ -8,23 +8,23 @@ use regex::Regex;
 use std::{fmt::{Debug, Display}, rc::Rc};
 use super::ast_matcher::{copy_args_with_mat, ASTParseError};
 use paste::paste;
+use super::utils::print_fn;
 
 use super::variables::*;
 
 /// Implementation of AST.
 pub struct AST {
-    root: ASTNode,
+    pub root: ASTNode,
 }
 
 #[derive(PartialEq, Clone)]
 pub enum ASTNode {
     Number(f64),
-    Identifier(String),
     Expression(Vec<ASTNode>),
     Function(String, Vec<ASTNode>),
 
     /// A variable purely exists for formatting expressions using AST
-    Variable(VariableType)
+    Variable(VariableType),
 }
 
 impl Debug for ASTNode {
@@ -32,9 +32,8 @@ impl Debug for ASTNode {
         match self {
             ASTNode::Number(x) => write!(f, "Number({})", x),
             ASTNode::Expression(x) => write!(f, "Expression({})", x.iter().map(|y| format!("{:?}", y)).collect::<Vec<String>>().join(", ")),
-            ASTNode::Function(name, x) => write!(f, "Function:{}({})", name, x.iter().map(|y| format!("{:?}", y)).collect::<Vec<String>>().join(", ")),
-            ASTNode::Identifier(x) => write!(f, "Identifier({})", x),
-            ASTNode::Variable(x) => write!(f, "Variable({:?})", x)
+            ASTNode::Function(name, x) => write!(f, "{}", print_fn(name, x)),
+            ASTNode::Variable(x) => write!(f, "Variable({:?})", x),
         }
     }
 }
@@ -135,7 +134,7 @@ impl ASTNode {
         // - Is it a pure string (i.e. valid variable name in rust)
         if IS_IDENT.is_match(s) {
             let ident = parse_ident(s, offset)?;
-            return Ok(ASTNode::Identifier(ident));
+            return Ok(ASTNode::Function(ident, vec![]));
         }
 
         // This is to handle a special case:
@@ -217,6 +216,19 @@ fn handle_variable(st: &str, offset: usize) -> Result<ASTNode, ASTError> {
     if contents == "*" {
         return Ok(ASTNode::Variable(VariableType::NumberTuple));
     }
+
+    // if contents contain a valid variable name, this means some point in the near future we will try to assign
+    // the variable with a number/expression/whatever.
+    // Store the variable name first
+    if IS_IDENT.is_match(contents) {
+        return Ok(ASTNode::Variable(VariableType::Function(contents.to_string(), vec![])));
+    }
+
+    // // If contents has * as its last character, then assume the previous part is a valid AST which we can get variables
+    // if &contents[contents.len()-1..] == "*" {
+    //     let ast = ASTNode::from_str(&contents[0..contents.len()-1])?;
+    //     return Ok(ASTNode::Variable(VariableType::Expression(Box::new(ast))));
+    // }
 
     return Err(ASTError {
         error_type: ASTErrorType::InvalidVariableSyntax,
@@ -407,8 +419,9 @@ fn splice_fn_like_args(s: &str, offset: usize) -> Result<ASTNode, ASTError> {
 impl AST {
     /// Returns a vector containing the matching pattern if the pattern matches, otherwise return None
     /// Raises an error if there is anything wrong with the syntax
-    pub fn matches(&self, s: &AST) -> Result<Option<Vec<VariablePayload>>, ASTParseError> {
-        return copy_args_with_mat(&self.root, &s.root);
+    /// 'self' should be the one with variables
+    pub fn matches(&self, s: &ASTNode) -> Result<Option<Vec<VariablePayload>>, ASTParseError> {
+        return copy_args_with_mat(&s, &self.root);
     }
 }
 
@@ -441,17 +454,19 @@ mod test {
         assert_eq!(IS_IDENT.is_match("foo bar"), false);
         assert_eq!(IS_IDENT.is_match("heya="), false);
         assert_eq!(IS_IDENT.is_match("my-variable"), false);
+        assert_eq!(IS_IDENT.is_match("1i"), false);
     }
 
     #[test]
     fn test_check_bracket() {
-        assert_eq!(check_brackets("(s)", "()"), true);
-        assert_eq!(check_brackets("(x, y)", "()"), true);
-        assert_eq!(check_brackets("3x + y", "()"), false);
-        assert_eq!(check_brackets("(x), (y)", "()"), false);
-        assert_eq!(check_brackets("((x), (y))", "()"), true);
-        assert_eq!(check_brackets("(((()()())())())", "()"), true);
-        assert_eq!(check_brackets("(", "()"), false);
+        let delims = "()";
+        assert_eq!(check_brackets("(s)", delims), true);
+        assert_eq!(check_brackets("(x, y)", delims), true);
+        assert_eq!(check_brackets("3x + y", delims), false);
+        assert_eq!(check_brackets("(x), (y)", delims), false);
+        assert_eq!(check_brackets("((x), (y))", delims), true);
+        assert_eq!(check_brackets("(((()()())())())", delims), true);
+        assert_eq!(check_brackets("(", delims), false);
     }
 
     #[test]
@@ -476,8 +491,8 @@ mod test {
     fn test_compile_ast2() {
         let result = ASTNode::from_str("F(f)(x)").unwrap();
         let expected = ASTNode::Function("F".to_string(), vec![
-            ASTNode::Identifier("f".to_string()),
-            ASTNode::Identifier("x".to_string())
+            ASTNode::Function("f".to_string(), vec![]),
+            ASTNode::Function("x".to_string(), vec![])
         ]);
 
         assert_eq!(result, expected)
@@ -487,8 +502,8 @@ mod test {
     fn test_compile_ast3() {
         let result = ASTNode::from_str(" F  ( f )   ( x    )").unwrap();
         let expected = ASTNode::Function("F".to_string(), vec![
-            ASTNode::Identifier("f".to_string()),
-            ASTNode::Identifier("x".to_string())
+            ASTNode::Function("f".to_string(), vec![]),
+            ASTNode::Function("x".to_string(), vec![])
         ]);
         assert_eq!(result, expected)
     }
@@ -548,7 +563,7 @@ mod test {
         let s = "f((x))";
         let result = ASTNode::from_str(s).unwrap();
         let expected = ASTNode::Function("f".to_string(), vec![
-            ASTNode::Identifier("x".to_string())
+            ASTNode::Function("x".to_string(), vec![])
         ]);
         assert_eq!(result, expected);
     }
@@ -558,10 +573,10 @@ mod test {
         let s = "(x), (x, y)";
         let result = ASTNode::from_str(s).unwrap();
         let expected = ASTNode::Expression(vec![
-            ASTNode::Identifier("x".to_string()),
+            ASTNode::Function("x".to_string(), vec![]),
             ASTNode::Expression(vec![
-                ASTNode::Identifier("x".to_string()),
-                ASTNode::Identifier("y".to_string())
+                ASTNode::Function("x".to_string(), vec![]),
+                ASTNode::Function("y".to_string(), vec![])
             ])
         ]);
         assert_eq!(result, expected);
@@ -622,6 +637,16 @@ mod test {
         let result = ASTNode::from_str(s).unwrap();
         let expected = ASTNode::Function(String::from("fn"), vec![
             ASTNode::Variable(VariableType::NumberTuple)
+        ]);
+        assert_eq!(result, expected);
+    }
+
+    #[test]
+    fn test_compile_ast14() {
+        let s = "fn({x})";
+        let result = ASTNode::from_str(s).unwrap();
+        let expected = ASTNode::Function(String::from("fn"), vec![
+            ASTNode::Variable(VariableType::Function("x".to_string(), vec![]))
         ]);
         assert_eq!(result, expected);
     }

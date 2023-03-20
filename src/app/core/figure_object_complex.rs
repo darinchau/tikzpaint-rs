@@ -102,13 +102,14 @@ impl FigureComplex {
     pub fn draw_with_text<S1: StringLike>(&mut self, s: S1) -> Result<(), ParserError> {
         log!(format!("Trying to draw {}", s));
         let wrapped_text = s.wrap();
-        let foc = parse(wrapped_text.clone())?;
-
-        log!(format!("Translates to {:?}", foc));
+        let focs = parse(wrapped_text.clone())?;
 
         // Draw on the figure
-        self.fig.draw(foc.fo.borrow().clone());
-        self.ttext.push(wrapped_text);
+        for foc in focs.into_iter() {
+            log!(format!("Drawing {:?}", foc));
+            self.fig.draw(foc.fo.borrow().clone());
+            self.ttext.push(wrapped_text.clone());
+        }
 
         Ok(())
     }

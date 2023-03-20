@@ -1,5 +1,7 @@
 //! This module defines the logic where we try to pattern-match the user's command against a list of predefined commands
 
+use crate::core::calc::eq;
+
 use super::ast::*;
 use super::variables::*;
 
@@ -30,6 +32,7 @@ fn copy_args_recursive(s: &ASTNode, mat: &ASTNode, result: &mut Vec<VariablePayl
     // Honestly it kinda doesn't matter which type of mismatch we get. Hence we simplified the implementation of ast parse errors
     match (s, mat) {
         (ASTNode::Number(x), ASTNode::Variable(t)) => {
+            // A number can only match a variable that is supposed to store a number
             if *t != VariableType::Number {
                 return Ok(false);
             }
@@ -37,25 +40,33 @@ fn copy_args_recursive(s: &ASTNode, mat: &ASTNode, result: &mut Vec<VariablePayl
             Ok(true)
         },
 
-        // If we were to write variables and identifiers this is the line we would have to change
-        (ASTNode::Identifier(x), ASTNode::Variable(t)) => {
-            todo!()
-        },
-
         (ASTNode::Expression(x), ASTNode::Variable(t)) => {
-            match_expr(x, t, result)
+            // Number cannot match an entire expression
+            match *t {
+                VariableType::Number => { Ok(false) }
+                VariableType::NumberTuple => { try_match_number_tuple_expr(x, result) }
+                VariableType::Function(_, _) => { Ok(false) }
+            }
         },
 
         (ASTNode::Function(x, v), ASTNode::Variable(t)) => {
-            todo!()
+            match *t {
+                VariableType::Number => { todo!() }
+                VariableType::NumberTuple => { Ok(false) }
+                VariableType::Function(ref name, ref node) => {
+                    if x == name && v.len() == node.len() {
+                        todo!()
+                    }
+
+                    Ok(false)
+                }
+            }
         },
 
         (ASTNode::Variable(_), _) => { return Err(ASTParseError::VarOnLeftExpr) },
 
         // If the right hand side is anything but a variable, the types and values have to match up
-        (ASTNode::Number(x), ASTNode::Number(y)) => return Ok(x == y),
-
-        (ASTNode::Identifier(x), ASTNode::Identifier(y)) => return Ok(x == y),
+        (ASTNode::Number(x), ASTNode::Number(y)) => return Ok(eq(x, y)),
 
         (ASTNode::Expression(x), ASTNode::Expression(y)) => {
             if x.len() != y.len() {
@@ -98,6 +109,6 @@ fn copy_args_recursive(s: &ASTNode, mat: &ASTNode, result: &mut Vec<VariablePayl
     }
 }
 
-fn match_expr(expr: &Vec<ASTNode>, var: &VariableType, res: &mut Vec<VariablePayload>) -> Result<bool, ASTParseError> {
+fn try_match_number_tuple_expr(x: &Vec<ASTNode>, result: &Vec<VariablePayload>) -> Result<bool, ASTParseError> {
     todo!()
 }
