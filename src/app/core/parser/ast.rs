@@ -329,17 +329,14 @@ fn splice_at_top_level_delim<'a>(s: &'a str, offset: usize, delim: char) -> Resu
         });
     }
 
-    // That means we found at least one top level commas
-    if first_substr_pos > 0 {
-        substrs.push((&s[first_substr_pos..], first_substr_pos));
-    }
+    substrs.push((&s[first_substr_pos..], first_substr_pos));
 
     return Ok(substrs);
 }
 
 /// This means we encountered a complex expression. We want to splice the string at top-level bracket commas
 fn splice_complex_expr(s: &str, offset: usize) -> Result<ASTNode, ASTError> {
-    // Use a two-pass strategy
+    // Use a three-pass
     // First pass is for commas
     let substrs = splice_at_top_level_delim(s, offset, ',')?;
 
@@ -354,8 +351,40 @@ fn splice_complex_expr(s: &str, offset: usize) -> Result<ASTNode, ASTError> {
         return Ok(ASTNode::Expression(root));
     }
 
-    // Second pass
-    return Ok(splice_fn_like_args(s, offset)?);
+    // Next pass is for top level math operators
+    return splice_math_operators(s, offset);
+}
+
+/// Handles stuff like 1 + 2 * (3 + zeta(4))
+fn splice_math_operators(s: &str, offset: usize) -> Result<ASTNode, ASTError> {
+    for (op, op_name) in [('+', "add"), ('-', "sub"), ('*', "mul"), ('/', "div")] {
+        if let Some(node) = splice_one_operator(s, offset, op, op_name)? {
+            return Ok(node);
+        }
+    }
+
+    return splice_fn_like_args(s, offset);
+}
+
+/// Handles one single operator. Returns the AST node if a top level operator is found, otherwise return none. Bubbles up the error if necessary
+fn splice_one_operator(s: &str, offset: usize, operator: char, operator_name: &str) -> Result<Option<ASTNode>, ASTError> {
+    let substrs = splice_at_top_level_delim(s, offset, operator)?;
+    if substrs.len() <= 1 {
+        return Ok(None);
+    }
+
+    let op_str = operator_name.to_string();
+
+    let mut root = ASTNode::from_str_recursive(substrs[0].0, offset)?;
+    for (substr, pos) in substrs.into_iter().skip(1) {
+        root = ASTNode::Function(op_str.clone(), vec![ASTNode::Expression(vec![
+            root,
+            ASTNode::from_str_recursive(substr, offset + pos)?
+        ])]);
+    }
+
+    // This only asserts root is actually something, where in reality we already assumed root is non-null
+    return Ok(Some(root));
 }
 
 /// Handles the function call syntax - funct(call1)(call2)...(calln)
@@ -366,6 +395,7 @@ fn splice_fn_like_args(s: &str, offset: usize) -> Result<ASTNode, ASTError> {
     let mut brackets_count = 0;
     let mut parts = vec![];
 
+    // We do not use the splice comma function because test 3 - if there are extra spaces its a pain to handle
     for (i, c) in s.chars().enumerate() {
         if c == '(' {
             if left_bracket_pos.is_none() {
@@ -496,6 +526,16 @@ mod test {
         let result = splice_at_top_level_delim(st,  0, ')').unwrap();
         assert!(compare_spliced(result, expected));
     }
+
+    #[test]
+    fn test_splice_4() {
+        let st = "hey I have no top level (commas, but I have one inside a bracket)";
+        let expected = vec!["hey I have no top level (commas, but I have one inside a bracket)"];
+        let result = splice_at_top_level_delim(st,  0, ',').unwrap();
+        println!("{:?}", result);
+        assert!(compare_spliced(result, expected));
+    }
+
 
     #[test]
     fn test_compile_ast1() {
@@ -694,6 +734,50 @@ mod test {
     }
 
     #[test]
+    fn test_compile_ast16() {
+        let s = "fn({x})";
+        let result = ASTNode::from_str(s).unwrap();
+        let expected = ASTNode::Function(String::from("fn"), vec![
+            ASTNode::Variable(VariableType::Function("x".to_string(), vec![]))
+        ]);
+        assert_eq!(result, expected);
+    }
+
+    /// Compares AST is mainly used to test math operator handling
+    fn compare_ast(result: &str, expected: &str) {
+        let ast1 = ASTNode::from_str(result).unwrap();
+        let ast2 = ASTNode::from_str(expected).unwrap();
+        assert_eq!(ast1, ast2);
+    }
+
+    #[test]
+    fn test_compile_ast17() {
+        compare_ast("1 + 2", "add(1, 2)");
+    }
+
+    #[test]
+    fn test_compile_ast18() {
+        compare_ast("1 + 2 + zeta(3)", "add(add(1, 2), zeta(3))");
+    }
+
+    #[test]
+    fn test_compile_ast19() {
+        compare_ast("1 + 2 + zeta(3) * x", "add(add(1, 2), mul(zeta(3), x))");
+    }
+
+    #[test]
+    fn test_compile_ast20() {
+        assert!(AST::new("1 +, 2").is_err());
+        assert!(AST::new("1 - (, 2)").is_err());
+        assert!(AST::new("1 +- 2").is_err());
+        assert!(AST::new("1 ,+ 2").is_err());
+        assert!(AST::new(", + 1").is_err());
+        assert!(AST::new("1 / + 2").is_err());
+        assert!(AST::new("1 + 2i").is_err());
+        assert!(AST::new("1 +").is_err());
+    }
+
+    #[test]
     fn test_parse_1() {
         let s1 = "point(3, 5)";
         let s2 = "point({}, {})";
@@ -718,7 +802,7 @@ mod test {
     }
 
     #[test]
-    fn test_parse_4() {
+    fn test_parse_3() {
         let s1 = "point(0, 1, 2, 3, 4, 5, -6.)";
         let s2 = "point({7})";
         let ast1 = ASTNode::from_str(s1).unwrap();
