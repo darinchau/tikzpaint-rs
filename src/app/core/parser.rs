@@ -54,8 +54,6 @@ pub fn parse<S: StringLike>(s: S) -> Result<Vec<FigureObjectComplex>, ParserErro
         }
     })?;
 
-    println!("Expanded: {:?}", expanded);
-
     // 3. Draw everything inside the AST after function evaluation
     let drawables = parse_draw(expanded).map_err(|x| {
         match x {
@@ -90,11 +88,21 @@ pub fn parse<S: StringLike>(s: S) -> Result<Vec<FigureObjectComplex>, ParserErro
 mod test {
     use super::*;
 
+    fn compare_tree(result: &str, expected: &str) {
+        initialize_parser();
+        let ast1 = evaluate_all(AST::new(result).unwrap()).unwrap();
+        let ast2 = AST::new(expected).unwrap();
+
+        assert_eq!(ast1, ast2);
+    }
+
     #[test]
     fn test_parse_1() {
         initialize_parser();
         let cmd = "point(3, 5)".wrap();
         let res = parse(cmd).unwrap();
+        assert!(res.len() == 1);
+        assert!(res[0].fo.borrow().repr() == "point(3, 5)");
     }
 
     #[test]
@@ -111,13 +119,17 @@ mod test {
 
     #[test]
     fn test_parse_3() {
-        initialize_parser();
-        let cmd = "point(1, add(2, 3))".wrap();
-        let res = parse(cmd).unwrap();
+        compare_tree("point(1, add(2, 3))", "point(1, 5)");
     }
 
     #[test]
     fn test_parse_4() {
+        initialize_parser();
+        compare_tree("point(1 + 2, 3 + 4 - 5)", "point(3, 2)");
+    }
+
+    #[test]
+    fn test_parse_5() {
         let cmd = "{x} = 5, point(3, x).wrap()".wrap();
         let res = parse(cmd).unwrap();
     }

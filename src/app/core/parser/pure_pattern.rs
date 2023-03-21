@@ -69,6 +69,7 @@ impl PatternLookup {
     }
 }
 
+#[derive(Debug)]
 pub struct FunctionEvaluateError {
     pub msg: String
 }
@@ -123,5 +124,23 @@ pub fn initialize_lookup() {
         let v0: f64 = (&v[0]).into();
         let v1: f64 = (&v[1]).into();
         return ASTNode::Number(v0 + v1)
+    });
+
+    FUNCTIONS.push("sub({}, {})", |v: Vec<VariablePayload>| {
+        let v0: f64 = (&v[0]).into();
+        let v1: f64 = (&v[1]).into();
+        return ASTNode::Number(v0 - v1)
+    });
+
+    FUNCTIONS.push("mul({}, {})", |v: Vec<VariablePayload>| {
+        let v0: f64 = (&v[0]).into();
+        let v1: f64 = (&v[1]).into();
+        return ASTNode::Number(v0 * v1)
+    });
+
+    FUNCTIONS.push("div({}, {})", |v: Vec<VariablePayload>| {
+        let v0: f64 = (&v[0]).into();
+        let v1: f64 = (&v[1]).into();
+        return ASTNode::Number(v0 * v1)
     });
 }

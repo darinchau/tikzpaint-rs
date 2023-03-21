@@ -8,13 +8,19 @@ use regex::Regex;
 use std::{fmt::{Debug, Display}, rc::Rc};
 use super::ast_matcher::{copy_args_with_mat, ASTParseError};
 use paste::paste;
-use super::utils::print_fn;
+use super::utils::{print_fn, ExtraStringMethodsForAST};
 
 use super::variables::*;
 
 /// Implementation of AST.
 pub struct AST {
     pub root: ASTNode,
+}
+
+impl PartialEq for AST {
+    fn eq(&self, other: &Self) -> bool {
+        self.root == other.root
+    }
 }
 
 #[derive(PartialEq, Clone)]
@@ -160,74 +166,6 @@ impl ASTNode {
             message: Some(format!("Failed to match any known patterns - got ({})", s)),
             source: "AST::from_str()"
         });
-    }
-}
-
-trait ExtraStringMethodsForAST {
-    /// Returns true if s contains one of the characters in chars
-    fn contains_one_of(&self, chars: &'static str) -> bool;
-
-    /// This removes the surrounding curly brackets of a string. This panics if the string is not surrounded by curly brackets.
-    fn remove_curly_brackets(&self) -> Self;
-
-    /// Returns true if there is a "top-level" bracket surrounding an expression
-    /// (1, 2, 3) is true
-    /// (1)(2) is false
-    /// 1, 2, 3 is false
-    /// ((1), 2) is true
-    fn check_brackets(&self, delimeters: &str) -> bool;
-}
-
-impl ExtraStringMethodsForAST for &str {
-    fn contains_one_of(&self, chars: &'static str) -> bool {
-        for x in chars.chars() {
-            if self.contains(x) {
-                return true;
-            }
-        }
-
-        return false;
-    }
-
-    #[inline(always)]
-    fn remove_curly_brackets(&self) -> Self {
-        let len = self.len();
-        if len >= 2 && &self[0..1] == "{" && &self[len-1..] == "}" {
-            &self[1..len-1]
-        } else {
-            panic!("The string should be surrounded by curly brackets")
-        }
-    }
-
-    /// Returns true if there is a "top-level" bracket surrounding an expression
-    /// (1, 2, 3) is true
-    /// (1)(2) is false
-    /// 1, 2, 3 is false
-    /// ((1), 2) is true
-    fn check_brackets(&self, delimeters: &str) -> bool {
-        let (left, right) = {
-            let mut c = delimeters.chars();
-            (c.next().unwrap(), c.next().unwrap())
-        };
-
-        if !self.starts_with(left) {
-            return false;
-        }
-
-        let mut brackets_count = 0;
-        for (i, c) in self.chars().enumerate() {
-            if c == left {
-                brackets_count += 1;
-            }
-            else if c == right {
-                brackets_count -= 1;
-                if brackets_count == 0 {
-                    return i == self.len() - 1;
-                }
-            }
-        }
-
-        return brackets_count == 0;
     }
 }
 
@@ -521,19 +459,11 @@ mod test {
         assert_eq!(IS_IDENT.is_match("1i"), false);
     }
 
-    #[test]
-    fn test_check_bracket() {
-        let delims = "()";
-        assert_eq!("(s)".check_brackets(delims), true);
-        assert_eq!("(x, y)".check_brackets(delims), true);
-        assert_eq!("3x + y".check_brackets(delims), false);
-        assert_eq!("(x), (y)".check_brackets(delims), false);
-        assert_eq!("((x), (y))".check_brackets(delims), true);
-        assert_eq!("(((()()())())())".check_brackets(delims), true);
-        assert_eq!("(".check_brackets(delims), false);
-    }
-
     fn compare_spliced(result: Vec<(&'static str, usize)>, expected: Vec<&'static str>) -> bool {
+        if result.len() != expected.len() {
+            return false;
+        }
+
         for ((s0, _), t0) in result.into_iter().zip(expected.into_iter()) {
             if s0.trim() != t0.trim() {
                 return false;
@@ -556,6 +486,14 @@ mod test {
         let st = "1, {2, 3}, (4, {5, 6})";
         let expected = vec!["1", "{2, 3}", "(4, {5, 6})"];
         let result = splice_at_top_level_delim(st,  0, ',').unwrap();
+        assert!(compare_spliced(result, expected));
+    }
+
+    #[test]
+    fn test_splice_3() {
+        let st = "hiya(1)(2)(3)";
+        let expected = vec!["hiya(1", "(2", "(3", ""];
+        let result = splice_at_top_level_delim(st,  0, ')').unwrap();
         assert!(compare_spliced(result, expected));
     }
 
@@ -723,6 +661,20 @@ mod test {
 
     #[test]
     fn test_compile_ast13() {
+        let s = "fn({3})";
+        let result = ASTNode::from_str(s).unwrap();
+        let expected = ASTNode::Function(String::from("fn"), vec![
+            ASTNode::Expression(vec![
+                ASTNode::Variable(VariableType::Number),
+                ASTNode::Variable(VariableType::Number),
+                ASTNode::Variable(VariableType::Number)
+            ])
+        ]);
+        assert_eq!(result, expected);
+    }
+
+    #[test]
+    fn test_compile_ast14() {
         let s = "fn({*})";
         let result = ASTNode::from_str(s).unwrap();
         let expected = ASTNode::Function(String::from("fn"), vec![
@@ -732,7 +684,7 @@ mod test {
     }
 
     #[test]
-    fn test_compile_ast14() {
+    fn test_compile_ast15() {
         let s = "fn({x})";
         let result = ASTNode::from_str(s).unwrap();
         let expected = ASTNode::Function(String::from("fn"), vec![
