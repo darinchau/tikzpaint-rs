@@ -52,9 +52,16 @@ fn copy_args_recursive(s: &ASTNode, mat: &ASTNode, result: &mut Vec<VariablePayl
         // So we bind the variable to a function that takes 0 arguments and gives said number
         (ASTNode::Number(x), ASTNode::Variable(VariableType::Variable(name))) => {
             let number = *x;
-            result.push(VariablePayload::Function(name.clone(), Box::new(move |a| {
-                ASTNode::Number(number)
-            })));
+
+            let payload = FunctionPayload {
+                num_layers: 0,
+                name: name.clone(),
+                f: Box::new(move |a| {
+                    ASTNode::Number(number)
+                })
+            };
+
+            result.push(VariablePayload::Function(payload));
 
             Ok(true)
         }

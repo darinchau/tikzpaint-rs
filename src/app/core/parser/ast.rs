@@ -585,7 +585,6 @@ mod test {
         let st = "hey I have no top level (commas, but I have one inside a bracket)";
         let expected = vec!["hey I have no top level (commas, but I have one inside a bracket)"];
         let result = splice_at_top_level_delim(st,  0, ',').unwrap();
-        println!("{:?}", result);
         assert!(compare_spliced(result, expected));
     }
 

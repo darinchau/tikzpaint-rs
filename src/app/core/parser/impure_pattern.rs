@@ -34,14 +34,16 @@ pub enum PatternMatchError {
 /// A singleton function parser that helps us match and evaluate functions
 pub struct ImpurePatternLookup {
     fns: Mutex<Vec<ImpurePattern>>,
-    names: Mutex<HashSet<String>>
+    names: Mutex<HashSet<String>>,
+    initialized: Mutex<bool>
 }
 
 impl ImpurePatternLookup {
     pub fn new() -> Self {
         Self {
             fns: Mutex::new(vec![]),
-            names: Mutex::new(HashSet::new())
+            names: Mutex::new(HashSet::new()),
+            initialized: Mutex::new(false)
         }
     }
 
@@ -81,6 +83,10 @@ impl ImpurePatternLookup {
     /// Returns true if the fn_name corresponds to a (impure) function. This is useful because we want to defer any impure patterns inside the pure pattern function lookup
     pub fn quick_lookup(&self, fn_name: &str) -> bool {
         return self.names.lock().unwrap().contains(fn_name)
+    }
+
+    pub fn initialize(&self) {
+        *self.initialized.lock().unwrap() = true;
     }
 }
 
@@ -124,8 +130,14 @@ pub fn is_name_of_impure_fn(name: &str) -> bool {
 }
 
 /// This function is called on initialization of the parser. Put patterns here.
-pub fn init_pattern_matcher() {
+pub fn init_impure() {
     PATTERNS.push("point({}, {})", |v: Vec<VariablePayload>| {
-        Point::new(Coordinates::new(&v[0], &v[1]))
+        Point::new(Coordinates::new(v[0].float().unwrap(), v[1].float().unwrap()))
     });
+
+    PATTERNS.initialize();
+}
+
+pub fn initialized_impure() -> bool {
+    return *PATTERNS.initialized.lock().unwrap()
 }

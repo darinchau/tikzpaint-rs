@@ -1,9 +1,6 @@
 
 #[derive(Debug, PartialEq)]
 pub enum ParserErrorType {
-    /// Not an error per se, but just a signal that we dont need to render anything
-    EmptyObject,
-
     /// The submitted string contains one or more invalid commands
     CommandNotFound,
 

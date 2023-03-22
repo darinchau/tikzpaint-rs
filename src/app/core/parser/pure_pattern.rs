@@ -33,19 +33,77 @@ impl Pattern {
 /// A singleton variable lookup table that helps us evaluate all non-drawing functions
 pub struct PatternLookup {
     fns: Mutex<Vec<Pattern>>,
-    names: Mutex<HashSet<String>>
+    names: Mutex<HashSet<String>>,
+    // We have a special place for the assignment operator because otherwise it will hang up the mutex and lock the function
+    assign: Mutex<Pattern>,
+    initialized: Mutex<bool>,
 }
+
 
 impl PatternLookup {
     pub fn new() -> Self {
         Self {
             fns: Mutex::new(vec![]),
-            names: Mutex::new(HashSet::new())
+            names: Mutex::new(HashSet::new()),
+            initialized: Mutex::new(false),
+            assign: Mutex::new(Pattern {
+                pattern: AST {
+                    root: ASTNode::Function("assign".to_string(), vec![
+                        ASTNode::Variable(VariableType::AST),
+                        ASTNode::Variable(VariableType::AST)
+                    ])
+                },
+                f: Box::new(|x| {
+                    let left = x[0].ast()?;
+                    let right = x[1].ast()?;
+
+                    // Exchange left and right because variables are on the left
+                    let match_result = copy_args_with_mat(right, left)
+                        .map_err(|x| {
+                            FunctionEvaluateError {
+                                msg: format!("{:?}", x)
+                            }
+                        })?;
+
+                    if match_result.is_none() {
+                        return Err(FunctionEvaluateError{
+                            msg: format!("Assignment pattern does not match up: found {:?} on the left and {:?} on the right", left, right)
+                        });
+                    }
+
+                    let payloads = match_result.unwrap();
+
+                    // This has to change in the future - for now we only support the {x} = 5 syntax
+                    // Technically for this way of implementing we get pattern matching for free
+                    // For the {x} = 5 example, (Function:x => 5) will be our lovely payload
+                    // its like int x() { return 5; }
+                    for payload in payloads {
+                        match payload {
+                            // User cannot create AST variable payloads
+                            VariablePayload::Function(load) => {
+                                FUNCTIONS.push_raw(load.pattern(), move |x| {
+                                    if x.len() != load.num_layers {
+                                        return Err(FunctionEvaluateError{
+                                            msg: format!("Unknown error: Incorrect number of arguments, expected {}, found {}", load.num_layers, x.len())
+                                        });
+                                    }
+
+                                    Ok(load.call(x))
+                                });
+                            }
+                            _ => unreachable!()
+                        }
+                    }
+
+                    // Return Right hand side of the assignment
+                    return Ok(right.to_owned());
+                }),
+            }),
         }
     }
 
-
-    pub fn push<F>(&self, pattern: &'static str, behavior: F) where
+    /// Push a new pattern into here
+    pub fn push<F>(&self, pattern: &str, behavior: F) where
     F: Fn(Vec<VariablePayload>) -> Result<ASTNode, FunctionEvaluateError> + Send + Sync + 'static {
         let ast = AST::new(pattern).expect(&format!("Failed to compile pure pattern: {}", pattern));
 
@@ -79,8 +137,17 @@ impl PatternLookup {
     /// Searches through every possible function out there and evaluates it if we find a match
     /// The ASTNode x is guaranteed to be a function
     pub fn evaluate(&self, x: ASTNode) -> Result<ASTNode, FunctionEvaluateError> {
+        // Try to match assignment
+        let assign = self.assign.lock().unwrap();
+        if let Some(vars) = assign.pattern.matches(&x)
+        .map_err(|x| FunctionEvaluateError{msg: format!("{:?}", x)})? {
+            return Ok(assign.call(vars)?);
+        }
+
+        // Try to match other pattern
         for f in self.fns.lock().unwrap().iter() {
-            if let Some(vars) = f.pattern.matches(&x).map_err(|x| FunctionEvaluateError{msg: format!("{:?}", x)})? {
+            if let Some(vars) = f.pattern.matches(&x)
+                .map_err(|x| FunctionEvaluateError{msg: format!("{:?}", x)})? {
                 return Ok(f.call(vars)?);
             }
         }
@@ -91,6 +158,10 @@ impl PatternLookup {
     /// Returns true if the fn_name corresponds to a (pure) function. This is useful because we want to defer any impure patterns inside the pure pattern function lookup
     pub fn quick_lookup(&self, fn_name: &str) -> bool {
         return self.names.lock().unwrap().contains(fn_name)
+    }
+
+    pub fn initialize(&self) {
+        *self.initialized.lock().unwrap() = true;
     }
 }
 
@@ -148,83 +219,47 @@ pub fn is_name_of_pure_fn(name: &str) -> bool {
     return FUNCTIONS.quick_lookup(name);
 }
 
-
-pub fn initialize_lookup() {
-    // Precompiled pattern - the assignment operator
-    FUNCTIONS.push_raw(ASTNode::Function("assign".to_string(), vec![
+pub fn init_pure() {
+    // If-then-else statement
+    FUNCTIONS.push_raw(ASTNode::Function(String::from("if"), vec![
+        ASTNode::Variable(VariableType::Number),
         ASTNode::Variable(VariableType::AST),
         ASTNode::Variable(VariableType::AST)
     ]), |x| {
-        let left = {
-            if let Some(VariablePayload::AST(left)) = x.get(0) {
-                left
-            }
-            else {
-                unreachable!()
-            }
-        };
+        let condition = x[0].float()?;
+        let if_true = x[1].ast()?;
+        let if_false = x[2].ast()?;
 
-        let right = {
-            if let Some(VariablePayload::AST(right)) = x.get(1) {
-                right
-            }
-            else {
-                unreachable!()
-            }
-        };
-
-        let match_result = copy_args_with_mat(right, left)
-            .map_err(|x| {
-                FunctionEvaluateError {
-                    msg: format!("{:?}", x)
-                }
-            })?;
-
-        if match_result.is_none() {
-            return Err(FunctionEvaluateError{
-                msg: format!("Assignment pattern does not match up: found {:?} on the left and {:?} on the right", left, right)
-            });
+        if condition > 0. {
+            return Ok(if_true.to_owned());
         }
-
-        let payloads = match_result.unwrap();
-
-        // This has to change in the future - for now we only support the {x} = 5 syntax
-        // Technically for this way of implementing we get pattern matching for free
-        for payload in payloads {
-            match payload {
-                // User cannot create AST variable payloads
-                VariablePayload::AST(_) => unreachable!(),
-                VariablePayload::Function(x, f) => {
-                    todo!()
-                }
-                _ => todo!()
-            }
+        else {
+            return Ok(if_false.to_owned())
         }
-
-        todo!()
     });
 
+    // Operators
     FUNCTIONS.push("add({})({})", |v: Vec<VariablePayload>| {
-        let v0: f64 = (&v[0]).into();
-        let v1: f64 = (&v[1]).into();
+        let v0: f64 = v[0].float()?;
+        let v1: f64 = v[1].float()?;
         return Ok(ASTNode::Number(v0 + v1))
     });
 
     FUNCTIONS.push("sub({})({})", |v: Vec<VariablePayload>| {
-        let v0: f64 = (&v[0]).into();
-        let v1: f64 = (&v[1]).into();
+        let v0: f64 = v[0].float()?;
+        let v1: f64 = v[1].float()?;
         return Ok(ASTNode::Number(v0 - v1))
     });
 
     FUNCTIONS.push("mul({})({})", |v: Vec<VariablePayload>| {
-        let v0: f64 = (&v[0]).into();
-        let v1: f64 = (&v[1]).into();
+        let v0: f64 = v[0].float()?;
+        let v1: f64 = v[1].float()?;
         return Ok(ASTNode::Number(v0 * v1))
     });
 
     FUNCTIONS.push("div({})({})", |v: Vec<VariablePayload>| {
-        let v0: f64 = (&v[0]).into();
-        let v1: f64 = (&v[1]).into();
+        let v0: f64 = v[0].float()?;
+        let v1: f64 = v[1].float()?;
         if is_zero(v1) {
             return Err(FunctionEvaluateError {
                 msg: String::from("Cannot divide by zero")
@@ -232,4 +267,11 @@ pub fn initialize_lookup() {
         }
         return Ok(ASTNode::Number(v0 / v1))
     });
+
+
+    FUNCTIONS.initialize();
+}
+
+pub fn initialized_pure() -> bool {
+    return *FUNCTIONS.initialized.lock().unwrap()
 }

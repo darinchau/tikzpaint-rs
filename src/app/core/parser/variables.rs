@@ -7,6 +7,7 @@ use crate::core::*;
 use crate::core::calc::*;
 
 use super::ast::ASTNode;
+use super::pure_pattern::FunctionEvaluateError;
 use super::utils::print_fn;
 
 use std::rc::Rc;
@@ -30,10 +31,32 @@ impl Debug for VariableType {
     }
 }
 
+pub struct FunctionPayload {
+    pub num_layers: usize,
+    pub name: ThreadSafeCheapString,
+    pub f: Box<dyn Fn(Vec<VariablePayload>) -> ASTNode + Send + Sync + 'static>
+}
+
+impl Debug for FunctionPayload {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "Function:{}({})", self.name, self.num_layers)
+    }
+}
+
+impl FunctionPayload {
+    pub fn pattern(&self) -> ASTNode {
+        ASTNode::Function(self.name.to_string(), vec![ASTNode::Variable(VariableType::AST); self.num_layers])
+    }
+
+    pub fn call(&self, loads: Vec<VariablePayload>) -> ASTNode {
+        (self.f)(loads)
+    }
+}
+
 pub enum VariablePayload {
     Number(f64),
     NumberTuple(Vec<f64>),
-    Function(ThreadSafeCheapString, Box<dyn Fn(Vec<ASTNode>) -> ASTNode + Send + Sync + 'static>),
+    Function(FunctionPayload),
     AST(ASTNode)
 }
 
@@ -42,7 +65,7 @@ impl Debug for VariablePayload {
         match self {
             VariablePayload::Number(y) => write!(f, "Var({})", y),
             VariablePayload::NumberTuple(y) => write!(f, "Var({:?})", y),
-            VariablePayload::Function(x, nodes) => write!(f, "Function({})", x),
+            VariablePayload::Function(x) => write!(f, "Function({:?})", x),
             VariablePayload::AST(node) => write!(f, "{:?}", node),
         }
     }
@@ -57,22 +80,34 @@ impl PartialEq<f64> for VariablePayload {
     }
 }
 
-/// Note: This is very convenient but also dangerous. Use only when you are 3000% sure the types match
-impl From<&VariablePayload> for f64 {
-    fn from(value: &VariablePayload) -> Self {
-        match value {
-            VariablePayload::Number(x) => *x,
-            _ => panic!("Types does not match! Told you not to use implicit conversion :D")
+impl VariablePayload {
+    pub fn float(&self) -> Result<f64, FunctionEvaluateError> {
+        if let VariablePayload::Number(x) = self {
+            return Ok(*x);
         }
-    }
-}
 
-/// Note: This is very convenient but also dangerous. Use only when you are 3000% sure the types match
-impl From<&VariablePayload> for Vec<f64> {
-    fn from(value: &VariablePayload) -> Self {
-        match value {
-            VariablePayload::NumberTuple(x) => x.clone(),
-            _ => panic!("Types does not match! Told you not to use implicit conversion :D")
+        Err(FunctionEvaluateError {
+            msg: format!("Unknown error: type mismatch for f64")
+        })
+    }
+
+    pub fn ast<'a>(&'a self) -> Result<&'a ASTNode, FunctionEvaluateError> {
+        if let VariablePayload::AST(x) = self {
+            return Ok(x);
         }
+
+        Err(FunctionEvaluateError {
+            msg: format!("Unknown error: type mismatch for f64")
+        })
+    }
+
+    pub fn tuple<'a>(&'a self) -> Result<&'a Vec<f64>, FunctionEvaluateError> {
+        if let VariablePayload::NumberTuple(x) = self {
+            return Ok(x);
+        }
+
+        Err(FunctionEvaluateError {
+            msg: format!("Unknown error: type mismatch for f64")
+        })
     }
 }

@@ -187,20 +187,9 @@ impl CanvasManager {
             let draw_result = mborrow!(f).draw_with_text(text);
 
             if let Err(e) = draw_result {
-                match e.error_type {
-                    ParserErrorType::EmptyObject => {
-                        return TerminalResetEvent {
-                            event_type: TerminalResetType::Reset,
-                            error_msg: None
-                        }
-                    },
-
-                    _ => {
-                        return TerminalResetEvent {
-                            event_type: TerminalResetType::StaySame,
-                            error_msg: Some(e.msg)
-                        }
-                    }
+                return TerminalResetEvent {
+                    event_type: TerminalResetType::StaySame,
+                    error_msg: Some(e.msg)
                 }
             }
 

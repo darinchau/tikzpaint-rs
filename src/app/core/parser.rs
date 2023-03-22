@@ -27,13 +27,24 @@ pub use self::parser_error::*;
 
 
 pub fn initialize_parser() {
-    initialize_lookup();
-    init_pattern_matcher();
+    init_pure();
+    init_impure();
+}
+
+/// Returns if the parsers are initialized
+fn try_initialize() {
+    if !initialized_pure() {
+        init_pure();
+    }
+
+    if !initialized_impure() {
+        init_impure()
+    }
 }
 
 /// Parses a string into possibly a figure object complex, trying to match every pattern possible
 /// If nothing matches, returns a parser error which is like an abstraction of every possible error that could occur
-pub fn parse<S: StringLike>(s: S) -> Result<Vec<FigureObjectComplex>, ParserError> {
+pub fn parse<S: StringLike>(s: S) -> Result<Option<Vec<FigureObjectComplex>>, ParserError> {
     // 1. Turn the command into a syntax tree
     let ast = AST::new(&(s.wrap())).map_err( |x| {
         let msg = format!("Parse error: {} - {} (char {})", x.error_type, x.message.unwrap_or_default(), x.position);
@@ -55,32 +66,35 @@ pub fn parse<S: StringLike>(s: S) -> Result<Vec<FigureObjectComplex>, ParserErro
     })?;
 
     // 3. Draw everything inside the AST after function evaluation
-    let drawables = parse_draw(expanded).map_err(|x| {
-        match x {
-            PatternMatchError::NoMatch => ParserError {
-                error_type: ParserErrorType::CommandNotFound,
-                msg: format!("Command not found"),
-                src: "parser::parse()"
+    let drawables = parse_draw(expanded);
+    if let Err(er) = drawables {
+        match er {
+            PatternMatchError::NoMatch => {
+                return Ok(None)
             },
 
-            PatternMatchError::ASTMatchError(er) => ParserError {
+            PatternMatchError::ASTMatchError(er) => return Err(ParserError {
                 error_type: ParserErrorType::ASTMatchError,
                 msg: format!("Invalid syntax: {}", er),
                 src: "parser::parse()"
-            }
-
+            })
         }
-    })?;
+    };
 
     // 4. Turn all the drawable objects into Figure object complexes
-    let focs_to_draw = drawables.into_iter().map(|dr| {
+    let focs_to_draw: Vec<FigureObjectComplex> = drawables.unwrap().into_iter().map(|dr| {
         FigureObjectComplex {
             st: dr.repr().wrap(),
             fo: Rc::new(RefCell::new(dr)),
         }
     }).collect();
 
-    return Ok(focs_to_draw);
+    // Handle the special case where nothing needs to be drawn
+    if focs_to_draw.len() == 0 {
+        return Ok(None);
+    }
+
+    return Ok(Some(focs_to_draw));
 }
 
 // Some of these here might not work, because they are features we aim to develop
@@ -100,7 +114,7 @@ mod test {
     fn test_parse_1() {
         initialize_parser();
         let cmd = "point(3, 5)".wrap();
-        let res = parse(cmd).unwrap();
+        let res = parse(cmd).unwrap().unwrap();
         assert!(res.len() == 1);
         assert!(res[0].fo.borrow().repr() == "point(3, 5)");
     }
@@ -119,7 +133,7 @@ mod test {
 
     #[test]
     fn test_parse_3() {
-        compare_tree("point(1, add(2, 3))", "point(1, 5)");
+        compare_tree("point(1, add(2)(3))", "point(1, 5)");
     }
 
     #[test]
@@ -129,13 +143,15 @@ mod test {
 
     #[test]
     fn test_parse_5() {
+        initialize_parser();
         let cmd = "{x} = 5, point(3, x)".wrap();
-        let res = parse(cmd).unwrap();
+        let res = parse(cmd).unwrap().unwrap();
     }
 
     #[test]
     fn test_parse_6() {
-        let cmd = "{x} = 5, point(3, x).wrap()".wrap();
+        initialize_parser();
+        let cmd = "{x} = 5, point(3, x)".wrap();
         let res = parse(cmd).unwrap();
     }
 }
