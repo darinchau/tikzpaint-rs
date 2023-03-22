@@ -130,7 +130,7 @@ impl ASTNode {
     }
 
     fn from_str_recursive(st: &str, offset: usize) -> Result<ASTNode, ASTError> {
-        let s = st.trim();
+        let s = st;
 
         // - Is it a variable?
         if s.check_brackets("{}") {
@@ -175,7 +175,7 @@ fn handle_variable(st: &str, offset: usize) -> Result<ASTNode, ASTError> {
     let contents = st.remove_curly_brackets();
 
     // If contents is white space, then it should match a single number
-    if contents.trim().is_empty() {
+    if contents.is_empty() {
         return Ok(ASTNode::Variable(VariableType::Number));
     }
 
@@ -448,7 +448,7 @@ fn add_explicit_brackets(s: &str) -> String {
 
 /// Handles stuff like 1 + 2 * (3 + zeta(4))
 fn splice_math_operators(s: &str, offset: usize) -> Result<ASTNode, ASTError> {
-    let bracketed_s = add_explicit_brackets(s.trim());
+    let bracketed_s = add_explicit_brackets(s);
     for (op, op_name) in [('+', "add"), ('-', "sub"), ('*', "mul"), ('/', "div")] {
         if let Some(node) = splice_one_operator(&bracketed_s, offset, op, op_name)? {
             return Ok(node);
@@ -482,62 +482,25 @@ fn splice_one_operator(s: &str, offset: usize, operator: char, operator_name: &s
 /// Handles the function call syntax - funct(call1)(call2)...(calln)
 fn splice_fn_like_args(s: &str, offset: usize) -> Result<ASTNode, ASTError> {
     // Second pass - if we reach here this means there is no top level commas
-    // So an expression must be of the form identifier(node)(node)...(node)
-    let mut left_bracket_pos = None;
-    let mut brackets_count = 0;
-    let mut parts = vec![];
+    // So an expression must be of the form fn_ident(node)(node)...(node)
+    let fn_ident = (&s[0..s.find('(').unwrap()]).to_string();
 
-    // We do not use the splice comma function because test 3 - if there are extra spaces its a pain to handle
-    for (i, c) in s.chars().enumerate() {
-        if c == '(' {
-            if left_bracket_pos.is_none() {
-                left_bracket_pos = Some(i);
+    // There is no white space so this can't f up
+    let nodes = splice_at_top_level_delim(s, offset, ')')?
+        .into_iter()
+        // Skip the last one because if we splice at ')' then there is one extra entry
+        .rev().skip(1).rev()
+        .enumerate()
+        .map(|(i, (substr, pos))| {
+            if i == 0 {
+                ASTNode::from_str_recursive(&substr[fn_ident.len() + 1..], offset)
             }
-            brackets_count += 1;
-        }
-        else if c == ')' {
-            // - if the bracket is not closed, bubble up an error
-            brackets_count -= 1;
-            if brackets_count < 0 {
-                return Err(ASTError {
-                    error_type: ASTErrorType::ExtraBrackets,
-                    position: offset + i,
-                    message: None,
-                    source: "AST::splice_fn_like_args()"
-                });
+            else {
+                ASTNode::from_str_recursive(&substr[1..], offset + pos)
             }
-            if brackets_count == 0 {
-                if let Some(lbp) = left_bracket_pos {
-                    parts.push(&s[lbp+1..i]);
-                    left_bracket_pos = None;
-                }
-                else {
-                    return Err(ASTError {
-                        error_type: ASTErrorType::InvalidSyntax,
-                        position: offset + i,
-                        message: Some(String::from("Unknown error encountered")),
-                        source: "AST::splice_fn_like_args()"
-                    });
-                }
+        }).collect::<Result<Vec<ASTNode>, ASTError>>()?;
 
-            }
-        }
-    }
-
-    let fn_ident = (&s[0..s.find('(').unwrap()]).trim().to_string();
-
-    // Add one for the stripped left bracket (
-    let mut cum_str_len = fn_ident.len() + 1;
-
-    let mut subnodes = vec![];
-
-    for part in parts {
-        subnodes.push(ASTNode::from_str_recursive(part, cum_str_len)?);
-
-        cum_str_len += part.len() + 2;
-    }
-
-    return Ok(ASTNode::Function(fn_ident, subnodes))
+    return Ok(ASTNode::Function(fn_ident, nodes));
 }
 
 impl AST {
