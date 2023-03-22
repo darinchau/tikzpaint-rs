@@ -158,7 +158,7 @@ impl ASTNode {
         }
 
         // Extract all brackets and commas and perform recursion magic
-        if s.contains_one_of("(){},+-*/") {
+        if s.contains_one_of("(){},+-*/=") {
             return Ok(splice_complex_expr(s, offset)?);
         }
 
@@ -383,7 +383,7 @@ fn add_explicit_brackets(s: &str) -> String {
         // This brackets whenever we see two consecutive operators
         // It will simplify the implementation, and if your syntax is wrong to begin, you are screwed anyway
         match c {
-            '+' | '-' | '*' | '/' => {
+            '+' | '-' | '*' | '/' | '=' => {
                 if bracket_count == 0 {
                     if last_char_is_operator || i == 0 {
                         last_char_is_operator = false;
@@ -416,10 +416,6 @@ fn add_explicit_brackets(s: &str) -> String {
                 bracket_count -= 1;
             },
 
-            ' ' => {
-                continue;
-            }
-
             _ => {
                 last_char_is_operator = false;
             }
@@ -449,7 +445,7 @@ fn add_explicit_brackets(s: &str) -> String {
 /// Handles stuff like 1 + 2 * (3 + zeta(4))
 fn splice_math_operators(s: &str, offset: usize) -> Result<ASTNode, ASTError> {
     let bracketed_s = add_explicit_brackets(s);
-    for (op, op_name) in [('+', "add"), ('-', "sub"), ('*', "mul"), ('/', "div")] {
+    for (op, op_name) in [('+', "add"), ('-', "sub"), ('*', "mul"), ('/', "div"), ('=', "assign")] {
         if let Some(node) = splice_one_operator(&bracketed_s, offset, op, op_name)? {
             return Ok(node);
         }
@@ -469,10 +465,10 @@ fn splice_one_operator(s: &str, offset: usize, operator: char, operator_name: &s
 
     let mut root = ASTNode::from_str_recursive(substrs[0].0, offset)?;
     for (substr, pos) in substrs.into_iter().skip(1) {
-        root = ASTNode::Function(op_str.clone(), vec![ASTNode::Expression(vec![
+        root = ASTNode::Function(op_str.clone(), vec![
             root,
             ASTNode::from_str_recursive(substr, offset + pos)?
-        ])]);
+        ]);
     }
 
     // This only asserts root is actually something, where in reality we already assumed root is non-null
@@ -822,17 +818,17 @@ mod test {
 
     #[test]
     fn test_compile_ast17() {
-        compare_ast("1 + 2", "add(1, 2)");
+        compare_ast("1 + 2", "add(1)(2)");
     }
 
     #[test]
     fn test_compile_ast18() {
-        compare_ast("1 + 2 + zeta(3)", "add(add(1, 2), zeta(3))");
+        compare_ast("1 + 2 + zeta(3)", "add(add(1)(2))(zeta(3))");
     }
 
     #[test]
     fn test_compile_ast19() {
-        compare_ast("1 + 2 + zeta(3) * x", "add(add(1, 2), mul(zeta(3), x))");
+        compare_ast("1 + 2 + zeta(3) * x", "add(add(1)(2))(mul(zeta(3))(x))");
     }
 
     #[test]
@@ -846,7 +842,7 @@ mod test {
 
     #[test]
     fn test_compile_ast21() {
-        compare_ast("1 +- 2", "add(1, -2)");
+        compare_ast("1 +- 2", "add(1)(-2)");
     }
 
     #[test]
@@ -856,12 +852,12 @@ mod test {
 
     #[test]
     fn test_compile_ast23() {
-        compare_ast("1 / + 2", "div(1, +2)");
+        compare_ast("1 / + 2", "div(1)(+2)");
     }
 
     #[test]
     fn test_compile_ast24() {
-        compare_ast("1*-2+3", "add(mul(1, -2), 3)");
+        compare_ast("1*-2+3", "add(mul(1)(-2))(3)");
     }
 
     #[test]

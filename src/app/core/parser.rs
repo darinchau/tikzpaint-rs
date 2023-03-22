@@ -83,7 +83,7 @@ pub fn parse<S: StringLike>(s: S) -> Result<Vec<FigureObjectComplex>, ParserErro
     return Ok(focs_to_draw);
 }
 
-
+// Some of these here might not work, because they are features we aim to develop
 #[cfg(test)]
 mod test {
     use super::*;
@@ -124,12 +124,17 @@ mod test {
 
     #[test]
     fn test_parse_4() {
-        initialize_parser();
-        compare_tree("point(1 + 2, 3 + 4 - 5)", "point(3, 2)");
+        compare_tree("point(1 + 2, 3 + 4 * (5 - 6))", "point(3, -1)");
     }
 
     #[test]
     fn test_parse_5() {
+        let cmd = "{x} = 5, point(3, x)".wrap();
+        let res = parse(cmd).unwrap();
+    }
+
+    #[test]
+    fn test_parse_6() {
         let cmd = "{x} = 5, point(3, x).wrap()".wrap();
         let res = parse(cmd).unwrap();
     }

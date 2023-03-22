@@ -109,6 +109,17 @@ fn copy_args_recursive(s: &ASTNode, mat: &ASTNode, result: &mut Vec<VariablePayl
     }
 }
 
-fn try_match_number_tuple_expr(x: &Vec<ASTNode>, result: &Vec<VariablePayload>) -> Result<bool, ASTParseError> {
-    todo!()
+fn try_match_number_tuple_expr(nodes: &Vec<ASTNode>, result: &mut Vec<VariablePayload>) -> Result<bool, ASTParseError> {
+    let mut v = vec![];
+    for node in nodes {
+        if let ASTNode::Number(x) = node {
+            v.push(*x);
+        }
+        else {
+            return Ok(false);
+        }
+    }
+
+    result.push(VariablePayload::NumberTuple(v));
+    Ok(true)
 }

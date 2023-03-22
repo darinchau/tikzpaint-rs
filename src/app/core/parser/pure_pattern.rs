@@ -6,11 +6,14 @@ use std::{cell::RefCell, sync::Mutex};
 use super::ast::*;
 use super::impure_pattern::is_name_of_impure_fn;
 use super::variables::*;
+use crate::core::calc::is_zero;
 use crate::figures::*;
 use crate::core::*;
 use lazy_static::lazy_static;
 
-type FunctionBehaviour = dyn Fn(Vec<VariablePayload>) -> ASTNode + Send + Sync;
+use std::collections::HashSet;
+
+type FunctionBehaviour = dyn Fn(Vec<VariablePayload>) -> Result<ASTNode, FunctionEvaluateError> + Send + Sync;
 
 /// An implementation of a function that evaluates to something
 /// This is a functional language :D which means when we assign x = 5
@@ -21,39 +24,44 @@ pub struct Pattern {
 }
 
 impl Pattern {
-    fn call(&self, args: Vec<VariablePayload>) -> ASTNode {
+    fn call(&self, args: Vec<VariablePayload>) -> Result<ASTNode, FunctionEvaluateError> {
         (self.f)(args)
     }
 }
 
 /// A singleton variable lookup table that helps us evaluate all non-drawing functions
 pub struct PatternLookup {
-    fns: Mutex<Vec<Pattern>>
+    fns: Mutex<Vec<Pattern>>,
+    names: Mutex<HashSet<String>>
 }
 
 impl PatternLookup {
     pub fn new() -> Self {
         Self {
-            fns: Mutex::new(vec![])
+            fns: Mutex::new(vec![]),
+            names: Mutex::new(HashSet::new())
         }
     }
 
-    pub fn push<F>(&self, pattern: &'static str, behavior: F) where
-    F: Fn(Vec<VariablePayload>) -> ASTNode + Send + Sync + 'static {
-        let ast = AST::new(pattern).expect("Failed to compile predefined patterns :(");
 
-        // This guarantees we have a function
-        match ast.root {
-            ASTNode::Function(_, _) => {},
-            _ => unreachable!()
+    pub fn push<F>(&self, pattern: &'static str, behavior: F) where
+    F: Fn(Vec<VariablePayload>) -> Result<ASTNode, FunctionEvaluateError> + Send + Sync + 'static {
+        let ast = AST::new(pattern).expect(&format!("Failed to compile pure pattern: {}", pattern));
+
+        if let ASTNode::Function(ref name, _) = ast.root {
+            self.names.lock().unwrap().insert(name.to_owned());
+
+            let pat = Pattern {
+                pattern: ast,
+                f: Box::new(behavior) as Box<FunctionBehaviour>
+            };
+
+            self.fns.lock().unwrap().push(pat);
+
+            return;
         }
 
-        let f = Pattern {
-            pattern: ast,
-            f: Box::new(behavior)
-        };
-
-        self.fns.lock().unwrap().push(f);
+        panic!("Precompiled pure pattern not a function")
     }
 
     /// Searches through every possible function out there and evaluates it if we find a match
@@ -61,11 +69,16 @@ impl PatternLookup {
     pub fn evaluate(&self, x: ASTNode) -> Result<ASTNode, FunctionEvaluateError> {
         for f in self.fns.lock().unwrap().iter() {
             if let Some(vars) = f.pattern.matches(&x).map_err(|x| FunctionEvaluateError{msg: format!("{:?}", x)})? {
-                return Ok(f.call(vars));
+                return Ok(f.call(vars)?);
             }
         }
 
         Err(FunctionEvaluateError{msg: format!("Function does not match any known patterns: {:?}", x)})
+    }
+
+    /// Returns true if the fn_name corresponds to a (pure) function. This is useful because we want to defer any impure patterns inside the pure pattern function lookup
+    pub fn quick_lookup(&self, fn_name: &str) -> bool {
+        return self.names.lock().unwrap().contains(fn_name)
     }
 }
 
@@ -119,28 +132,42 @@ pub fn evaluate_all(x: AST) -> Result<AST, FunctionEvaluateError> {
     })
 }
 
+pub fn is_name_of_pure_fn(name: &str) -> bool {
+    return FUNCTIONS.quick_lookup(name);
+}
+
+
 pub fn initialize_lookup() {
-    FUNCTIONS.push("add({}, {})", |v: Vec<VariablePayload>| {
+    FUNCTIONS.push("add({})({})", |v: Vec<VariablePayload>| {
         let v0: f64 = (&v[0]).into();
         let v1: f64 = (&v[1]).into();
-        return ASTNode::Number(v0 + v1)
+        return Ok(ASTNode::Number(v0 + v1))
     });
 
-    FUNCTIONS.push("sub({}, {})", |v: Vec<VariablePayload>| {
+    FUNCTIONS.push("sub({})({})", |v: Vec<VariablePayload>| {
         let v0: f64 = (&v[0]).into();
         let v1: f64 = (&v[1]).into();
-        return ASTNode::Number(v0 - v1)
+        return Ok(ASTNode::Number(v0 - v1))
     });
 
-    FUNCTIONS.push("mul({}, {})", |v: Vec<VariablePayload>| {
+    FUNCTIONS.push("mul({})({})", |v: Vec<VariablePayload>| {
         let v0: f64 = (&v[0]).into();
         let v1: f64 = (&v[1]).into();
-        return ASTNode::Number(v0 * v1)
+        return Ok(ASTNode::Number(v0 * v1))
     });
 
-    FUNCTIONS.push("div({}, {})", |v: Vec<VariablePayload>| {
+    FUNCTIONS.push("div({})({})", |v: Vec<VariablePayload>| {
         let v0: f64 = (&v[0]).into();
         let v1: f64 = (&v[1]).into();
-        return ASTNode::Number(v0 * v1)
+        if is_zero(v1) {
+            return Err(FunctionEvaluateError {
+                msg: String::from("Cannot divide by zero")
+            })
+        }
+        return Ok(ASTNode::Number(v0 / v1))
+    });
+
+    FUNCTIONS.push("assign({})({})", |v: Vec<VariablePayload>| {
+
     });
 }
