@@ -6,6 +6,7 @@ use std::{cell::RefCell, sync::Mutex};
 use super::ast::*;
 use super::impure_pattern::is_name_of_impure_fn;
 use super::variables::*;
+use crate::app::core::parser::ast_matcher::copy_args_with_mat;
 use crate::core::calc::is_zero;
 use crate::figures::*;
 use crate::core::*;
@@ -62,6 +63,17 @@ impl PatternLookup {
         }
 
         panic!("Precompiled pure pattern not a function")
+    }
+
+    /// This is only for predefined functions
+    fn push_raw<F>(&self, pattern: ASTNode, behavior: F) where
+    F: Fn(Vec<VariablePayload>) -> Result<ASTNode, FunctionEvaluateError> + Send + Sync + 'static {
+        let pat = Pattern {
+            pattern: AST{root: pattern},
+            f: Box::new(behavior) as Box<FunctionBehaviour>
+        };
+
+        self.fns.lock().unwrap().push(pat);
     }
 
     /// Searches through every possible function out there and evaluates it if we find a match
@@ -138,6 +150,60 @@ pub fn is_name_of_pure_fn(name: &str) -> bool {
 
 
 pub fn initialize_lookup() {
+    // Precompiled pattern - the assignment operator
+    FUNCTIONS.push_raw(ASTNode::Function("assign".to_string(), vec![
+        ASTNode::Variable(VariableType::AST),
+        ASTNode::Variable(VariableType::AST)
+    ]), |x| {
+        let left = {
+            if let Some(VariablePayload::AST(left)) = x.get(0) {
+                left
+            }
+            else {
+                unreachable!()
+            }
+        };
+
+        let right = {
+            if let Some(VariablePayload::AST(right)) = x.get(1) {
+                right
+            }
+            else {
+                unreachable!()
+            }
+        };
+
+        let match_result = copy_args_with_mat(right, left)
+            .map_err(|x| {
+                FunctionEvaluateError {
+                    msg: format!("{:?}", x)
+                }
+            })?;
+
+        if match_result.is_none() {
+            return Err(FunctionEvaluateError{
+                msg: format!("Assignment pattern does not match up: found {:?} on the left and {:?} on the right", left, right)
+            });
+        }
+
+        let payloads = match_result.unwrap();
+
+        // This has to change in the future - for now we only support the {x} = 5 syntax
+        // Technically for this way of implementing we get pattern matching for free
+        for payload in payloads {
+            match payload {
+                // User cannot create AST variable payloads
+                VariablePayload::AST(_) => unreachable!(),
+                VariablePayload::Function(x, f) => {
+                    todo!()
+                }
+                _ => todo!()
+            }
+        }
+
+        todo!()
+    });
+
     FUNCTIONS.push("add({})({})", |v: Vec<VariablePayload>| {
         let v0: f64 = (&v[0]).into();
         let v1: f64 = (&v[1]).into();
@@ -165,9 +231,5 @@ pub fn initialize_lookup() {
             })
         }
         return Ok(ASTNode::Number(v0 / v1))
-    });
-
-    FUNCTIONS.push("assign({})({})", |v: Vec<VariablePayload>| {
-
     });
 }

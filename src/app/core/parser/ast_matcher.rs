@@ -29,44 +29,61 @@ pub fn copy_args_with_mat(ast1: &ASTNode, ast2: &ASTNode) -> Result<Option<Vec<V
 
 /// Returns true if the AST matches, pushing the results in order into the result vector whenever necessary
 fn copy_args_recursive(s: &ASTNode, mat: &ASTNode, result: &mut Vec<VariablePayload>) -> Result<bool, ASTParseError> {
-    // Honestly it kinda doesn't matter which type of mismatch we get. Hence we simplified the implementation of ast parse errors
     match (s, mat) {
-        (ASTNode::Number(x), ASTNode::Variable(t)) => {
-            // A number can only match a variable that is supposed to store a number
-            if *t != VariableType::Number {
-                return Ok(false);
-            }
+        // If right hand side is expecting an AST, then match everything - we guarantee left hand side cannot expect
+        // an AST because there is no way to get an AST variable except for precompiled patterns
+        (_, ASTNode::Variable(VariableType::AST)) => {
+            result.push(VariablePayload::AST(s.to_owned()));
+            Ok(true)
+        }
+
+        (ASTNode::Variable(VariableType::AST), _) => {
+            unreachable!()
+        }
+
+        // For variable on the right hand side, try to convert the AST nodes into variable payloads whenever possible
+        // A number can be matched into a number
+        (ASTNode::Number(x), ASTNode::Variable(VariableType::Number)) => {
             result.push(VariablePayload::Number(*x));
             Ok(true)
         },
 
-        (ASTNode::Expression(x), ASTNode::Variable(t)) => {
-            // Number cannot match an entire expression
-            match *t {
-                VariableType::Number => { Ok(false) }
-                VariableType::NumberTuple => { try_match_number_tuple_expr(x, result) }
-                VariableType::Function(_, _) => { Ok(false) }
-            }
-        },
+        // A number can be matched into a variable - this is the assignment operation
+        // So we bind the variable to a function that takes 0 arguments and gives said number
+        (ASTNode::Number(x), ASTNode::Variable(VariableType::Variable(name))) => {
+            let number = *x;
+            result.push(VariablePayload::Function(name.clone(), Box::new(move |a| {
+                ASTNode::Number(number)
+            })));
 
-        (ASTNode::Function(x, v), ASTNode::Variable(t)) => {
-            match *t {
-                VariableType::Number => { todo!() }
-                VariableType::NumberTuple => { Ok(false) }
-                VariableType::Function(ref name, ref node) => {
-                    if x == name && v.len() == node.len() {
-                        todo!()
-                    }
+            Ok(true)
+        }
 
-                    Ok(false)
+        // An expression can only match into a number tuple
+        (ASTNode::Expression(x), ASTNode::Variable(VariableType::NumberTuple)) => {
+            let mut v = vec![];
+            for node in x {
+                if let ASTNode::Number(a) = node {
+                    v.push(*a);
+                }
+                else {
+                    return Ok(false);
                 }
             }
+
+            result.push(VariablePayload::NumberTuple(v));
+            Ok(true)
         },
 
-        (ASTNode::Variable(_), _) => { return Err(ASTParseError::VarOnLeftExpr) },
+        // A variable cannot appear on the left hand side
+        (ASTNode::Variable(_), _) => {
+            Err(ASTParseError::VarOnLeftExpr)
+        },
 
         // If the right hand side is anything but a variable, the types and values have to match up
-        (ASTNode::Number(x), ASTNode::Number(y)) => return Ok(eq(x, y)),
+        (ASTNode::Number(x), ASTNode::Number(y)) => {
+            Ok(eq(x, y))
+        },
 
         (ASTNode::Expression(x), ASTNode::Expression(y)) => {
             if x.len() != y.len() {
@@ -80,7 +97,7 @@ fn copy_args_recursive(s: &ASTNode, mat: &ASTNode, result: &mut Vec<VariablePayl
                 }
             }
 
-            return Ok(true);
+            Ok(true)
         }
 
         (ASTNode::Function(name_x, x), ASTNode::Function(name_y, y)) => {
@@ -101,25 +118,10 @@ fn copy_args_recursive(s: &ASTNode, mat: &ASTNode, result: &mut Vec<VariablePayl
                 }
             }
 
-            return Ok(true);
+            Ok(true)
         }
 
         // The remaining cases means the node types does not match up
-        _ => return Ok(false)
+        _ => Ok(false)
     }
-}
-
-fn try_match_number_tuple_expr(nodes: &Vec<ASTNode>, result: &mut Vec<VariablePayload>) -> Result<bool, ASTParseError> {
-    let mut v = vec![];
-    for node in nodes {
-        if let ASTNode::Number(x) = node {
-            v.push(*x);
-        }
-        else {
-            return Ok(false);
-        }
-    }
-
-    result.push(VariablePayload::NumberTuple(v));
-    Ok(true)
 }

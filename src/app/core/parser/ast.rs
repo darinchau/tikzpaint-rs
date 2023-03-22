@@ -1,7 +1,7 @@
 //! This file contains the definition for the abstract syntax tree of the text
 //! Construct an AST by AST::new() and try to match an AST by AST::matches()
 
-use crate::figures::*;
+use crate::{figures::*, core::StringLike};
 use crate::core::calc::*;
 use lazy_static::lazy_static;
 use regex::Regex;
@@ -28,8 +28,6 @@ pub enum ASTNode {
     Number(f64),
     Expression(Vec<ASTNode>),
     Function(String, Vec<ASTNode>),
-
-    /// A variable purely exists for formatting expressions using AST
     Variable(VariableType),
 }
 
@@ -208,11 +206,9 @@ fn handle_variable(st: &str, offset: usize) -> Result<ASTNode, ASTError> {
         return Ok(ASTNode::Variable(VariableType::NumberTuple));
     }
 
-    // if contents contain a valid variable name, this means some point in the near future we will try to assign
-    // the variable with a number/expression/whatever.
-    // Store the variable name first
+    // If contents is a variable name then we store that in a function
     if IS_IDENT.is_match(contents) {
-        return Ok(ASTNode::Variable(VariableType::Function(contents.to_string(), vec![])));
+        return Ok(ASTNode::Variable(VariableType::Variable(contents.wrap_thread_safe())));
     }
 
     return Err(ASTError {
@@ -794,7 +790,7 @@ mod test {
         let s = "fn({x})";
         let result = ASTNode::from_str(s).unwrap();
         let expected = ASTNode::Function(String::from("fn"), vec![
-            ASTNode::Variable(VariableType::Function("x".to_string(), vec![]))
+            ASTNode::Variable(VariableType::Variable("x".wrap_thread_safe()))
         ]);
         assert_eq!(result, expected);
     }
@@ -804,7 +800,7 @@ mod test {
         let s = "fn({x})";
         let result = ASTNode::from_str(s).unwrap();
         let expected = ASTNode::Function(String::from("fn"), vec![
-            ASTNode::Variable(VariableType::Function("x".to_string(), vec![]))
+            ASTNode::Variable(VariableType::Variable("x".wrap_thread_safe()))
         ]);
         assert_eq!(result, expected);
     }

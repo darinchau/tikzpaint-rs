@@ -3,7 +3,7 @@
 use std::fmt::Debug;
 use std::any::TypeId;
 use std::any::Any;
-use crate::core::CheapString;
+use crate::core::*;
 use crate::core::calc::*;
 
 use super::ast::ASTNode;
@@ -12,11 +12,11 @@ use super::utils::print_fn;
 use std::rc::Rc;
 
 #[derive(Clone, PartialEq)]
-/// A variable is like a macro - it is something that contains a single ASTNode
 pub enum VariableType {
     Number,
     NumberTuple,
-    Function(String, Vec<ASTNode>)
+    Variable(ThreadSafeCheapString),
+    AST
 }
 
 impl Debug for VariableType {
@@ -24,16 +24,17 @@ impl Debug for VariableType {
         match self {
             VariableType::Number => write!(f, "Number"),
             VariableType::NumberTuple => write!(f, "NumberTuple"),
-            VariableType::Function(name, nodes) => write!(f, "{}", print_fn(name, nodes))
+            VariableType::Variable(name) => write!(f, "Variable{}", name),
+            VariableType::AST => write!(f, "AST")
         }
     }
 }
 
-#[derive(Clone, PartialEq)]
 pub enum VariablePayload {
     Number(f64),
     NumberTuple(Vec<f64>),
-    Function(String, Vec<ASTNode>),
+    Function(ThreadSafeCheapString, Box<dyn Fn(Vec<ASTNode>) -> ASTNode + Send + Sync + 'static>),
+    AST(ASTNode)
 }
 
 impl Debug for VariablePayload {
@@ -41,7 +42,8 @@ impl Debug for VariablePayload {
         match self {
             VariablePayload::Number(y) => write!(f, "Var({})", y),
             VariablePayload::NumberTuple(y) => write!(f, "Var({:?})", y),
-            VariablePayload::Function(x, nodes) => write!(f, "{}", print_fn(x, nodes)),
+            VariablePayload::Function(x, nodes) => write!(f, "Function({})", x),
+            VariablePayload::AST(node) => write!(f, "{:?}", node),
         }
     }
 }
