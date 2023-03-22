@@ -115,7 +115,7 @@ impl Debug for AST {
 }
 
 lazy_static! {
-    static ref IS_NUMBER: Regex = Regex::new(r"^-?\d+\.?\d*$").unwrap();
+    static ref IS_NUMBER: Regex = Regex::new(r"^[+-]? *\d+\.?\d*$").unwrap();
     static ref IS_POSITIVE_INT: Regex = Regex::new(r"^\d+$").unwrap();
     static ref IS_IDENT: Regex = Regex::new(r"^[A-Za-z_][A-Za-z_0-9]*$").unwrap();
     static ref IS_BRACKETED: Regex = Regex::new(r"^\(.*\)$").unwrap();
@@ -124,7 +124,9 @@ lazy_static! {
 impl ASTNode {
     /// This function exists for testing only
     fn from_str(st: &str) -> Result<ASTNode, ASTError> {
-        return ASTNode::from_str_recursive(st, 0);
+        // Remove all white spaces first
+        let s = st.split_whitespace().collect::<String>();
+        return ASTNode::from_str_recursive(&s, 0);
     }
 
     fn from_str_recursive(st: &str, offset: usize) -> Result<ASTNode, ASTError> {
@@ -223,7 +225,12 @@ fn handle_variable(st: &str, offset: usize) -> Result<ASTNode, ASTError> {
 
 /// It is known that s is a number. Make that into an AST node
 fn parse_number(s: &str, offset: usize) -> Result<f64, ASTError> {
-    s.parse::<f64>().map_err(|x| ASTError {
+    // Removes all the white space including those in the middle
+    s.split_whitespace()
+        .collect::<String>()
+        // Try to parse the whole thing into a f64
+        .parse::<f64>()
+        .map_err(|x| ASTError {
         error_type: ASTErrorType::ParseNumberFail,
         position: offset,
         message: Some(format!("Got {}", s)),
@@ -355,10 +362,95 @@ fn splice_complex_expr(s: &str, offset: usize) -> Result<ASTNode, ASTError> {
     return splice_math_operators(s, offset);
 }
 
+/// This is to handle special (weird) cases like 1 +- 2 and 2*-3 and 1 + 2 * -(3 + 4)
+/// and bracket the signs
+/// This also removes all white spaces in the process just so we make everything a bit more predictable
+fn add_explicit_brackets(s: &str) -> String {
+    let mut result = String::new();
+    let mut buffer = String::new();
+
+    // Keep track of the bracket counts because we only want to modify anything that is in the top bracket layer
+    // We assume we did the bracket check so every bracket pairs match up
+    let mut bracket_count = 0;
+
+    // Keep track of whether the last character we encountered is a multiplication or a division
+    // So to handle the *+ and  /- etc
+    // Make this true because this handles the case where the string starts with a -1
+    let mut last_char_is_operator = false;
+    let mut should_add_brackets = false;
+
+    for (i, c) in s.chars().enumerate() {
+        // This brackets whenever we see two consecutive operators
+        // It will simplify the implementation, and if your syntax is wrong to begin, you are screwed anyway
+        match c {
+            '+' | '-' | '*' | '/' => {
+                if bracket_count == 0 {
+                    if last_char_is_operator || i == 0 {
+                        last_char_is_operator = false;
+                        should_add_brackets = true;
+                        buffer.push(c);
+                    }
+                    else if should_add_brackets {
+                        last_char_is_operator = true;
+                        should_add_brackets = false;
+                        result.push('(');
+                        result.push_str(&buffer);
+                        result.push(')');
+                        result.push(c);
+                        buffer.clear();
+                    }
+                    else {
+                        last_char_is_operator = true;
+                        result.push(c);
+                    }
+
+                    continue;
+                }
+            },
+
+            '(' | '{' => {
+                bracket_count += 1;
+            },
+
+            ')' | '}' => {
+                bracket_count -= 1;
+            },
+
+            ' ' => {
+                continue;
+            }
+
+            _ => {
+                last_char_is_operator = false;
+            }
+        }
+
+        if should_add_brackets {
+            buffer.push(c);
+        }
+        else {
+            result.push(c);
+        }
+    }
+
+    // End if something is in the buffer
+    if should_add_brackets {
+        result.push('(');
+        result.push_str(&buffer);
+        result.push(')');
+    }
+    else {
+        result.push_str(&buffer);
+    }
+
+    result
+}
+
 /// Handles stuff like 1 + 2 * (3 + zeta(4))
 fn splice_math_operators(s: &str, offset: usize) -> Result<ASTNode, ASTError> {
+    let bracketed_s = add_explicit_brackets(s.trim());
     for (op, op_name) in [('+', "add"), ('-', "sub"), ('*', "mul"), ('/', "div")] {
-        if let Some(node) = splice_one_operator(s, offset, op, op_name)? {
+        if let Some(node) = splice_one_operator(&bracketed_s, offset, op, op_name)? {
             return Ok(node);
         }
     }
@@ -472,6 +564,12 @@ mod test {
         assert_eq!(IS_NUMBER.is_match("1a"), false);
         assert_eq!(IS_NUMBER.is_match("point(4, 5, 6)"), false);
         assert_eq!(IS_NUMBER.is_match("2 + 3i"), false);
+        assert_eq!(IS_NUMBER.is_match("- 1234"), true);
+        assert_eq!(IS_NUMBER.is_match("+ 3.5"), true);
+        assert_eq!(IS_NUMBER.is_match("-                                                                      1"), true);
+        assert_eq!(IS_NUMBER.is_match("+"), false);
+        assert_eq!(IS_NUMBER.is_match("-"), false);
+        assert_eq!(IS_NUMBER.is_match("1+"), false);
     }
 
     #[test]
@@ -534,6 +632,15 @@ mod test {
         let result = splice_at_top_level_delim(st,  0, ',').unwrap();
         println!("{:?}", result);
         assert!(compare_spliced(result, expected));
+    }
+
+    #[test]
+    fn test_math_bracketing() {
+        assert_eq!(&add_explicit_brackets("1*-(2+3)"), "1*(-(2+3))");
+        assert_eq!(&add_explicit_brackets("-1 +- 2"), "(-1)+(-2)");
+        assert_eq!(&add_explicit_brackets("1 + -2"), "1+(-2)");
+        assert_eq!(&add_explicit_brackets("1*+2"), "1*(+2)");
+        assert_eq!(&add_explicit_brackets("1 /- 2"), "1/(-2)");
     }
 
 
@@ -769,12 +876,29 @@ mod test {
     fn test_compile_ast20() {
         assert!(AST::new("1 +, 2").is_err());
         assert!(AST::new("1 - (, 2)").is_err());
-        assert!(AST::new("1 +- 2").is_err());
-        assert!(AST::new("1 ,+ 2").is_err());
         assert!(AST::new(", + 1").is_err());
-        assert!(AST::new("1 / + 2").is_err());
         assert!(AST::new("1 + 2i").is_err());
         assert!(AST::new("1 +").is_err());
+    }
+
+    #[test]
+    fn test_compile_ast21() {
+        compare_ast("1 +- 2", "add(1, -2)");
+    }
+
+    #[test]
+    fn test_compile_ast22() {
+        compare_ast("1 ,+ 2", "1, 2");
+    }
+
+    #[test]
+    fn test_compile_ast23() {
+        compare_ast("1 / + 2", "div(1, +2)");
+    }
+
+    #[test]
+    fn test_compile_ast24() {
+        compare_ast("1*-2+3", "add(mul(1, -2), 3)");
     }
 
     #[test]
