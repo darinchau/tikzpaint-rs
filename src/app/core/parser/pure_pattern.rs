@@ -2,6 +2,7 @@
 //! paradigm so the base type is only functions and numbers.
 
 use std::rc::Rc;
+use std::sync::Arc;
 use std::{cell::RefCell, sync::Mutex};
 use super::ast::*;
 use super::impure_pattern::is_name_of_impure_fn;
@@ -21,7 +22,7 @@ type FunctionBehaviour = dyn Fn(Vec<VariablePayload>) -> Result<ASTNode, Functio
 /// we are really assigning x to a function that takes no arguments and evaluates to 5
 pub struct Pattern {
     pattern: AST,
-    f: Box<FunctionBehaviour>
+    f: Arc<FunctionBehaviour>
 }
 
 impl Pattern {
@@ -35,7 +36,6 @@ pub struct PatternLookup {
     fns: Mutex<Vec<Pattern>>,
     names: Mutex<HashSet<String>>,
     // We have a special place for the assignment operator because otherwise it will hang up the mutex and lock the function
-    assign: Mutex<Pattern>,
     initialized: Mutex<bool>,
 }
 
@@ -46,59 +46,6 @@ impl PatternLookup {
             fns: Mutex::new(vec![]),
             names: Mutex::new(HashSet::new()),
             initialized: Mutex::new(false),
-            assign: Mutex::new(Pattern {
-                pattern: AST {
-                    root: ASTNode::Function("assign".to_string(), vec![
-                        ASTNode::Variable(VariableType::AST),
-                        ASTNode::Variable(VariableType::AST)
-                    ])
-                },
-                f: Box::new(|x| {
-                    let left = x[0].ast()?;
-                    let right = x[1].ast()?;
-
-                    // Exchange left and right because variables are on the left
-                    let match_result = copy_args_with_mat(right, left)
-                        .map_err(|x| {
-                            FunctionEvaluateError {
-                                msg: format!("{:?}", x)
-                            }
-                        })?;
-
-                    if match_result.is_none() {
-                        return Err(FunctionEvaluateError{
-                            msg: format!("Assignment pattern does not match up: found {:?} on the left and {:?} on the right", left, right)
-                        });
-                    }
-
-                    let payloads = match_result.unwrap();
-
-                    // This has to change in the future - for now we only support the {x} = 5 syntax
-                    // Technically for this way of implementing we get pattern matching for free
-                    // For the {x} = 5 example, (Function:x => 5) will be our lovely payload
-                    // its like int x() { return 5; }
-                    for payload in payloads {
-                        match payload {
-                            // User cannot create AST variable payloads
-                            VariablePayload::Function(load) => {
-                                FUNCTIONS.push_raw(load.pattern(), move |x| {
-                                    if x.len() != load.num_layers {
-                                        return Err(FunctionEvaluateError{
-                                            msg: format!("Unknown error: Incorrect number of arguments, expected {}, found {}", load.num_layers, x.len())
-                                        });
-                                    }
-
-                                    Ok(load.call(x))
-                                });
-                            }
-                            _ => unreachable!()
-                        }
-                    }
-
-                    // Return Right hand side of the assignment
-                    return Ok(right.to_owned());
-                }),
-            }),
         }
     }
 
@@ -112,7 +59,7 @@ impl PatternLookup {
 
             let pat = Pattern {
                 pattern: ast,
-                f: Box::new(behavior) as Box<FunctionBehaviour>
+                f: Arc::new(behavior) as Arc<FunctionBehaviour>
             };
 
             self.fns.lock().unwrap().push(pat);
@@ -128,7 +75,7 @@ impl PatternLookup {
     F: Fn(Vec<VariablePayload>) -> Result<ASTNode, FunctionEvaluateError> + Send + Sync + 'static {
         let pat = Pattern {
             pattern: AST{root: pattern},
-            f: Box::new(behavior) as Box<FunctionBehaviour>
+            f: Arc::new(behavior) as Arc<FunctionBehaviour>
         };
 
         self.fns.lock().unwrap().push(pat);
@@ -137,19 +84,20 @@ impl PatternLookup {
     /// Searches through every possible function out there and evaluates it if we find a match
     /// The ASTNode x is guaranteed to be a function
     pub fn evaluate(&self, x: ASTNode) -> Result<ASTNode, FunctionEvaluateError> {
-        // Try to match assignment
-        let assign = self.assign.lock().unwrap();
-        if let Some(vars) = assign.pattern.matches(&x)
-        .map_err(|x| FunctionEvaluateError{msg: format!("{:?}", x)})? {
-            return Ok(assign.call(vars)?);
-        }
+        let mut payload = None;
 
         // Try to match other pattern
         for f in self.fns.lock().unwrap().iter() {
             if let Some(vars) = f.pattern.matches(&x)
                 .map_err(|x| FunctionEvaluateError{msg: format!("{:?}", x)})? {
-                return Ok(f.call(vars)?);
+                payload = Some((f.f.clone(), vars));
+                break;
             }
+        }
+
+        // This is so that we release the function mutex before executing the function
+        if let Some((f, vars)) = payload {
+            return Ok((*f)(vars)?);
         }
 
         Err(FunctionEvaluateError{msg: format!("Function does not match any known patterns: {:?}", x)})
@@ -220,6 +168,56 @@ pub fn is_name_of_pure_fn(name: &str) -> bool {
 }
 
 pub fn init_pure() {
+    // Assigment
+    FUNCTIONS.push_raw(ASTNode::Function("assign".to_string(), vec![
+        ASTNode::Variable(VariableType::AST),
+        ASTNode::Variable(VariableType::AST)
+    ]), |x| {
+        let left = x[0].ast()?;
+        let right = x[1].ast()?;
+
+        // Exchange left and right because variables are on the left
+        let match_result = copy_args_with_mat(right, left)
+            .map_err(|x| {
+                FunctionEvaluateError {
+                    msg: format!("{:?}", x)
+                }
+            })?;
+
+        if match_result.is_none() {
+            return Err(FunctionEvaluateError{
+                msg: format!("Assignment pattern does not match up: found {:?} on the left and {:?} on the right", left, right)
+            });
+        }
+
+        let payloads = match_result.unwrap();
+
+        // This has to change in the future - for now we only support the {x} = 5 syntax
+        // Technically for this way of implementing we get pattern matching for free
+        // For the {x} = 5 example, (Function:x => 5) will be our lovely payload
+        // its like int x() { return 5; }
+        for payload in payloads {
+            match payload {
+                // User cannot create AST variable payloads
+                VariablePayload::Function(load) => {
+                    FUNCTIONS.push_raw(load.pattern(), move |x| {
+                        if x.len() != load.num_layers {
+                            return Err(FunctionEvaluateError{
+                                msg: format!("Unknown error: Incorrect number of arguments, expected {}, found {}", load.num_layers, x.len())
+                            });
+                        }
+
+                        Ok(load.call(x))
+                    });
+                }
+                _ => unreachable!()
+            }
+        }
+
+        // Return Right hand side of the assignment
+        return Ok(right.to_owned());
+    });
+
     // If-then-else statement
     FUNCTIONS.push_raw(ASTNode::Function(String::from("if"), vec![
         ASTNode::Variable(VariableType::Number),
@@ -236,6 +234,14 @@ pub fn init_pure() {
         else {
             return Ok(if_false.to_owned())
         }
+    });
+
+    // While loops
+    FUNCTIONS.push_raw(ASTNode::Function(String::from("while"), vec![
+        ASTNode::Variable(VariableType::Number),
+        ASTNode::Variable(VariableType::AST)
+    ]), |x| {
+        todo!();
     });
 
     // Operators

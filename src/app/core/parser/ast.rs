@@ -452,22 +452,28 @@ fn splice_math_operators(s: &str, offset: usize) -> Result<ASTNode, ASTError> {
 
 /// Handles one single operator. Returns the AST node if a top level operator is found, otherwise return none. Bubbles up the error if necessary
 fn splice_one_operator(s: &str, offset: usize, operator: char, operator_name: &str) -> Result<Option<ASTNode>, ASTError> {
-    let substrs = splice_at_top_level_delim(s, offset, operator)?;
-    if substrs.len() <= 1 {
-        return Ok(None);
-    }
+    let sstrs = splice_at_top_level_delim(s, offset, operator)?;
 
     let op_str = operator_name.to_string();
 
-    let mut root = ASTNode::from_str_recursive(substrs[0].0, offset)?;
-    for (substr, pos) in substrs.into_iter().skip(1) {
+    // If there is only one node then nothing is sliced
+    if sstrs.len() <= 1 {
+        return Ok(None);
+    }
+
+    let mut substrs = sstrs.into_iter().rev();
+
+    // Safe unwrap - already asserted sstr length >= 1
+    let subs = substrs.next().unwrap();
+    let mut root = ASTNode::from_str_recursive(subs.0, offset + subs.1)?;
+
+    while let Some((substr, pos)) = substrs.next() {
         root = ASTNode::Function(op_str.clone(), vec![
-            root,
-            ASTNode::from_str_recursive(substr, offset + pos)?
+            ASTNode::from_str_recursive(substr, offset + pos)?,
+            root
         ]);
     }
 
-    // This only asserts root is actually something, where in reality we already assumed root is non-null
     return Ok(Some(root));
 }
 
@@ -818,12 +824,12 @@ mod test {
 
     #[test]
     fn test_compile_ast18() {
-        compare_ast("1 + 2 + zeta(3)", "add(add(1)(2))(zeta(3))");
+        compare_ast("1 + 2 + zeta(3)", "add(1)(add(2)(zeta(3)))");
     }
 
     #[test]
     fn test_compile_ast19() {
-        compare_ast("1 + 2 + zeta(3) * x", "add(add(1)(2))(mul(zeta(3))(x))");
+        compare_ast("1 + 2 + zeta(3) * x", "add(1)(add(2)(mul(zeta(3))(x)))");
     }
 
     #[test]

@@ -146,12 +146,34 @@ mod test {
         initialize_parser();
         let cmd = "{x} = 5, point(3, x)".wrap();
         let res = parse(cmd).unwrap().unwrap();
+        assert!(res.len() == 1);
+        assert!(res[0].fo.borrow().repr() == "point(3, 5)");
     }
 
     #[test]
     fn test_parse_6() {
         initialize_parser();
-        let cmd = "{x} = 5, point(3, x)".wrap();
-        let res = parse(cmd).unwrap();
+        let cmd = "{x} = 1, {y} = if(x)(0.5)(-0.5), point(x, y)".wrap();
+        let res = parse(cmd).unwrap().unwrap();
+        assert!(res.len() == 1);
+        assert!(res[0].fo.borrow().repr() == "point(1, 0.5)");
+    }
+
+    #[test]
+    fn test_parse_7() {
+        initialize_parser();
+        let cmd = "{x} = {y} = 1, point(x, y)".wrap();
+        let res = parse(cmd).unwrap().unwrap();
+        assert!(res.len() == 1);
+        assert!(res[0].fo.borrow().repr() == "point(1, 1)");
+    }
+
+    #[test]
+    fn test_parse_8() {
+        initialize_parser();
+        let cmd = "{i} = 10, while(i)(point(0, i), {i} = i-1)".wrap();
+        let res = parse(cmd).unwrap().unwrap();
+        assert!(res.len() == 10);
+        assert!(res[0].fo.borrow().repr() == "point(0, 10)");
     }
 }
